@@ -16,7 +16,6 @@
 
 #include "RobotRaconteur/DataTypes.h"
 #include "RobotRaconteur/Endpoint.h"
-#include "RobotRaconteur/Service.h"
 
 namespace RobotRaconteur
 {
@@ -106,70 +105,7 @@ namespace RobotRaconteur
 		{
 			function = T();
 		}
-	};
-
-	class ROBOTRACONTEUR_CORE_API ServiceSkel;
-
-
-	class ROBOTRACONTEUR_CORE_API CallbackServerBase
-	{
-
-	public:
-		virtual ~CallbackServerBase() {}
-
-	protected:
-		RR_WEAK_PTR<ServiceSkel> skel;
-		
-
-		virtual RR_SHARED_PTR<void> GetClientFunction_internal(uint32_t e);
-
-		virtual std::string GetMemberName()=0;
-	};
-
-	template<typename T>
-	class CallbackServer : public Callback<T>, public CallbackServerBase
-	{
-	public:
-		CallbackServer(const std::string& name, RR_SHARED_PTR<ServiceSkel> skel) : Callback<T>(name)
-		{
-			this->skel = skel;
-		}
-
-		virtual ~CallbackServer() {}
-
-		virtual T GetFunction()
-		{
-			throw InvalidOperationException("Invalid for server side of callback");
-		}
-		virtual void SetFunction(T value)
-		{
-			throw InvalidOperationException("Invalid for server side of callback");
-		}
-
-		virtual T GetClientFunction(RR_SHARED_PTR<Endpoint> e)
-		{
-			return GetClientFunction(e->GetLocalEndpoint());
-		}
-
-		virtual T GetClientFunction(uint32_t e)
-		{
-			RR_SHARED_PTR<ServiceSkel> s=skel.lock();
-			if (!s) throw InvalidOperationException("Callback server has been closed");
-			return *RR_STATIC_POINTER_CAST<T>(s->GetCallbackFunction(e,GetMemberName()));
-		}
-
-	
-		virtual std::string GetMemberName()
-		{
-			return Callback<T>::GetMemberName();
-		}
-
-		virtual void Shutdown()
-		{
-			
-		}	
-
-	};
+	};	
 
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 	template<typename T> using CallbackPtr = RR_SHARED_PTR<Callback<T> >;

@@ -1,9 +1,6 @@
 
 #ifndef SWIG
 #include "RobotRaconteur/RobotRaconteurNode.h"
-#include "RobotRaconteur/TcpTransport.h"
-#include "RobotRaconteur/LocalTransport.h"
-#include "RobotRaconteur/HardwareTransport.h"
 
 #include <boost/assign/list_of.hpp>
 
@@ -78,20 +75,13 @@ namespace RobotRaconteur
 
 #ifndef SWIG
 	class ROBOTRACONTEUR_CORE_API RobotRaconteurNodeSetup : boost::noncopyable
-	{
-		RR_SHARED_PTR<TcpTransport> tcp_transport;
-		RR_SHARED_PTR<LocalTransport> local_transport;
-		RR_SHARED_PTR<HardwareTransport> hardware_transport;
+	{		
 		RR_SHARED_PTR<RobotRaconteurNode> node;
 
 	public:
 		RobotRaconteurNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
 			const std::string& node_name, uint16_t tcp_port, uint32_t flags);
-
-		RR_SHARED_PTR<LocalTransport> GetLocalTransport();
-		RR_SHARED_PTR<TcpTransport> GetTcpTransport();
-		RR_SHARED_PTR<HardwareTransport> GetHardwareTransport();
-
+		
 		virtual ~RobotRaconteurNodeSetup();
 	};
 
@@ -103,27 +93,7 @@ namespace RobotRaconteur
 
 		ClientNodeSetup(const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, const std::string& node_name = "",
 			uint32_t flags = RobotRaconteurNodeSetupFlags_CLIENT_DEFAULT);
-	};
-
-	class ROBOTRACONTEUR_CORE_API ServerNodeSetup : public RobotRaconteurNodeSetup
-	{
-	public:
-		ServerNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
-			const std::string& node_name, uint16_t tcp_port = 0, uint32_t flags = RobotRaconteurNodeSetupFlags_SERVER_DEFAULT);
-
-		ServerNodeSetup(std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, const std::string& node_name, uint16_t tcp_port = 0,
-			uint32_t flags = RobotRaconteurNodeSetupFlags_SERVER_DEFAULT);
-	};
-
-	class ROBOTRACONTEUR_CORE_API SecureServerNodeSetup : public RobotRaconteurNodeSetup
-	{
-	public:
-		SecureServerNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types,
-			const std::string& node_name, uint16_t tcp_port = 0, uint32_t flags = RobotRaconteurNodeSetupFlags_SECURE_SERVER_DEFAULT);
-
-		SecureServerNodeSetup(std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, const std::string& node_name, uint16_t tcp_port = 0,
-			uint32_t flags = RobotRaconteurNodeSetupFlags_SECURE_SERVER_DEFAULT);
-	};
+	};	
 #endif
 	
 }

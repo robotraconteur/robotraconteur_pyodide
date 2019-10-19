@@ -23,11 +23,9 @@ namespace RobotRaconteur
 
 	class ROBOTRACONTEUR_CORE_API StructureStub;
 	class ROBOTRACONTEUR_CORE_API ServiceStub;
-	class ROBOTRACONTEUR_CORE_API ServiceSkel;
-
+	
 	class ROBOTRACONTEUR_CORE_API ClientContext;
-	class ROBOTRACONTEUR_CORE_API ServerContext;
-
+	
 	class ROBOTRACONTEUR_CORE_API RobotRaconteurNode;
 	
 	class ROBOTRACONTEUR_CORE_API ServiceFactory
@@ -68,8 +66,6 @@ namespace RobotRaconteur
 		virtual RR_INTRUSIVE_PTR<RRNamedBaseMultiDimArray> UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<MessageElementNamedMultiDimArray> structure) = 0;
 
 		virtual RR_SHARED_PTR<ServiceStub> CreateStub(const std::string& objecttype, const std::string& path, RR_SHARED_PTR<ClientContext> context)=0;
-
-		virtual RR_SHARED_PTR<ServiceSkel> CreateSkel(const std::string& objecttype, const std::string& path, RR_SHARED_PTR<RRObject> obj, RR_SHARED_PTR<ServerContext> context)=0;
 
 		virtual RR_SHARED_PTR<ServiceDefinition> ServiceDef();
 		

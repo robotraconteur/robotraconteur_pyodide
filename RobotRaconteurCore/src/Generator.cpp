@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/Generator.h"
 #include "RobotRaconteur/RobotRaconteurNode.h"
 #include "RobotRaconteur/Client.h"
-#include "RobotRaconteur/Service.h"
 #include "RobotRaconteur/DataTypes.h"
 
 #include <boost/range/adaptors.hpp>
@@ -42,15 +37,7 @@ namespace RobotRaconteur
 		if (!out) throw InvalidOperationException("Generator has been closed");
 		return out;
 	}
-
-	void GeneratorClientBase::Abort()
-	{
-		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
-		AbortOperationException err("Generator abort requested");
-		RobotRaconteurExceptionUtil::ExceptionToMessageEntry(err, m);
-		m->AddElement("index", ScalarToRRArray(id));
-		GetStub()->ProcessRequest(m);
-	}
+	
 	void GeneratorClientBase::AsyncAbort(boost::function<void(RR_SHARED_PTR<RobotRaconteurException> err)> handler, int32_t timeout)
 	{
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
@@ -59,15 +46,7 @@ namespace RobotRaconteur
 		m->AddElement("index", ScalarToRRArray(id));
 		GetStub()->AsyncProcessRequest(m, boost::bind(handler, _2), timeout);
 	}
-
-	void GeneratorClientBase::Close()
-	{
-		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
-		StopIterationException err("");
-		RobotRaconteurExceptionUtil::ExceptionToMessageEntry(err, m);
-		m->AddElement("index", ScalarToRRArray(id));
-		GetStub()->ProcessRequest(m);
-	}
+	
 	void GeneratorClientBase::AsyncClose(boost::function<void(RR_SHARED_PTR<RobotRaconteurException> err)> handler, int32_t timeout)
 	{
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
@@ -81,21 +60,7 @@ namespace RobotRaconteur
 	{
 		return name;
 	}
-
-	RR_INTRUSIVE_PTR<MessageElement> GeneratorClientBase::NextBase(RR_INTRUSIVE_PTR<MessageElement> v)
-	{
-		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());		
-		m->AddElement("index", ScalarToRRArray(id));
-		if (v)
-		{
-			v->ElementName = "parameter";
-			m->elements.push_back(v);
-		}
-		RR_INTRUSIVE_PTR<MessageEntry> ret = GetStub()->ProcessRequest(m);
-		RR_INTRUSIVE_PTR<MessageElement> mret;
-		ret->TryFindElement("return", mret);
-		return mret;
-	}
+	
 	void GeneratorClientBase::AsyncNextBase(RR_INTRUSIVE_PTR<MessageElement> v, boost::function<void(RR_INTRUSIVE_PTR<MessageElement> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<RobotRaconteurNode>)> handler, int32_t timeout)
 	{
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
@@ -129,63 +94,6 @@ namespace RobotRaconteur
 
 		ret->TryFindElement("return", mret);
 		handler(mret,err,node1);
-	}
-
-	GeneratorServerBase::GeneratorServerBase(const std::string& name, int32_t index, RR_SHARED_PTR<ServiceSkel> skel, RR_SHARED_PTR<ServerEndpoint> ep)
-	{
-		this->name = name;
-		this->index = index;
-		this->skel = skel;
-		this->ep = ep;
-		this->last_access_time = boost::posix_time::second_clock::universal_time();
-	}
-
-	uint32_t GeneratorServerBase::GetEndpoint()
-	{
-		return ep->GetLocalEndpoint();
-	}
-
-	void GeneratorServerBase::EndAsyncCallNext(RR_WEAK_PTR<ServiceSkel> skel, RR_INTRUSIVE_PTR<MessageElement> ret, RR_SHARED_PTR<RobotRaconteurException> err, int32_t index, RR_INTRUSIVE_PTR<MessageEntry> m, RR_SHARED_PTR<ServerEndpoint> ep)
-	{
-		RR_SHARED_PTR<ServiceSkel> skel1 = skel.lock();
-		if (!skel1) return;
-				
-		try
-		{
-			RR_INTRUSIVE_PTR<MessageEntry> ret1 = CreateMessageEntry(MessageEntryType_GeneratorNextRes, m->MemberName);
-			ret1->RequestID = m->RequestID;
-			ret1->ServicePath = m->ServicePath;
-
-			if (err)
-			{
-				RobotRaconteurExceptionUtil::ExceptionToMessageEntry(*err, ret1);
-			}
-			else
-			{
-				if (!ret)
-				{
-					ret1->AddElement("return", ScalarToRRArray<int32_t>(0));
-				}
-				else
-				{
-					ret->ElementName = "return";
-					ret1->AddElement(ret);
-				}
-			}
-
-			
-			skel1->SendGeneratorResponse(index, ret1, ep);
-		}
-		catch (std::exception& exp)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node;
-			try
-			{
-				node = skel1->RRGetNode();
-			}
-			catch (std::exception&) {}
-			RobotRaconteurNode::TryHandleException(node, &exp);
-		}
 	}
 
 	namespace detail

@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/Transport.h"
 #include "RobotRaconteur/RobotRaconteurNode.h"
 #include "RobotRaconteur/DataTypes.h"
 #include <boost/algorithm/string.hpp>
 #include "RobotRaconteur/Client.h"
-#include "RobotRaconteur/Service.h"
 
 #include <boost/foreach.hpp>
 
@@ -78,32 +73,8 @@ namespace RobotRaconteur
 		TransportListeners(shared_this, ev, parameter);
 	}
 
-	RR_INTRUSIVE_PTR<Message> Transport::SpecialRequest(RR_INTRUSIVE_PTR<Message> m, RR_SHARED_PTR<ITransportConnection> tc)
-	{
-		if (m->entries.size() >= 1)
-		{
-			uint32_t type = (static_cast<uint32_t>(m->entries[0]->EntryType));
-			if (type < 500 && (type % 2 == 1))
-			{
-				RR_INTRUSIVE_PTR<Message> r = GetNode()->SpecialRequest(m,TransportID,tc);
-				return r;
-			}
-		}
-
-		return RR_INTRUSIVE_PTR<Message>();
-	}
-
 	void Transport::Close()
 	{
-
-	}
-
-	std::vector<NodeDiscoveryInfo>  Transport::GetDetectedNodes(const std::vector<std::string>& schemes)
-	{
-		RR_SHARED_PTR<detail::sync_async_handler<std::vector<NodeDiscoveryInfo> > > t=RR_MAKE_SHARED<detail::sync_async_handler<std::vector<NodeDiscoveryInfo> > >();
-		boost::function<void(RR_SHARED_PTR<std::vector<NodeDiscoveryInfo> >)> h = boost::bind(&detail::sync_async_handler<std::vector<NodeDiscoveryInfo> >::operator(), t, _1, RR_SHARED_PTR<RobotRaconteurException>());
-		AsyncGetDetectedNodes(schemes, h);
-		return *t->end();
 
 	}
 

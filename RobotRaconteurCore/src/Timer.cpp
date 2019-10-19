@@ -12,12 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/Timer.h"
-#include "RobotRaconteur/AutoResetEvent.h"
 #include "RobotRaconteur/RobotRaconteurNode.h"
 
 namespace RobotRaconteur

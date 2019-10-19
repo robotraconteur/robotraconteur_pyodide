@@ -58,7 +58,9 @@
 #include <boost/thread.hpp>
 #include <boost/regex.hpp>
 
-#ifdef BOOST_WINDOWS
+#if defined(__EMSCRIPTEN__)
+#define ROBOTRACONTEUR_EMSCRIPTEN
+#elif defined(BOOST_WINDOWS)
 #define ROBOTRACONTEUR_WINDOWS
 #elif defined(__linux__)
 #define ROBOTRACONTEUR_LINUX

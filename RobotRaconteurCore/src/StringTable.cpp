@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/StringTable.h"
 #include "RobotRaconteur/Message.h"
 #include "RobotRaconteur/IOUtils.h"

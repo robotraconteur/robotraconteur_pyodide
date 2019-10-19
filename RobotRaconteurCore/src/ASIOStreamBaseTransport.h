@@ -190,8 +190,7 @@ namespace RobotRaconteur
 			virtual void AsyncAttachStream(bool server, const NodeID& target_nodeid, const std::string& target_nodename, boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>& callback);
 		public:
 			virtual void AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>& callback);
-			virtual void SendMessage(RR_INTRUSIVE_PTR<Message> m);
-
+			
 
 
 		protected:

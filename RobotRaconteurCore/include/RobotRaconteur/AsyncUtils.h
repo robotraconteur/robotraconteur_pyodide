@@ -19,7 +19,6 @@
 #include "RobotRaconteur/DataTypes.h"
 #include "RobotRaconteur/ErrorUtil.h"
 #include "RobotRaconteur/Timer.h"
-#include "RobotRaconteur/AutoResetEvent.h"
 
 #pragma once
 
@@ -29,77 +28,6 @@ namespace RobotRaconteur
 	
 	namespace detail
 	{
-		template<typename T>
-		class sync_async_handler : private boost::noncopyable
-		{
-		public:
-			RR_SHARED_PTR<AutoResetEvent> ev;
-			RR_SHARED_PTR<RobotRaconteurException> err;
-			RR_SHARED_PTR<T> data;
-			boost::mutex data_lock;
-
-			sync_async_handler()
-			{
-				ev=RR_MAKE_SHARED<AutoResetEvent>();
-			}
-
-			sync_async_handler(RR_SHARED_PTR<RobotRaconteurException> err)
-			{
-				ev=RR_MAKE_SHARED<AutoResetEvent>();
-				this->err=err;
-			}
-
-			void operator() ()
-			{
-				
-				ev->Set();
-			}
-
-			void operator() (RR_SHARED_PTR<RobotRaconteurException> err)
-			{
-				boost::mutex::scoped_lock lock(data_lock);
-				this->err=err;
-				ev->Set();
-			}
-
-			void operator() (RR_SHARED_PTR<T> data, RR_SHARED_PTR<RobotRaconteurException> err)
-			{
-				boost::mutex::scoped_lock lock(data_lock);
-				this->err=err;
-				this->data=data;
-				ev->Set();
-			}
-
-			RR_SHARED_PTR<T> end()
-			{
-				ev->WaitOne();
-
-				boost::mutex::scoped_lock lock(data_lock);
-				if (err)
-				{
-					RobotRaconteurExceptionUtil::DownCastAndThrowException(err);
-				}
-
-				if (!data) throw InternalErrorException("Internal async error");
-
-				return data;
-			}
-
-			void end_void()
-			{
-				ev->WaitOne();
-
-				boost::mutex::scoped_lock lock(data_lock);
-				if (err)
-				{
-					RobotRaconteurExceptionUtil::DownCastAndThrowException(err);
-				}
-
-			}
-
-		};
-		
-
 		RR_SHARED_PTR<Timer> async_timeout_wrapper_CreateTimer(RR_SHARED_PTR<RobotRaconteurNode> node, const boost::posix_time::time_duration& period, RR_MOVE_ARG(boost::function<void(const TimerEvent&)>) handler, bool oneshot);
 
 		template<typename T>

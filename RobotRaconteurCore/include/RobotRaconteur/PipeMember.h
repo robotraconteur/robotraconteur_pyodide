@@ -58,8 +58,6 @@ namespace RobotRaconteur
 
 		void SetRequestPacketAck(bool ack);
 		
-		virtual void Close();
-
 		virtual void AsyncClose(RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout=RR_TIMEOUT_INFINITE);
 
 		virtual size_t Available();
@@ -90,17 +88,13 @@ namespace RobotRaconteur
 		RR_INTRUSIVE_PTR<RRValue> ReceivePacketBase();
 		RR_INTRUSIVE_PTR<RRValue> PeekPacketBase();
 
-		RR_INTRUSIVE_PTR<RRValue> ReceivePacketBaseWait(int32_t timeout = RR_TIMEOUT_INFINITE);
-		RR_INTRUSIVE_PTR<RRValue> PeekPacketBaseWait(int32_t timeout = RR_TIMEOUT_INFINITE);
-
-		bool TryReceivePacketBaseWait(RR_INTRUSIVE_PTR<RRValue>& packet, int32_t timeout = RR_TIMEOUT_INFINITE, bool peek=false);
+		bool TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet, bool peek=false);
 		
 		boost::mutex sendlock;
 		boost::mutex recvlock;
 
 		std::deque<RR_INTRUSIVE_PTR<RRValue> > recv_packets;
-		boost::condition_variable recv_packets_wait;
-
+		
 		uint32_t increment_packet_number(uint32_t packetnum);
 
 	
@@ -166,14 +160,6 @@ namespace RobotRaconteur
 		boost::signals2::signal<void (RR_SHARED_PTR<PipeEndpoint<T> >)> PacketReceivedEvent;
 		boost::signals2::signal<void (RR_SHARED_PTR<PipeEndpoint<T> >,uint32_t)> PacketAckReceivedEvent;
 
-		virtual uint32_t SendPacket(typename boost::call_traits<T>::param_type packet)
-		{
-			 RR_SHARED_PTR<detail::sync_async_handler<uint32_t> > t=RR_MAKE_SHARED<detail::sync_async_handler<uint32_t> >();
-			 boost::function<void(RR_SHARED_PTR<uint32_t>, RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&detail::sync_async_handler<uint32_t>::operator(), t, _1, _2);
-			 AsyncSendPacket(packet,boost::bind(&PipeEndpoint::send_handler,_1,_2,h));
-			 return *t->end();
-		}
-
 		virtual void AsyncSendPacket(typename boost::call_traits<T>::param_type packet, RR_MOVE_ARG(boost::function<void(uint32_t,RR_SHARED_PTR<RobotRaconteurException>)>) handler)
 		{
 			 AsyncSendPacketBase(RRPrimUtil<T>::PrePack(packet), RR_MOVE(handler));
@@ -189,20 +175,10 @@ namespace RobotRaconteur
 			return RRPrimUtil<T>::PreUnpack(PeekPacketBase());
 		}
 
-		virtual T ReceivePacketWait(int32_t timeout = RR_TIMEOUT_INFINITE)
-		{
-			return RRPrimUtil<T>::PreUnpack(ReceivePacketBaseWait(timeout));
-		}
-
-		virtual T PeekNextPacketWait(int32_t timeout = RR_TIMEOUT_INFINITE)
-		{
-			return RRPrimUtil<T>::PreUnpack(PeekPacketBaseWait(timeout));
-		}
-
-		virtual bool TryReceivePacketWait(T& val, int32_t timeout = RR_TIMEOUT_INFINITE, bool peek = false)
+		virtual bool TryReceivePacket(T& val, bool peek = false)
 		{
 			RR_INTRUSIVE_PTR<RRValue> o;
-			if (!TryReceivePacketBaseWait(o, timeout, peek)) return false;
+			if (!TryReceivePacketBase(o, peek)) return false;
 			val = RRPrimUtil<T>::PreUnpack(o);
 			return true;
 		}
@@ -238,7 +214,7 @@ namespace RobotRaconteur
 		}
 
 	public:
-		virtual void Close()
+		/*virtual void Close()
 		{
 			PipeEndpointBase::Close();
 			{
@@ -249,7 +225,7 @@ namespace RobotRaconteur
 			}
 			PacketReceivedEvent.disconnect_all_slots();
 			PacketAckReceivedEvent.disconnect_all_slots();
-		}
+		}*/
 
 	protected:
 
@@ -368,12 +344,6 @@ namespace RobotRaconteur
 
 		virtual ~Pipe() {}
 
-		virtual boost::function<void(RR_SHARED_PTR<PipeEndpoint<T> >)> GetPipeConnectCallback()=0;
-		
-		virtual void SetPipeConnectCallback(boost::function<void(RR_SHARED_PTR<PipeEndpoint<T> >)> function)=0;
-		
-		virtual RR_SHARED_PTR<PipeEndpoint<T> > Connect(int32_t index)=0;
-
 		virtual void AsyncConnect(int32_t index, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout=RR_TIMEOUT_INFINITE)=0;
 
 		virtual void AsyncConnect(RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout=RR_TIMEOUT_INFINITE)
@@ -468,30 +438,13 @@ namespace RobotRaconteur
 	public:
 
 		virtual ~PipeClient() {}
-		
-		virtual boost::function<void(RR_SHARED_PTR<PipeEndpoint<T> >)> GetPipeConnectCallback()
-		{
-			throw InvalidOperationException("Not valid for client");
-		}
-		
-		virtual void SetPipeConnectCallback(boost::function<void(RR_SHARED_PTR<PipeEndpoint<T> >)> function)
-		{
-			throw InvalidOperationException("Not valid for client");
-		}
-		
+						
 		virtual void AsyncConnect(int32_t index, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout=RR_TIMEOUT_INFINITE)
 		{
 			
 			AsyncConnect_internal(index,boost::bind(handler,boost::bind(&PipeClient<T>::AsyncConnect_cast,_1),_2),timeout); 
 		}
-
-		virtual RR_SHARED_PTR<PipeEndpoint<T> > Connect(int32_t index)
-		{
-			RR_SHARED_PTR<detail::sync_async_handler<PipeEndpoint<T> > > t=RR_MAKE_SHARED<detail::sync_async_handler<PipeEndpoint<T> > >();
-			AsyncConnect(index,boost::bind(&detail::sync_async_handler<PipeEndpoint<T> >::operator(),t,_1,_2),GetNode()->GetRequestTimeout());
-			return t->end();
-		}
-
+		
 		PipeClient(const std::string& name, RR_SHARED_PTR<ServiceStub> stub, bool unreliable=false, MemberDefinition_Direction direction = MemberDefinition_Direction_both, boost::function<void(RR_INTRUSIVE_PTR<RRValue>&)> verify=NULL) : PipeClientBase(name,stub,unreliable,direction), Pipe<T>(verify)
 		{
 			if (boost::is_same<T,RR_INTRUSIVE_PTR<MessageElement> >::value)
@@ -527,261 +480,12 @@ namespace RobotRaconteur
 	};
 
 
-	class ROBOTRACONTEUR_CORE_API ServiceSkel;
-	class ROBOTRACONTEUR_CORE_API PipeServerBase : public virtual PipeBase
-	{
-	public:
-
-		virtual ~PipeServerBase() {}
-
-		virtual std::string GetMemberName();
-
-		virtual void PipePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e=0);
-
-		virtual void Shutdown();
-		
-		virtual void AsyncSendPipePacket(RR_INTRUSIVE_PTR<RRValue> data, int32_t index, uint32_t packetnumber, bool requestack, uint32_t endpoint, bool unreliable, bool message3, RR_MOVE_ARG(boost::function<void(uint32_t,RR_SHARED_PTR<RobotRaconteurException>)>) handler);
-
-		virtual void AsyncClose(RR_SHARED_PTR<PipeEndpointBase> endpoint, bool remote, uint32_t ee, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout);
-
-		virtual RR_INTRUSIVE_PTR<MessageEntry> PipeCommand(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e);
-
-		RR_SHARED_PTR<ServiceSkel> GetSkel();
-
-	protected:
-		
-		std::string m_MemberName;
-				
-		struct pipe_endpoint_server_id
-		{
-			pipe_endpoint_server_id(uint32_t endpoint, int32_t index)
-			{
-				this->endpoint=endpoint;
-				this->index=index;
-			}
-
-			uint32_t endpoint;
-			int32_t index;
-
-			bool operator==(const pipe_endpoint_server_id& rhs) const
-			{
-				return (endpoint==rhs.endpoint && index==rhs.index);
-			}
-						
-		};
-		
-
-		struct hash_value
-		{
-		 std::size_t operator()(pipe_endpoint_server_id const& e) const {
-		  std::size_t seed = 0;
-		  boost::hash_combine( seed, e.endpoint );
-		  boost::hash_combine( seed, e.index );
-		  return seed;
-		}
-		};
-
-		RR_UNORDERED_MAP<pipe_endpoint_server_id,RR_SHARED_PTR<PipeEndpointBase> , hash_value > pipeendpoints;
-		boost::mutex pipeendpoints_lock;
-
-		RR_WEAK_PTR<ServiceSkel> skel;
-
-		
-		PipeServerBase(const std::string& name, RR_SHARED_PTR<ServiceSkel> skel, bool unreliable, MemberDefinition_Direction direction);
-
-		virtual RR_SHARED_PTR<PipeEndpointBase> CreateNewPipeEndpoint(int32_t index,uint32_t endpoint, bool unreliable, MemberDefinition_Direction direction, bool message3)=0;
-
-		void DeleteEndpoint(RR_SHARED_PTR<PipeEndpointBase> e);
-
-		virtual void fire_PipeConnectCallback(RR_SHARED_PTR<PipeEndpointBase> e)=0;
-
-		
-		bool init;
-		boost::signals2::connection listener_connection;
-		
-	public:
-		void ClientDisconnected(RR_SHARED_PTR<ServerContext> context, ServerServiceListenerEventType ev, RR_SHARED_PTR<void> param);
-
-	};
-
-	template <typename T>
-	class PipeServer : public virtual PipeServerBase, public virtual Pipe<T>
-	{
-
-	public:
-
-		virtual ~PipeServer() {}
-
-		virtual boost::function<void(RR_SHARED_PTR<PipeEndpoint<T> >)> GetPipeConnectCallback()
-		{
-			return callback;
-		}
-		
-		virtual void SetPipeConnectCallback(boost::function<void(RR_SHARED_PTR<PipeEndpoint<T> >)> function)
-		{
-			callback=function;
-		}
-		
-		virtual RR_SHARED_PTR<PipeEndpoint<T> > Connect(int32_t index)
-		{
-			throw InvalidOperationException("Not valid for server");
-		}
-
-		virtual void AsyncConnect(int32_t index, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout=RR_TIMEOUT_INFINITE)
-		{
-			throw InvalidOperationException("Not valid for server");
-		}
-
-		PipeServer(const std::string& name, RR_SHARED_PTR<ServiceSkel> skel, bool unreliable=false, MemberDefinition_Direction direction=MemberDefinition_Direction_both, boost::function<void(RR_INTRUSIVE_PTR<RRValue>&)> verify = NULL) : PipeServerBase(name,skel,unreliable,direction), Pipe<T>(verify)
-		{
-			if (boost::is_same<T, RR_INTRUSIVE_PTR<MessageElement> >::value)
-			{
-				rawelements=true;
-			}
-			else
-			{
-				rawelements=false;
-			}			
-		}
-
-
-	protected:
-		virtual RR_SHARED_PTR<PipeEndpointBase> CreateNewPipeEndpoint(int32_t index, uint32_t endpoint, bool unreliable, MemberDefinition_Direction direction, bool message3)
-		{
-			return RR_MAKE_SHARED<PipeEndpoint<T> >(RR_STATIC_POINTER_CAST<PipeBase>(shared_from_this()),index,endpoint,unreliable,direction,message3);
-		}
-
-		boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >)> callback;
-
-		virtual void fire_PipeConnectCallback(RR_SHARED_PTR<PipeEndpointBase> e)
-		{
-			if (!callback) return;
-			callback(RR_STATIC_POINTER_CAST<PipeEndpoint<T> >(e));
-		}
-
-		boost::function<void(RR_INTRUSIVE_PTR<RRValue>&)> verify;
-
-	public:
-
-		virtual void Shutdown()
-		{
-			PipeServerBase::Shutdown();
-
-			callback.clear();
-		}
-
-
-	};
-
-	namespace detail
-	{
-		class PipeBroadcasterBase_connected_endpoint;
-		struct PipeBroadcasterBase_async_send_operation;
-	}
-
-	class ROBOTRACONTEUR_CORE_API PipeBroadcasterBase : public RR_ENABLE_SHARED_FROM_THIS<PipeBroadcasterBase>, private boost::noncopyable
-	{
-	public:
-
-		virtual ~PipeBroadcasterBase();
-				
-		size_t GetActivePipeEndpointCount();
-
-		boost::function<bool(RR_SHARED_PTR<PipeBroadcasterBase>&, uint32_t, int32_t) > GetPredicate();
-		void SetPredicate(boost::function<bool(RR_SHARED_PTR<PipeBroadcasterBase>&,  uint32_t, int32_t)> f);
-
-		int32_t GetMaximumBacklog();
-		void SetMaximumBacklog(int32_t maximum_backlog);
-
-	protected:
-
-		PipeBroadcasterBase();
-
-		void InitBase(RR_SHARED_PTR<PipeBase> pipe, int32_t maximum_backlog = -1);
-
-		void EndpointConnectedBase(RR_SHARED_PTR<PipeEndpointBase > ep);
-
-		void EndpointClosedBase(RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> ep);
-
-		void PacketAckReceivedBase(RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> ep, uint32_t id);
-
-		void handle_send(int32_t id, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> ep, RR_SHARED_PTR<detail::PipeBroadcasterBase_async_send_operation> op, int32_t key, int32_t send_key, boost::function<void()>& handler);
-
-		void SendPacketBase(RR_INTRUSIVE_PTR<RRValue> packet);
-
-		void AsyncSendPacketBase(RR_INTRUSIVE_PTR<RRValue> packet, RR_MOVE_ARG(boost::function<void()>) handler);
-
-		virtual void AttachPipeServerEvents(RR_SHARED_PTR<PipeServerBase> p);
-
-		virtual void AttachPipeEndpointEvents(RR_SHARED_PTR<PipeEndpointBase> p, RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> cep);
-
-		RR_SHARED_PTR<PipeBase> GetPipeBase();
-
-		std::list<RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> > endpoints;
-		boost::mutex endpoints_lock;
-
-		RR_WEAK_PTR<PipeServerBase> pipe;
-		RR_WEAK_PTR<RobotRaconteurNode> node;
-		int32_t maximum_backlog;
-
-		bool copy_element;
-
-		boost::function<bool(RR_SHARED_PTR<PipeBroadcasterBase>&, uint32_t, int32_t)> predicate;
-
-	};
-
-
-
-	template <typename T>
-	class PipeBroadcaster : public PipeBroadcasterBase
-	{
-
-	public:
-		PipeBroadcaster() {}
-
-		void Init(RR_SHARED_PTR<Pipe<T> > pipe, int32_t maximum_backlog = -1)
-		{
-			InitBase(pipe, maximum_backlog);
-		}
-
-		void SendPacket(T packet)
-		{
-			SendPacketBase(RRPrimUtil<T>::PrePack(packet));
-		}
-
-		void AsyncSendPacket(T packet, RR_MOVE_ARG(boost::function<void()>) handler)
-		{
-			AsyncSendPacketBase(RRPrimUtil<T>::PrePack(packet), RR_MOVE(handler));
-		}
-
-		RR_SHARED_PTR<Pipe<T> > GetPipe()
-		{
-			return rr_cast<Pipe<T> >(GetPipeBase());
-		}
-
-	protected:
-		virtual void AttachPipeServerEvents(RR_SHARED_PTR<PipeServerBase> p)
-		{
-			RR_SHARED_PTR<PipeServer<T> > p_T = rr_cast<PipeServer<T> >(p);
-			
-			p_T->SetPipeConnectCallback(boost::bind(&PipeBroadcaster::EndpointConnectedBase, shared_from_this(), _1));			
-		}
-
-		virtual void AttachPipeEndpointEvents(RR_SHARED_PTR<PipeEndpointBase> ep, RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> cep)
-		{
-			RR_SHARED_PTR<PipeEndpoint<T> > ep_T = rr_cast<PipeEndpoint<T> >(ep);
-
-			ep_T->SetPipeEndpointClosedCallback(boost::bind(&PipeBroadcaster::EndpointClosedBase, shared_from_this(), cep));
-			ep_T->PacketAckReceivedEvent.connect(boost::bind(&PipeBroadcaster::PacketAckReceivedBase, shared_from_this(), cep, _2));
-		}
-
-	};
+	
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 	using PipeEndpointBasePtr = RR_SHARED_PTR<PipeEndpointBase>;
 	template <typename T> using PipeEndpointPtr = RR_SHARED_PTR<PipeEndpoint<T> >;
 	using PipeBasePtr = RR_SHARED_PTR<PipeBase>;
-	template <typename T> using PipePtr = RR_SHARED_PTR<Pipe<T> >;
-	template <typename T> using PipeBroadcasterPtr = RR_SHARED_PTR<PipeBroadcaster<T> >;
+	template <typename T> using PipePtr = RR_SHARED_PTR<Pipe<T> >;	
 #endif
 }
 

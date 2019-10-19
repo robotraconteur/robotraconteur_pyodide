@@ -42,7 +42,6 @@ namespace RobotRaconteur
 	class ROBOTRACONTEUR_CORE_API RobotRaconteurNode;
 	class ROBOTRACONTEUR_CORE_API Timer;
 	struct ROBOTRACONTEUR_CORE_API TimerEvent;
-	class ROBOTRACONTEUR_CORE_API AutoResetEvent;
 
 	class ROBOTRACONTEUR_CORE_API ITransportTimeProvider
 	{
@@ -54,8 +53,6 @@ namespace RobotRaconteur
 		virtual RR_SHARED_PTR<Rate> CreateRate(double frequency)=0;
 
 		virtual void Sleep(const boost::posix_time::time_duration& duration)=0;
-
-		virtual RR_SHARED_PTR<AutoResetEvent> CreateAutoResetEvent()=0;
 
 		virtual ~ITransportTimeProvider() {}
 	};
@@ -163,8 +160,6 @@ namespace RobotRaconteur
 		boost::signals2::signal<void (RR_SHARED_PTR<Transport> transport, TransportListenerEventType ev, RR_SHARED_PTR<void> parameter   )> TransportListeners;
 
 		virtual RR_SHARED_PTR<RobotRaconteurNode> GetNode();
-
-		virtual std::vector<NodeDiscoveryInfo> GetDetectedNodes(const std::vector<std::string>& schemes);
 
 		virtual void AsyncGetDetectedNodes(const std::vector<std::string>& schemes, boost::function<void(RR_SHARED_PTR<std::vector<NodeDiscoveryInfo> >)>& handler, int32_t timeout=RR_TIMEOUT_INFINITE);
 

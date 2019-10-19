@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "Discovery_private.h"
 #include "Subscription_private.h"
 
@@ -1143,14 +1139,6 @@ namespace RobotRaconteur
 			update->AsyncUpdateServiceInfo(storage, storage->info->ServiceStateNonce, boost::bind(&Discovery::EndUpdateServiceInfo, shared_from_this(), _1, _2, _3, _4), backoff);
 		}
 
-		void Discovery::UpdateDetectedNodes(const std::vector<std::string>& schemes)
-		{
-			RR_SHARED_PTR<detail::sync_async_handler<void> > t = RR_MAKE_SHARED<detail::sync_async_handler<void> >();
-			boost::function<void()> h = boost::bind(&detail::sync_async_handler<void>::operator(), t);
-			AsyncUpdateDetectedNodes(schemes, h);
-			t->end_void();
-		}
-
 		void Discovery::AsyncUpdateDetectedNodes(const std::vector<std::string>& schemes, boost::function<void()>& handler, int32_t timeout)
 		{
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
@@ -1385,22 +1373,7 @@ namespace RobotRaconteur
 			f->AsyncFindServiceByType(servicetype, transportschemes, RR_MOVE(handler), timeout);
 
 		}
-
-		std::vector<ServiceInfo2> Discovery::FindServiceByType(const std::string &servicetype, const std::vector<std::string>& transportschemes)
-		{
-			RR_SHARED_PTR<detail::sync_async_handler<std::vector<ServiceInfo2> > > t = RR_MAKE_SHARED<detail::sync_async_handler<std::vector<ServiceInfo2> > >();
-			boost::function< void(RR_SHARED_PTR<std::vector<ServiceInfo2> >) > h = boost::bind(&detail::sync_async_handler<std::vector<ServiceInfo2> >::operator(), t, _1, RR_SHARED_PTR<RobotRaconteurException>());
-			AsyncFindServiceByType(servicetype, transportschemes, h);
-			return *t->end();
-		}
-
-		std::vector<NodeInfo2> Discovery::FindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes)
-		{
-			RR_SHARED_PTR<detail::sync_async_handler<std::vector<NodeInfo2> > > n = RR_MAKE_SHARED<detail::sync_async_handler<std::vector<NodeInfo2> > >();
-			boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) > h = boost::bind(&detail::sync_async_handler<std::vector<NodeInfo2> >::operator(), n, _1, RR_SHARED_PTR<RobotRaconteurException>());
-			AsyncFindNodeByID(id, transportschemes, h);
-			return *n->end();
-		}
+	
 
 		void Discovery::AsyncFindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout)
 		{
@@ -1464,15 +1437,7 @@ namespace RobotRaconteur
 			detail::InvokeHandler(node, handler, ret);
 
 		}
-
-		std::vector<NodeInfo2> Discovery::FindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes)
-		{
-			RR_SHARED_PTR<detail::sync_async_handler<std::vector<NodeInfo2> > > n = RR_MAKE_SHARED<detail::sync_async_handler<std::vector<NodeInfo2> > >();
-			boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) > h = boost::bind(&detail::sync_async_handler<std::vector<NodeInfo2> >::operator(), n, _1, RR_SHARED_PTR<RobotRaconteurException>());
-			AsyncFindNodeByName(name, transportschemes, h);
-			return *n->end();
-		}
-
+		
 		void Discovery::AsyncFindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout)
 		{
 			boost::function<void()> h = boost::bind(&Discovery::EndAsyncFindNodeByName, shared_from_this(), name, transportschemes, handler);

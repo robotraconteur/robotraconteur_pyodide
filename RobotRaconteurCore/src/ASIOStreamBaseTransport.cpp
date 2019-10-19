@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "ASIOStreamBaseTransport.h"
 #include "RobotRaconteur/Message.h"
 #include "RobotRaconteur/IOUtils.h"
@@ -2464,17 +2460,6 @@ NodeID ASIOStreamBaseTransport::GetRemoteNodeID()
 {
 	boost::shared_lock<boost::shared_mutex> lock(RemoteNodeID_lock);
 	return RemoteNodeID;
-}
-
-void ASIOStreamBaseTransport::SendMessage(RR_INTRUSIVE_PTR<Message> m)
-{
-	RR_SHARED_PTR<detail::sync_async_handler<void> > s=RR_MAKE_SHARED<detail::sync_async_handler<void> >(RR_MAKE_SHARED<ConnectionException>("Send timeout"));
-	
-	boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&detail::sync_async_handler<void>::operator(), s, _1);
-	AsyncSendMessage(m, h);
-
-	s->end_void();
-	
 }
 
 bool ASIOStreamBaseTransport::IsLargeTransferAuthorized()

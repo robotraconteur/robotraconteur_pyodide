@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/Endpoint.h"
 #include "RobotRaconteur/RobotRaconteurNode.h"
 #include "RobotRaconteur/DataTypes.h"
@@ -142,91 +138,12 @@ void Endpoint::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<voi
 	GetNode()->AsyncSendMessage(m,callback);
 }
 
-void Endpoint::SendMessage(RR_INTRUSIVE_PTR<Message> m)
-	{
-		if (!m->header)
-			m->header = CreateMessageHeader();
-		if (m->entries.size()==1 && m->entries.at(0)->EntryType <=500)
-		{
-			m->header->ReceiverNodeName = GetRemoteNodeName();
-			m->header->SenderNodeName = GetNode()->NodeName();
-		}
-		m->header->SenderEndpoint = GetLocalEndpoint();
-		m->header->ReceiverEndpoint = GetRemoteEndpoint();
-
-		m->header->SenderNodeID = GetNode()->NodeID();
-		m->header->ReceiverNodeID = GetRemoteNodeID();
-
-
-		
-		{			
-			m->header->MessageID = MessageNumber.load();
-
-			MessageNumber = static_cast<uint16_t>((MessageNumber == (static_cast<uint16_t>(std::numeric_limits<uint16_t>::max()))) ? 0 : MessageNumber + 1);
-		}
-
-		SetLastMessageSentTime(boost::posix_time::microsec_clock::universal_time());
-
-		GetNode()->SendMessage(m);
-
-
-
-	}
 
 	void Endpoint::PeriodicCleanupTask()
 	{
 
 	}
-
-	void Endpoint::CheckEndpointCapabilityMessage(RR_INTRUSIVE_PTR<Message> m)
-	{
-		uint32_t capability = 0;
-		RR_INTRUSIVE_PTR<MessageEntry> e;
-
-		RR_INTRUSIVE_PTR<Message> ret = CreateMessage();
-		ret->header = CreateMessageHeader();
-		ret->header->ReceiverNodeName = m->header->SenderNodeName;
-		ret->header->SenderNodeName = GetNode()->NodeName();
-		ret->header->ReceiverNodeID = m->header->SenderNodeID;
-		ret->header->ReceiverEndpoint = m->header->SenderEndpoint;
-		ret->header->SenderEndpoint = m->header->ReceiverEndpoint;
-		ret->header->SenderNodeID = GetNode()->NodeID();
-
-		RR_INTRUSIVE_PTR<MessageEntry> eret; 
-
-		try
-		{
-			eret= ret->AddEntry(MessageEntryType_EndpointCheckCapabilityRet, m->entries.at(0)->MemberName);
-			if (m->entries.empty())
-				throw InvalidArgumentException("");
-
-			e = m->entries.at(0);
-
-			
-			eret->RequestID = e->RequestID;
-			eret->ServicePath = e->ServicePath;
-
-			if (e->EntryType != MessageEntryType_EndpointCheckCapability)
-				throw InvalidArgumentException("");
-			std::string name = e->MemberName;
-			capability = EndpointCapability(name);
-			
-
-			eret->AddElement("return", ScalarToRRArray<uint32_t>(capability));
-		}
-		catch (std::exception& e)
-		{
-			RobotRaconteurExceptionUtil::ExceptionToMessageEntry(e,eret);
-
-
-		}
-
-
-		SendMessage(ret);
-
-
-	}
-
+	
 	uint32_t Endpoint::EndpointCapability(const std::string &name)
 	{
 		return static_cast<uint32_t>(0);

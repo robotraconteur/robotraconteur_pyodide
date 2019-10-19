@@ -68,8 +68,6 @@ namespace detail
 
 		void NodeDetected(const NodeDiscoveryInfo& info);
 
-		void UpdateDetectedNodes(const std::vector<std::string>& schemes);
-
 		void AsyncUpdateDetectedNodes(const std::vector<std::string>& schemes, boost::function<void()>& handler, int32_t timeout = 5000);
 
 		uint32_t GetNodeDiscoveryMaxCacheCount();
@@ -77,16 +75,10 @@ namespace detail
 			
 		void CleanDiscoveredNodes();
 		
-		std::vector<ServiceInfo2> FindServiceByType(const std::string &servicetype, const std::vector<std::string>& transportschemes);
-
 		void AsyncFindServiceByType(const std::string &servicetype, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<ServiceInfo2> >) >& handler, int32_t timeout = 5000);
 
-		std::vector<NodeInfo2> FindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes);
-
 		void AsyncFindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout = 5000);
-
-		std::vector<NodeInfo2> FindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes);
-
+		
 		void AsyncFindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout = 5000);
 
 		RR_SHARED_PTR<RobotRaconteurNode> GetNode();

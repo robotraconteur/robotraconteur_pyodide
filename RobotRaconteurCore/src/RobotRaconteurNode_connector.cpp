@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteurNode_connector_private.h"
 
 #include <boost/foreach.hpp>
@@ -24,7 +20,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include "RobotRaconteur/Client.h"
-#include "RobotRaconteur/Service.h"
 
 namespace RobotRaconteur
 {
@@ -73,7 +68,7 @@ namespace RobotRaconteur
 			connecting = true;
 			transport_connected = false;
 			this->node = node;
-			delay_event = node->CreateAutoResetEvent();
+			//delay_event = node->CreateAutoResetEvent();
 		}
 		
 		void RobotRaconteurNode_connector::handle_error(const int32_t& key, RR_SHARED_PTR<RobotRaconteurException> err)
@@ -136,7 +131,7 @@ namespace RobotRaconteur
 				connect_timer.reset();
 			}
 
-			delay_event->Set();
+			//delay_event->Set();
 						
 			detail::InvokeHandlerWithException(node, handler, err);
 			
@@ -178,7 +173,7 @@ namespace RobotRaconteur
 
 				if (c)
 				{
-					delay_event->Set();
+					//delay_event->Set();
 					detail::InvokeHandlerWithException(node, handler, err);
 				}
 
@@ -219,7 +214,7 @@ namespace RobotRaconteur
 
 				try
 				{
-					delay_event->Set();
+					//delay_event->Set();
 					ep->release();
 					if (listener != 0)
 						rr_cast<ServiceStub>(client)->GetContext()->ClientServiceListener.connect(listener);
@@ -358,10 +353,10 @@ namespace RobotRaconteur
 					connect_timer.reset();
 				}
 
-				if (delay_event)
+				/*if (delay_event)
 				{
 					delay_event->Set();
-				}
+				}*/
 								
 				detail::InvokeHandlerWithException(node, handler, RR_MAKE_SHARED<ConnectionException>("Connection timed out"));
 				
@@ -401,7 +396,10 @@ namespace RobotRaconteur
 				while (urls.size() > 0)
 				{
 					std::string url = node->SelectRemoteNodeURL(urls);
-					urls.erase(std::remove(urls.begin(), urls.end(), url), urls.end());
+					//urls.erase(std::remove(urls.begin(), urls.end(), url), urls.end());
+
+					// TODO: check multiple URLs
+					urls.clear();
 
 					RR_SHARED_PTR<Transport> t = connectors.at(url).lock();
 					if (!t) continue;
@@ -439,7 +437,7 @@ namespace RobotRaconteur
 					}
 
 					//node->Sleep(boost::posix_time::milliseconds(15));
-					delay_event->WaitOne(15);
+					//delay_event->WaitOne(15);
 
 					{
 						boost::mutex::scoped_lock lock(connecting_lock);

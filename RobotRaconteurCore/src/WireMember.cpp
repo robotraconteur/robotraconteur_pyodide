@@ -12,13 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/WireMember.h"
 #include "RobotRaconteur/Client.h"
-#include "RobotRaconteur/Service.h"
 #include "RobotRaconteur/DataTypes.h"
 
 #include "WireMember_private.h"
@@ -78,26 +73,18 @@ namespace RobotRaconteur
 		return out;
 	}
 
-	void WireConnectionBase::Close()
-	{
-		RR_SHARED_PTR<detail::sync_async_handler<void> > t=RR_MAKE_SHARED<detail::sync_async_handler<void > >();
-		AsyncClose(boost::bind(&detail::sync_async_handler<void>::operator(),t,_1),GetNode()->GetRequestTimeout());
-		t->end_void();
-	}
-
 	void WireConnectionBase::AsyncClose(RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
 		{
 			boost::mutex::scoped_lock lock(outval_lock);
 			send_closed = true;
-			outval_wait.notify_all();
+			
 			GetParent()->AsyncClose(shared_from_this(), false, endpoint, RR_MOVE(handler), timeout);
 		}
 
 		{
 			boost::mutex::scoped_lock lock(inval_lock);
 			recv_closed = true;
-			inval_wait.notify_all();
 		}		
 	}
 
@@ -138,8 +125,7 @@ namespace RobotRaconteur
 					boost::mutex::scoped_lock lock2(inval_lock);
 					inval = packet;
 					lasttime_recv = timespec;
-					inval_valid = true;
-					inval_wait.notify_all();
+					inval_valid = true;					
 				}
 
 				
@@ -169,14 +155,12 @@ namespace RobotRaconteur
 	{
 		{
 			boost::mutex::scoped_lock lock(outval_lock);
-			send_closed = true;
-			outval_wait.notify_all();
+			send_closed = true;			
 		}
 
 		{
 			boost::mutex::scoped_lock lock(inval_lock);
-			recv_closed = true;
-			inval_wait.notify_all();
+			recv_closed = true;			
 		}
 
 		try
@@ -252,9 +236,7 @@ namespace RobotRaconteur
 			boost::mutex::scoped_lock lock2(outval_lock);
 			outval = value;
 			lasttime_send = time;
-			outval_valid = true;
-			outval_wait.notify_all();
-			
+			outval_valid = true;			
 		}
 	}
 
@@ -288,40 +270,6 @@ namespace RobotRaconteur
 		return outval_valid;
 	}
 
-	bool WireConnectionBase::WaitInValueValid(int32_t timeout)
-	{
-		boost::mutex::scoped_lock lock2(inval_lock);
-		if (inval_valid) return true;
-		if (timeout == 0) return inval_valid;
-		if (recv_closed) return false;
-		if (timeout < 0)
-		{
-			inval_wait.wait(lock2);
-		}
-		else
-		{
-			inval_wait.wait_for(lock2, boost::chrono::milliseconds(timeout));
-		}
-		return inval_valid;
-	}
-
-	bool WireConnectionBase::WaitOutValueValid(int32_t timeout)
-	{
-		boost::mutex::scoped_lock lock2(outval_lock);
-		if (outval_valid) return true;
-		if (timeout == 0) return outval_valid;
-		if (send_closed) return false;
-		if (timeout < 0)
-		{
-			outval_wait.wait(lock2);
-		}
-		else
-		{
-			outval_wait.wait_for(lock2, boost::chrono::milliseconds(timeout));
-		}
-		return outval_valid;
-	}
-
 	bool WireConnectionBase::GetIgnoreInValue()
 	{
 		boost::mutex::scoped_lock lock2(inval_lock);
@@ -344,14 +292,12 @@ namespace RobotRaconteur
 	{
 		{
 			boost::mutex::scoped_lock lock(outval_lock);
-			send_closed = true;
-			outval_wait.notify_all();
+			send_closed = true;			
 		}
 
 		{
 			boost::mutex::scoped_lock lock(inval_lock);
-			recv_closed = true;
-			inval_wait.notify_all();
+			recv_closed = true;			
 		}
 
 		RobotRaconteurNode::TryPostToThreadPool(node, boost::bind(&WireConnectionBase::fire_WireClosedCallback, shared_from_this()),true);
@@ -478,6 +424,8 @@ namespace RobotRaconteur
 		return m_MemberName;
 	}
 
+	static void empty_close_handler(RR_SHARED_PTR<RobotRaconteurException> err) {}
+
 	void WireClientBase::WirePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e)
 	{
 		//boost::shared_lock<boost::shared_mutex> lock2(stub_lock);
@@ -487,7 +435,7 @@ namespace RobotRaconteur
 				try
 				{
 					boost::mutex::scoped_lock lock (connection_lock);
-					connection->Close();
+					connection->AsyncClose(&empty_close_handler,GetNode()->GetRequestTimeout());
 					connection.reset();
 				}
 				catch (std::exception&)
@@ -633,11 +581,7 @@ namespace RobotRaconteur
 		}
 	}
 
-	std::string WireServerBase::GetMemberName()
-	{
-		return m_MemberName;
-	}
-
+	
 	WireClientBase::WireClientBase(const std::string& name, RR_SHARED_PTR<ServiceStub> stub, MemberDefinition_Direction direction)
 	{
 		this->stub=stub;
@@ -646,27 +590,6 @@ namespace RobotRaconteur
 		this->direction = direction;
 	}
 
-	RR_INTRUSIVE_PTR<RRValue> WireClientBase::PeekInValueBase(TimeSpec& ts)
-	{
-		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePeekInValueReq, GetMemberName());
-		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> mr = GetStub()->ProcessRequest(m);
-		return UnpackPacket(mr, ts);		
-	}
-
-	RR_INTRUSIVE_PTR<RRValue> WireClientBase::PeekOutValueBase(TimeSpec& ts)
-	{
-		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePeekOutValueReq, GetMemberName());
-		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> mr = GetStub()->ProcessRequest(m);
-		return UnpackPacket(mr, ts);
-	}
-
-	void WireClientBase::PokeOutValueBase(RR_INTRUSIVE_PTR<RRValue> value)
-	{
-		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(value, TimeSpec::Now(), GetStub()->GetContext()->UseMessage3());
-		m->EntryType = MessageEntryType_WirePokeOutValueReq;
-		m->MetaData = "";		
-		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> mr = GetStub()->ProcessRequest(m);
-	}
 
 	void WireClientBase::AsyncPeekValueBaseEnd1(RR_INTRUSIVE_PTR<MessageEntry> m, RR_SHARED_PTR<RobotRaconteurException> err, 
 		boost::function< void(const RR_INTRUSIVE_PTR<RRValue>&, const TimeSpec&, RR_SHARED_PTR<RobotRaconteurException>) >& handler)
@@ -736,425 +659,6 @@ namespace RobotRaconteur
 		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase_AsyncPokeValueBaseEnd, _1, _2, handler), timeout);
 	}
 
-	void WireServerBase::WirePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e)
-	{
-		if (m->EntryType == MessageEntryType_WirePacket)
-		{
-			try
-			{
-				RR_SHARED_PTR<WireConnectionBase> c;
-				{
-					boost::mutex::scoped_lock lock(connections_lock);
-					RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<WireConnectionBase> >::iterator e1 = connections.find(e);
-					if (e1 == connections.end()) return;
-					c = e1->second;
-				}
-				DispatchPacket(m, c);
-			}
-			catch (std::exception&)
-			{				
-			}
 
-		}
-	}
-
-	void WireServerBase::ClientDisconnected(RR_SHARED_PTR<ServerContext> context, ServerServiceListenerEventType ev, RR_SHARED_PTR<void> param)
-{
 	
-	if (ev==ServerServiceListenerEventType_ClientDisconnected)
-	{
-		uint32_t ep=*RR_STATIC_POINTER_CAST<uint32_t>(param);
-		
-		std::vector<RR_SHARED_PTR<WireConnectionBase> > c;
-		{
-			boost::mutex::scoped_lock lock(connections_lock);
-			for (RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<WireConnectionBase> >::iterator ee= connections.begin(); ee!=connections.end(); )
-			{
-				if (ee->first==ep)
-				{
-					//ee->second->RemoteClose();
-					c.push_back(ee->second);
-					ee=connections.erase(ee);
-				
-				
-				
-				}
-				else
-				{
-					++ee;
-				}
-			}
-		}
-		
-		BOOST_FOREACH (RR_SHARED_PTR<WireConnectionBase> ee, c)
-		{
-			try
-			{
-				ee->fire_WireClosedCallback();
-			}
-			catch (std::exception& exp) 
-			{
-				RobotRaconteurNode::TryHandleException(node, &exp);
-			}
-			
-		}
-		
-	}
-}
-
-	void WireServerBase::Shutdown()
-	{
-		
-
-		std::vector<RR_SHARED_PTR<WireConnectionBase> > c;
-		{
-			boost::mutex::scoped_lock lock(connections_lock);
-		
-			boost::copy(connections | boost::adaptors::map_values, std::back_inserter(c));
-			
-			connections.clear();
-		}
-		BOOST_FOREACH (RR_SHARED_PTR<WireConnectionBase>& e, c)
-		{
-			try
-			{
-				RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WireClosed, GetMemberName());
-
-				GetSkel()->SendWireMessage(m, e->GetEndpoint());
-			}
-			catch (std::exception&)
-			{
-			}
-
-			try
-			{
-				e->Shutdown();
-			}
-			catch (std::exception& exp) 
-			{
-				RobotRaconteurNode::TryHandleException(node, &exp);
-			}
-		}
-		
-		//skel.reset();;
-
-		listener_connection.disconnect();		
-	}
-
-	RR_SHARED_PTR<ServiceSkel> WireServerBase::GetSkel()
-	{
-		RR_SHARED_PTR<ServiceSkel> out=skel.lock();
-		if (!out) throw InvalidOperationException("Wire connection has been closed");
-		return out;
-	}
-
-	void WireServerBase::SendWirePacket(RR_INTRUSIVE_PTR<RRValue> packet, TimeSpec time, uint32_t e, bool message3 )
-	{
-		{
-		boost::mutex::scoped_lock lock(connections_lock);
-		if (connections.find(e) == connections.end())
-			throw InvalidOperationException("Wire has been disconnected");
-		}
-		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(packet, time, message3);		
-		
-		GetSkel()->SendWireMessage(m, e);
-	}
-
-	void WireServerBase::AsyncClose(RR_SHARED_PTR<WireConnectionBase> c, bool remote, uint32_t ee, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
-	{
-		
-		if (!remote)
-		{
-		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WireClosed, GetMemberName());
-
-		GetSkel()->SendWireMessage(m, ee);
-		}
-
-		try
-		{
-
-			
-			{
-				boost::mutex::scoped_lock lock (connections_lock);
-				if (connections.find(c->GetEndpoint()) != connections.end())
-					connections.erase(c->GetEndpoint());
-			}
-		}
-		catch (std::exception&)
-		{
-		}
-
-		
-		detail::PostHandler(node, handler, true);		
-	}
-
-	void wire_server_client_disconnected(RR_SHARED_PTR<ServerContext> context, ServerServiceListenerEventType ev, RR_SHARED_PTR<void> param,RR_WEAK_PTR<WireServerBase> w)
-	{
-		RR_SHARED_PTR<WireServerBase> p=w.lock();
-		if (!p) return;
-		p->ClientDisconnected(context,ev,param);
-
-	}
-
-	RR_INTRUSIVE_PTR<MessageEntry> WireServerBase::WireCommand(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e)
-	{
-
-		
-		{
-			boost::mutex::scoped_lock lock(connections_lock);
-			switch (m->EntryType)
-			{
-				case MessageEntryType_WireConnectReq:
-				{
-					if (!init)
-					{
-						RR_WEAK_PTR<WireServerBase> weak= RR_DYNAMIC_POINTER_CAST<WireServerBase>(shared_from_this());
-						listener_connection=GetSkel()->GetContext()->ServerServiceListener.connect(boost::bind(&wire_server_client_disconnected,_1,_2,_3,weak));
-						init=true;
-					}
-
-
-					if (connections.find(e) == connections.end())
-					{
-						// Switch connection direction since this is the server
-						MemberDefinition_Direction ep_direction = direction;
-						if (direction == MemberDefinition_Direction_readonly) ep_direction = MemberDefinition_Direction_writeonly;
-						if (direction == MemberDefinition_Direction_writeonly) ep_direction = MemberDefinition_Direction_readonly;
-
-						connections.insert(std::make_pair(e, CreateNewWireConnection(e, ep_direction, GetSkel()->GetContext()->UseMessage3(e))));
-					}
-						RR_SHARED_PTR<WireConnectionBase> con = connections.at(e);
-						lock.unlock();
-						fire_WireConnectCallback(con);
-
-						RR_INTRUSIVE_PTR<MessageEntry> ret = CreateMessageEntry(MessageEntryType_WireConnectRet, GetMemberName());
-						return ret;
-				}
-				case MessageEntryType_WireDisconnectReq:
-				{
-					RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<WireConnectionBase> >::iterator e1 = connections.find(e);
-						if (e1 == connections.end())
-							throw ServiceException("Invalid wire connection");
-						RR_SHARED_PTR<WireConnectionBase> c = e1->second;
-						lock.unlock();
-						c->RemoteClose();
-						//connections.erase(e);
-						return CreateMessageEntry(MessageEntryType_WireDisconnectRet, GetMemberName());
-				}
-				case MessageEntryType_WirePeekInValueReq:
-				{
-					if (direction == MemberDefinition_Direction_writeonly)
-						throw WriteOnlyMemberException("Write only member");
-					RR_INTRUSIVE_PTR<RRValue> value = do_PeekInValue(e);					
-					RR_INTRUSIVE_PTR<MessageEntry> mr = PackPacket(value, TimeSpec::Now(), GetSkel()->GetContext()->UseMessage3(e));
-					mr->EntryType = MessageEntryType_WirePeekInValueRet;
-					mr->MetaData = "";
-					return mr;
-				}
-				case MessageEntryType_WirePeekOutValueReq:
-				{
-					if (direction == MemberDefinition_Direction_readonly)
-						throw ReadOnlyMemberException("Read only member");
-					RR_INTRUSIVE_PTR<RRValue> value = do_PeekOutValue(e);
-					RR_INTRUSIVE_PTR<MessageEntry> mr = PackPacket(value, TimeSpec::Now(), GetSkel()->GetContext()->UseMessage3(e));
-					mr->EntryType = MessageEntryType_WirePeekOutValueRet;
-					mr->MetaData = "";
-					return mr;
-				}
-				case MessageEntryType_WirePokeOutValueReq:
-				{
-					if (direction == MemberDefinition_Direction_readonly)
-						throw ReadOnlyMemberException("Read only member");
-					TimeSpec ts;
-					RR_INTRUSIVE_PTR<RRValue> value1 = UnpackPacket(m, ts);
-					do_PokeOutValue(value1, ts, e);
-					return CreateMessageEntry(MessageEntryType_WirePokeOutValueRet, GetMemberName());
-				}
-
-				default:
-					throw InvalidOperationException("Invalid Command");
-
-
-
-			}
-		}
-
-
-	}
-
-	WireServerBase::WireServerBase(const std::string& name, RR_SHARED_PTR<ServiceSkel> skel, MemberDefinition_Direction direction)
-	{
-		this->skel=skel;
-		this->m_MemberName=name;
-		this->init=false;
-		this->node=skel->RRGetNode();
-		this->direction = direction;
-
-	}
-
-	// WireBroadcasterBase
-	namespace detail
-	{
-		class WireBroadcaster_connected_connection
-		{
-		public:
-
-			WireBroadcaster_connected_connection(RR_SHARED_PTR<WireConnectionBase > connection)
-			{
-				this->connection = connection;
-			}
-
-			RR_WEAK_PTR<WireConnectionBase> connection;
-
-		};
-	}
-
-	WireBroadcasterBase::~WireBroadcasterBase()
-	{
-
-	}
-
-	WireBroadcasterBase::WireBroadcasterBase()
-	{
-		copy_element = false;
-	}
-
-	void WireBroadcasterBase::InitBase(RR_SHARED_PTR<WireBase> wire)
-	{
-		RR_SHARED_PTR<WireServerBase> wire1 = RR_DYNAMIC_POINTER_CAST<WireServerBase>(wire);
-		if (!wire1) throw InvalidArgumentException("Wire must be a WireServer for WireBroadcaster");
-
-		this->wire = wire1;
-		this->node = wire->GetNode();
-
-		AttachWireServerEvents(wire1);
-
-		wire1->GetSkel()->GetContext()->ServerServiceListener.connect(
-			boost::signals2::signal<void(RR_SHARED_PTR<ServerContext>, ServerServiceListenerEventType, RR_SHARED_PTR<void>)>::slot_type(
-				boost::bind(&WireBroadcasterBase::ServiceEvent, this, _2)
-			).track(shared_from_this())
-		);
-	}
-
-	void WireBroadcasterBase::ServiceEvent(ServerServiceListenerEventType evt)
-	{
-		if (evt != ServerServiceListenerEventType_ServiceClosed) return;
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-		predicate.clear();
-	}
-
-	void WireBroadcasterBase::ConnectionClosedBase(RR_SHARED_PTR<detail::WireBroadcaster_connected_connection> ep)
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-		try
-		{
-			connected_wires.remove(ep);
-		}
-		catch (std::exception&) {}
-	}
-
-	void WireBroadcasterBase::ConnectionConnectedBase(RR_SHARED_PTR<WireConnectionBase > ep)
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-		ep->SetIgnoreInValue(true);
-
-		RR_SHARED_PTR<detail::WireBroadcaster_connected_connection> c = RR_MAKE_SHARED<detail::WireBroadcaster_connected_connection>(ep);
-
-		AttachWireConnectionEvents(ep, c);
-
-		connected_wires.push_back(c);
-	}
-
-	void WireBroadcasterBase::SetOutValueBase(RR_INTRUSIVE_PTR<RRValue> value)
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-
-		out_value = value;
-		out_value_valid.data() = true;
-
-		RR_SHARED_PTR<WireBroadcasterBase> this_ = shared_from_this();
-
-		for (std::list<RR_SHARED_PTR<detail::WireBroadcaster_connected_connection> >::iterator ee = connected_wires.begin(); ee != connected_wires.end(); )
-		{
-			try
-			{
-				RR_SHARED_PTR<WireConnectionBase > c = (*ee)->connection.lock();
-				if (!c)
-				{
-					ee = connected_wires.erase(ee);
-					continue;
-				}
-				else
-				{
-					if (predicate)
-					{
-						if (!predicate(this_, c->GetEndpoint()))
-						{
-							ee++;
-							continue;
-						}
-					}
-					
-					if (!copy_element)
-					{
-						c->SetOutValueBase(value);
-					}
-					else
-					{
-						RR_INTRUSIVE_PTR<MessageElement> value2 = ShallowCopyMessageElement(rr_cast<MessageElement>(value));
-						c->SetOutValueBase(value2);
-					}
-					ee++;
-				}
-			}
-			catch (std::exception&)
-			{
-				ee = connected_wires.erase(ee);
-			}
-		}
-
-	}
-
-	size_t WireBroadcasterBase::GetActiveWireConnectionCount()
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-		return connected_wires.size();
-	}
-
-	void WireBroadcasterBase::AttachWireServerEvents(RR_SHARED_PTR<WireServerBase> p)
-	{
-
-	}
-
-	void WireBroadcasterBase::AttachWireConnectionEvents(RR_SHARED_PTR<WireConnectionBase> p, RR_SHARED_PTR<detail::WireBroadcaster_connected_connection> cep)
-	{
-
-	}
-
-	boost::function<bool(RR_SHARED_PTR<WireBroadcasterBase>&, uint32_t)> WireBroadcasterBase::GetPredicate()
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-		return predicate;
-	}
-	void WireBroadcasterBase::SetPredicate(boost::function<bool(RR_SHARED_PTR<WireBroadcasterBase>&, uint32_t)> f)
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);
-		predicate = f;
-	}
-
-	RR_INTRUSIVE_PTR<RRValue> WireBroadcasterBase::ClientPeekInValueBase()
-	{
-		boost::mutex::scoped_lock lock(connected_wires_lock);		
-		if (!out_value_valid) throw ValueNotSetException("Value not set");
-		return out_value;
-	}
-
-	RR_SHARED_PTR<WireBase> WireBroadcasterBase::GetWireBase()
-	{
-		RR_SHARED_PTR<WireBase> wire1 = wire.lock();
-		if (!wire1) throw InvalidOperationException("Wire released");
-		return wire1;
-	}
-
-
 }

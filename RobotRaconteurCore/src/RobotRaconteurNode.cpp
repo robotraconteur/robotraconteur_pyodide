@@ -12,16 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "RobotRaconteur/RobotRaconteurNode.h"
 #include <boost/algorithm/string.hpp>
 #include "RobotRaconteur/Client.h"
-#include "RobotRaconteur/Service.h"
 #include "RobotRaconteur/RobotRaconteurServiceIndex.h"
-#include "RobotRaconteur/ServiceIndexer.h"
 #include "RobotRaconteur/DataTypes.h"
 #include <boost/regex.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -75,11 +69,6 @@ void RobotRaconteurNode::Init()
 		boost::mutex::scoped_lock lock(random_generator_lock);
 		random_generator = RR_MAKE_SHARED<boost::random::random_device>();
 	}
-
-	RegisterServiceType(RR_MAKE_SHARED<RobotRaconteurServiceIndex::RobotRaconteurServiceIndexFactory>());
-	RegisterService("RobotRaconteurServiceIndex","RobotRaconteurServiceIndex",RR_MAKE_SHARED<ServiceIndexer>(shared_from_this()));
-	
-	service_state_nonce = GetRandomString(16);
 
 	instance_is_init=true;
 
@@ -604,23 +593,6 @@ void RobotRaconteurNode::Shutdown()
 			is_shutdown = true;
 		}
 
-
-
-		{
-			boost::unique_lock<boost::shared_mutex> lock(services_lock);
-
-			BOOST_FOREACH (RR_SHARED_PTR<ServerContext>& e, services | boost::adaptors::map_values)
-			{
-				try
-				{
-					e->Close();
-				}
-				catch (std::exception&) {}
-			}
-	
-			services.clear();
-		}
-
 		std::vector<RR_SHARED_PTR<Endpoint> > endpointsv;
 		{
 			boost::mutex::scoped_lock lock(endpoint_lock);
@@ -951,535 +923,6 @@ RR_INTRUSIVE_PTR<Message> RobotRaconteurNode::GenerateErrorReturnMessage(RR_INTR
 	return ret;
 }
 
-RR_SHARED_PTR<ServerContext> RobotRaconteurNode::RegisterService(const std::string &name, const std::string &servicetype,  RR_SHARED_PTR<RRObject> obj, RR_SHARED_PTR<ServiceSecurityPolicy> securitypolicy)
-{
-		
-	if(!boost::regex_match(name,boost::regex("^[a-zA-Z][a-zA-Z0-9_]*$")))
-	{
-		throw InvalidArgumentException("\"" + name + "\" is an invalid NodeName");
-	}
-
-	RR_SHARED_PTR<ServerContext> c;
-	
-	{
-		boost::unique_lock<boost::shared_mutex> lock(services_lock);
-
-		if (services.count(name)!=0)
-		{
-			throw InvalidOperationException("Service name in use");
-		}
-
-		c = RR_MAKE_SHARED<ServerContext>(GetServiceType(servicetype),shared_from_this());
-		c->SetBaseObject(name, obj, securitypolicy);
-
-		//RegisterEndpoint(c);
-		services.insert(make_pair(name, c));		
-	}
-
-	UpdateServiceStateNonce();
-
-	return c;
-}
-
-RR_SHARED_PTR<ServerContext> RobotRaconteurNode::RegisterService(RR_SHARED_PTR<ServerContext> c)
-{
-		
-	if(!boost::regex_match(c->GetServiceName(),boost::regex("^[a-zA-Z][a-zA-Z0-9_]*$")))
-	{
-		throw InvalidArgumentException("\"" + c->GetServiceName() + "\" is an invalid NodeName");
-	}
-		
-	{
-		boost::unique_lock<boost::shared_mutex> lock(services_lock);
-		if (services.count(c->GetServiceName())!=0)
-		{
-			CloseService(c->GetServiceName());
-		}
-
-		services.insert(std::make_pair(c->GetServiceName(), c));		
-	}
-		
-	UpdateServiceStateNonce();
-
-	return c;
-}
-
-void RobotRaconteurNode::CloseService(const std::string &sname)
-{
-		
-	RR_SHARED_PTR<ServerContext> s;
-	{
-		boost::unique_lock<boost::shared_mutex> lock(services_lock);
-		RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServerContext> >::iterator e1 = services.find(sname);
-		if (e1 == services.end()) throw ServiceException("Service not found");
-		s = e1->second;
-		s->Close();
-		//DeleteEndpoint(s);
-		services.erase(sname);
-	}
-}
-
-
-std::vector<std::string> RobotRaconteurNode::GetRegisteredServiceNames()
-{
-	boost::shared_lock<boost::shared_mutex> lock(services_lock);
-	std::vector<std::string> o;	
-	BOOST_FOREACH (RR_SHARED_PTR<ServerContext>& e, services | boost::adaptors::map_values)
-	{
-		o.push_back(e->GetServiceName());
-	}
-
-	return o;
-}
-
-
-RR_SHARED_PTR<ServerContext> RobotRaconteurNode::GetService(const std::string &name)
-{
-			
-	boost::shared_lock<boost::shared_mutex> lock(services_lock);
-	RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServerContext> >::iterator e1 = services.find(name);
-	if (e1 != services.end())
-	{
-		return e1->second;
-	}
-		
-	throw ServiceNotFoundException("Service " + name + " not found");	
-}
-
-
-RR_INTRUSIVE_PTR<Message> RobotRaconteurNode::SpecialRequest(RR_INTRUSIVE_PTR<Message> m, uint32_t transportid, RR_SHARED_PTR<ITransportConnection> tc)
-{
-
-
-	if (!(m->header->ReceiverNodeID == NodeID().GetAny() && (m->header->ReceiverNodeName == "" || m->header->ReceiverNodeName == NodeName())) && !(m->header->ReceiverNodeID == NodeID()))
-	{		
-		return GenerateErrorReturnMessage(m, MessageErrorType_NodeNotFound, "RobotRaconteur.NodeNotFound", "Could not find route to remote node");
-	}
-
-
-	if (m->header->ReceiverEndpoint != 0 && m->entries.size() == 1 && m->entries.at(0)->EntryType == MessageEntryType_ObjectTypeName)
-	{
-		//Workaround for security of getting object types
-		MessageReceived(m);
-		return RR_INTRUSIVE_PTR<Message>();
-
-	}
-
-	RR_INTRUSIVE_PTR<Message> ret = CreateMessage();
-	ret->header = CreateMessageHeader();
-	ret->header->ReceiverNodeName = m->header->SenderNodeName;
-	ret->header->SenderNodeName = this->NodeName();
-	ret->header->ReceiverNodeID = m->header->SenderNodeID;
-	ret->header->ReceiverEndpoint = m->header->SenderEndpoint;
-	ret->header->SenderEndpoint = m->header->ReceiverEndpoint;
-	ret->header->SenderNodeID = this->NodeID();
-
-	BOOST_FOREACH (RR_INTRUSIVE_PTR<MessageEntry>& e, m->entries)
-	{
-		RR_INTRUSIVE_PTR<MessageEntry> eret = ret->AddEntry(static_cast<MessageEntryType>(static_cast<uint16_t>(e->EntryType)+1),e->MemberName);
-		eret->RequestID = e->RequestID;
-		eret->ServicePath = e->ServicePath;
-
-		switch (e->EntryType)
-		{
-			case MessageEntryType_GetNodeInfo:
-				break;
-			case MessageEntryType_ObjectTypeName:
-			{
-					std::string path = static_cast<std::string>(e->ServicePath);
-					
-					std::vector<std::string> s1;
-					boost::split(s1,path,boost::is_from_range('.','.'));
-					
-					try
-					{						
-						RR_SHARED_PTR<ServerContext> s;
-
-						s = GetService(s1.at(0));
-
-						RobotRaconteurVersion v;
-						RR_INTRUSIVE_PTR<MessageElement> m_ver;
-						if (e->TryFindElement("clientversion",m_ver))
-						{
-							v.FromString(m_ver->CastDataToString());
-						}
-
-						std::string objtype = s->GetObjectType(path,v);
-						eret->AddElement("objecttype", stringToRRArray(objtype));
-						
-					}
-					catch (std::exception&)
-					{
-						eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ObjectNotFoundException"));
-						eret->AddElement("errorstring", stringToRRArray("Object not found"));
-						eret->Error = MessageErrorType_ObjectNotFound;
-					}
-			}
-				break;
-			case MessageEntryType_GetServiceDesc:
-			{
-					//string name = (string)e.FindElement("servicename").Data;
-					std::string name = e->ServicePath;
-					try
-					{
-						std::string servicedef = "";
-
-						bool is_service_type=false;
-						bool is_service_type2 = false;
-
-						RR_INTRUSIVE_PTR<MessageElement> el1;
-						RR_INTRUSIVE_PTR<MessageElement> el2;
-						is_service_type=e->TryFindElement("ServiceType", el1);
-						is_service_type2=e->TryFindElement("servicetype", el2);
-
-						if (is_service_type)
-						{
-							name = el1->CastDataToString();
-							servicedef = GetServiceType(name)->DefString();
-						}
-						else if (is_service_type2)
-						{
-							name = el2->CastDataToString();
-							servicedef = GetServiceType(name)->DefString();
-						}
-						else
-						{
-							RobotRaconteurVersion v;
-							RR_INTRUSIVE_PTR<MessageElement> m_ver;
-							if (e->TryFindElement("clientversion", m_ver))
-							{
-								v.FromString(m_ver->CastDataToString());
-							}
-
-							servicedef = GetService(name)->GetRootObjectServiceDef(v)->DefString();
-							RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > attr=AllocateEmptyRRMap<std::string,RRValue>();
-							attr->GetStorageContainer()=GetService(name)->GetAttributes();
-							eret->AddElement("attributes", PackMapType<std::string, RRValue>(attr));
-						}
-						eret->AddElement("servicedef", stringToRRArray(servicedef));
-					}
-					catch (std::exception&)
-					{
-						eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceNotFoundException"));
-						eret->AddElement("errorstring", stringToRRArray("Service not found"));
-						eret->Error = MessageErrorType_ServiceNotFound;
-					}
-			}
-				break;
-			case MessageEntryType_ConnectClient:
-			{
-					std::string name = static_cast<std::string>(e->ServicePath);
-
-					try
-					{
-						RR_SHARED_PTR<ServerEndpoint> se = RR_MAKE_SHARED<ServerEndpoint>(shared_from_this());
-
-						RR_SHARED_PTR<ServerContext> c = GetService(name);
-						se->service = c;
-
-						se->SetRemoteEndpoint ( m->header->SenderEndpoint);
-						se->SetRemoteNodeID ( m->header->SenderNodeID);
-						RegisterEndpoint(se);
-
-						se->SetTransport( transportid);
-						se->SetTransportConnection(tc);
-
-						c->AddClient(se);
-
-						ret->header->SenderEndpoint = se->GetLocalEndpoint();
-						
-					}
-					catch (std::exception&)
-					{
-						eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceNotFoundException"));
-						eret->AddElement("errorstring", stringToRRArray("Service not found"));
-						eret->Error = MessageErrorType_ServiceNotFound;
-					}
-			}
-				break;
-			case MessageEntryType_DisconnectClient:
-			{
-
-
-					try
-					{
-						std::string name = e->FindElement("servicename")->CastDataToString();
-						RR_SHARED_PTR<ServerEndpoint> se;
-						
-						{
-							boost::mutex::scoped_lock lock(endpoint_lock);
-							se = RR_DYNAMIC_POINTER_CAST<ServerEndpoint>(endpoints.at(m->header->ReceiverEndpoint));
-							if (se==0) throw InternalErrorException("");
-						}
-
-						
-						{
-							//boost::mutex::scoped_lock lock(services_lock);
-							try
-							{
-								GetService(name)->RemoveClient(se);
-							}
-							catch (std::out_of_range&)
-							{
-								throw ServiceNotFoundException("Service " + name + " not found");
-							}
-						}
-
-
-						try
-						{
-							RobotRaconteurNode::DeleteEndpoint(se);
-						}
-						catch (std::exception&)
-						{
-						}
-						//eret.AddElement("servicedef", servicedef);
-					}
-					catch (std::exception&)
-					{
-						eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceNotFoundException"));
-						eret->AddElement("errorstring", stringToRRArray("Service not found"));
-						eret->Error = MessageErrorType_ServiceNotFound;
-					}
-			}
-				break;
-			case MessageEntryType_ConnectionTest:
-				break;
-
-			case MessageEntryType_NodeCheckCapability:
-				eret->AddElement("return", ScalarToRRArray(static_cast<uint32_t>(0)));
-				break;
-			case MessageEntryType_GetServiceAttributes:
-			{
-					std::string path = static_cast<std::string>(e->ServicePath);
-					
-					std::vector<std::string> s1;
-					boost::split(s1,path,boost::is_from_range('.','.'));
-					try
-					{
-						RR_SHARED_PTR<ServerContext> s;
-
-						s = GetService(s1.at(0));
-
-						RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > attr=AllocateEmptyRRMap<std::string, RRValue>();
-						attr->GetStorageContainer()= (s->GetAttributes());
-						eret->AddElement("return", PackMapType<std::string, RRValue>(attr));
-					}
-					catch (std::exception&)
-					{
-						eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceError"));
-						eret->AddElement("errorstring", stringToRRArray("Service not found"));
-						eret->Error = MessageErrorType_ServiceError;
-					}
-			}
-				break;
-
-
-			case MessageEntryType_ConnectClientCombined:
-			{
-				std::string name = static_cast<std::string>(e->ServicePath);
-
-				RR_SHARED_PTR<ServerContext> c;
-
-				RobotRaconteurVersion v;
-				RR_INTRUSIVE_PTR<MessageElement> m_ver;
-				if (e->TryFindElement("clientversion", m_ver))
-				{
-					v.FromString(m_ver->CastDataToString());
-				}
-
-				try
-				{
-					c = GetService(name);
-					std::string objtype= c->GetRootObjectType(v);
-					eret->AddElement("objecttype", stringToRRArray(objtype));
-				}
-				catch (std::exception&)
-				{
-					eret->elements.clear();
-					eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceNotFoundException"));
-					eret->AddElement("errorstring", stringToRRArray("Service not found"));
-					eret->Error = MessageErrorType_ServiceNotFound;
-					break;
-				}
-
-				try
-				{
-					bool returnservicedef = true;
-
-					try
-					{
-						RR_INTRUSIVE_PTR<MessageElement> returnservicedefs_el;
-						if (e->TryFindElement("returnservicedefs", returnservicedefs_el))
-						{
-							std::string returnservicedef_str = returnservicedefs_el->CastDataToString();
-							boost::trim(returnservicedef_str);
-							if (boost::to_lower_copy(returnservicedef_str) == "false" || returnservicedef_str == "0")
-							{
-								returnservicedef = false;
-							}
-						}
-					}
-					catch (std::exception&) {}
-
-
-					if (returnservicedef)
-					{
-						RR_SHARED_PTR<ServiceFactory> servicedef1 = c->GetRootObjectServiceDef(v);
-						std::map<std::string, RR_SHARED_PTR<ServiceFactory> > defs;
-						defs.insert(std::make_pair(servicedef1->GetServiceName(), servicedef1));
-
-						while (true)
-						{
-							bool new_found = false;
-							std::vector<std::string> v1;
-							boost::range::copy(defs | boost::adaptors::map_keys, std::back_inserter(v1));
-							BOOST_FOREACH(std::string& e, v1)
-							{
-								RR_SHARED_PTR<ServiceFactory> d1 = defs.at(e);
-								BOOST_FOREACH(std::string& e2, d1->ServiceDef()->Imports)
-								{
-									if (defs.find(e2) == defs.end())
-									{
-										RR_SHARED_PTR<ServiceFactory> d2 = GetServiceType(e2);
-										defs.insert(std::make_pair(d2->GetServiceName(), d2));
-										new_found = true;
-									}
-								}
-							}
-
-							if (!new_found) break;
-						}
-
-						uint32_t n = 0;
-
-						std::vector<RR_INTRUSIVE_PTR<MessageElement> > servicedef_list;
-						BOOST_FOREACH(RR_SHARED_PTR<ServiceFactory> d1, defs | boost::adaptors::map_values)
-						{
-							RR_INTRUSIVE_PTR<MessageElement> e1 = CreateMessageElement();
-							e1->ElementFlags |= MessageElementFlags_ELEMENT_NUMBER;
-							e1->ElementFlags &= ~MessageElementFlags_ELEMENT_NAME_STR;
-							e1->ElementNumber = n;
-							e1->SetData(stringToRRArray(d1->DefString()));
-							servicedef_list.push_back(e1);
-							n++;
-						}
-
-						eret->AddElement("servicedefs", CreateMessageElementList(servicedef_list));
-					}
-				}
-				catch (std::exception&)
-				{
-					eret->elements.clear();
-					eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceNotFoundException"));
-					eret->AddElement("errorstring", stringToRRArray("Service factory configuration error"));
-					eret->Error = MessageErrorType_ServiceNotFound;
-					break;
-				}
-
-				RR_SHARED_PTR<ServerEndpoint> se;
-
-				try
-				{
-
-					se = RR_MAKE_SHARED<ServerEndpoint>(shared_from_this());
-										
-					RegisterEndpoint(se);
-
-					se->service = c;
-
-					se->SetRemoteEndpoint(m->header->SenderEndpoint);
-					se->SetRemoteNodeID(m->header->SenderNodeID);
-
-					se->SetTransport(transportid);
-					se->SetTransportConnection(tc);
-
-					c->AddClient(se);
-
-					ret->header->SenderEndpoint = se->GetLocalEndpoint();
-
-				}
-				catch (std::exception&)
-				{
-					if (se)
-					{
-						try
-						{
-							DeleteEndpoint(se);
-						}
-						catch (std::exception&) {}
-					}
-
-					eret->elements.clear();
-					eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ServiceNotFoundException"));
-					eret->AddElement("errorstring", stringToRRArray("Service not found"));
-					eret->Error = MessageErrorType_ServiceNotFound;
-					break;
-				}
-
-				try
-				{
-					if (c->RequireValidUser())
-					{
-						RR_INTRUSIVE_PTR<MessageElement> username_el;
-						RR_INTRUSIVE_PTR<MessageElement> credentials_el;
-						if (!e->TryFindElement("username", username_el))
-						{
-							throw AuthenticationException("Username not provided");
-						}
-
-						if (!e->TryFindElement("credentials", credentials_el))
-						{
-							throw AuthenticationException("Credentials not provided");
-						}
-
-						RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials = rr_cast<RRMap<std::string,RRValue> >(UnpackMapType<std::string, RRValue>(credentials_el->CastData<MessageElementMap<std::string> >()));
-						if (!credentials)
-						{
-							throw AuthenticationException("Credentials cannot be null");
-						}
-
-						std::string username = username_el->CastDataToString();
-
-						se->AuthenticateUser(username, credentials->GetStorageContainer());
-					}					
-				}
-				catch (std::exception&)
-				{
-					try
-					{
-						c->RemoveClient(se);
-						DeleteEndpoint(se);
-					}
-					catch (std::exception&)
-					{
-						
-					}
-
-					eret->elements.clear();
-					eret->AddElement("errorname", stringToRRArray("RobotRaconteur.AuthenticationError"));
-					eret->AddElement("errorstring", stringToRRArray("Authentication Failed"));
-					eret->Error = MessageErrorType_AuthenticationError;
-					break;
-				}
-			}
-			break;
-
-			default:
-				eret->Error = MessageErrorType_ProtocolError;
-				eret->AddElement("errorname", stringToRRArray("RobotRaconteur.ProtocolError"));
-				eret->AddElement("errorstring", stringToRRArray("Invalid Special Operation"));
-				break;
-		}
-	}
-
-	return ret;
-}
-
-
-
-
-
 void RobotRaconteurNode::AsyncConnectService(const std::string &url, const std::string &username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials, boost::function<void (RR_SHARED_PTR<ClientContext>,ClientServiceListenerEventType,RR_SHARED_PTR<void>)> listener, const std::string& objecttype, boost::function<void(RR_SHARED_PTR<RRObject>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout)
 {
 	std::vector<std::string> urls;
@@ -1521,29 +964,6 @@ void RobotRaconteurNode::AsyncConnectService(const std::vector<std::string> &url
 		RR_SHARED_PTR<detail::RobotRaconteurNode_connector> connector=RR_MAKE_SHARED<detail::RobotRaconteurNode_connector>(shared_from_this());
 		GetThreadPool()->Post(boost::bind(&detail::RobotRaconteurNode_connector::connect, connector, connectors, username, credentials, listener, objecttype, boost::protect(handler), timeout));
 		return;	
-}
-
-RR_SHARED_PTR<RRObject> RobotRaconteurNode::ConnectService(const std::vector<std::string>& urls, const std::string &username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials, boost::function<void (RR_SHARED_PTR<ClientContext>,ClientServiceListenerEventType,RR_SHARED_PTR<void>)> listener, const std::string& objecttype)
-{
-	RR_SHARED_PTR<detail::sync_async_handler<RRObject> > h=RR_MAKE_SHARED<detail::sync_async_handler<RRObject> >(RR_MAKE_SHARED<ConnectionException>("Connection timed out"));
-	AsyncConnectService(urls,username,credentials,listener,objecttype,boost::bind(&detail::sync_async_handler<RRObject>::operator(),h,_1,_2),this->GetRequestTimeout()*2);
-	return h->end();
-}
-
-RR_SHARED_PTR<RRObject> RobotRaconteurNode::ConnectService(const std::string &url, const std::string &username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials, boost::function<void (RR_SHARED_PTR<ClientContext>,ClientServiceListenerEventType,RR_SHARED_PTR<void>)> listener, const std::string& objecttype)
-{
-	std::vector<std::string> urls;
-	urls.push_back(url);
-	return ConnectService(urls,username,credentials,listener,objecttype);
-}
-
-void RobotRaconteurNode::DisconnectService(RR_SHARED_PTR<RRObject> obj)
-{
-	if (!obj) return;
-	RR_SHARED_PTR<ServiceStub> stub = rr_cast<ServiceStub>(obj);
-	
-		stub->GetContext()->Close();
-
 }
 
 void RobotRaconteurNode::AsyncDisconnectService(RR_SHARED_PTR<RRObject> obj, boost::function<void()> handler)
@@ -1652,12 +1072,6 @@ void RobotRaconteurNode::NodeDetected(const NodeDiscoveryInfo& info)
 {
 	if (!m_Discovery) throw InvalidOperationException("Node not init");
 	m_Discovery->NodeDetected(info);
-}
-
-void RobotRaconteurNode::UpdateDetectedNodes(const std::vector<std::string>& schemes)
-{
-	if (!m_Discovery) throw InvalidOperationException("Node not init");
-	m_Discovery->UpdateDetectedNodes(schemes);
 }
 
 void RobotRaconteurNode::AsyncUpdateDetectedNodes(const std::vector<std::string>& schemes, boost::function<void()> handler, int32_t timeout)
@@ -1790,56 +1204,16 @@ void RobotRaconteurNode::AsyncFindServiceByType(const std::string &servicetype, 
 
 }
 
-std::vector<ServiceInfo2> RobotRaconteurNode::FindServiceByType(const std::string &servicetype, const std::vector<std::string>& transportschemes)
-{
-	if (!m_Discovery) throw InvalidOperationException("Node not init");
-	return m_Discovery->FindServiceByType(servicetype, transportschemes);
-}
-
-std::vector<NodeInfo2> RobotRaconteurNode::FindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes)
-{
-	if (!m_Discovery) throw InvalidOperationException("Node not init");
-	return m_Discovery->FindNodeByID(id, transportschemes);
-}
-
 void RobotRaconteurNode::AsyncFindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) > handler, int32_t timeout)
 {
 	if (!m_Discovery) throw InvalidOperationException("Node not init");
 	m_Discovery->AsyncFindNodeByID(id, transportschemes, handler, timeout);
 }
 
-std::vector<NodeInfo2> RobotRaconteurNode::FindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes)
-{
-	if (!m_Discovery) throw InvalidOperationException("Node not init");
-	return m_Discovery->FindNodeByName(name, transportschemes);
-}
-
 void RobotRaconteurNode::AsyncFindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) > handler, int32_t timeout)
 {
 	if (!m_Discovery) throw InvalidOperationException("Node not init");
 	m_Discovery->AsyncFindNodeByName(name, transportschemes, handler, timeout);
-}
-
-std::string RobotRaconteurNode::RequestObjectLock(RR_SHARED_PTR<RRObject> obj, RobotRaconteurObjectLockFlags flags)
-{
-	if (!(dynamic_cast<ServiceStub*>(obj.get()) != 0))
-		throw InvalidArgumentException("Can only lock object opened through Robot Raconteur");
-	RR_SHARED_PTR<ServiceStub> s = rr_cast<ServiceStub>(obj);
-
-	return s->GetContext()->RequestObjectLock(obj,flags);
-
-
-}
-
-std::string RobotRaconteurNode::ReleaseObjectLock(RR_SHARED_PTR<RRObject> obj)
-{
-	if (!(dynamic_cast<ServiceStub*>(obj.get()) != 0))
-		throw InvalidArgumentException("Can only unlock object opened through Robot Raconteur");
-	RR_SHARED_PTR<ServiceStub> s = rr_cast<ServiceStub>(obj);
-
-	return s->GetContext()->ReleaseObjectLock(obj);
-
-
 }
 
 void RobotRaconteurNode::AsyncRequestObjectLock(RR_SHARED_PTR<RRObject> obj, RobotRaconteurObjectLockFlags flags, boost::function<void(RR_SHARED_PTR<std::string>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout)
@@ -1855,67 +1229,6 @@ void RobotRaconteurNode::AsyncReleaseObjectLock(RR_SHARED_PTR<RRObject> obj, boo
 	if (!s) throw InvalidArgumentException("Can only unlock object opened through Robot Raconteur");
 	s->GetContext()->AsyncReleaseObjectLock(obj,RR_MOVE(handler),timeout);
 }
-
-void RobotRaconteurNode::MonitorEnter(RR_SHARED_PTR<RRObject> obj, int32_t timeout)
-{		
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be monitored by RobotRaconteurNode");
-	s->GetContext()->MonitorEnter(obj,timeout);
-}
-
-void RobotRaconteurNode::MonitorExit(RR_SHARED_PTR<RRObject> obj)
-{		
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be monitored by RobotRaconteurNode");
-	s->GetContext()->MonitorExit(obj);
-}
-
-RR_SHARED_PTR<RobotRaconteurNode> RobotRaconteurNode::ScopedMonitorLock::GetNode()
-{
-	RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
-	if (!n) throw InvalidOperationException("Node has been released");
-	return n;
-}
-
-RobotRaconteurNode::ScopedMonitorLock::ScopedMonitorLock(RR_SHARED_PTR<RRObject> obj, int32_t timeout)
-{
-	this->obj=obj;
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be monitored by RobotRaconteurNode");
-	this->node=s->RRGetNode();
-	this->GetNode()->MonitorEnter(obj,timeout);
-	locked=true;
-}
-
-void RobotRaconteurNode::ScopedMonitorLock::lock(int32_t timeout)
-{				
-	if (!obj) return;
-	if (locked) throw InvalidOperationException("Already locked");
-	this->GetNode()->MonitorEnter(obj,timeout);
-	locked=true;
-}
-
-void RobotRaconteurNode::ScopedMonitorLock::unlock()
-{
-	if (!obj) return;
-	if (!locked) throw InvalidOperationException("Not locked");
-	this->GetNode()->MonitorExit(obj);
-	locked=false;
-}
-
-void RobotRaconteurNode::ScopedMonitorLock::release()
-{
-	obj.reset();
-}
-
-RobotRaconteurNode::ScopedMonitorLock::~ScopedMonitorLock()
-{
-	if (locked)
-	{
-		unlock();
-	}
-}
-
 
 void RobotRaconteurNode::PeriodicCleanupTask(const TimerEvent& err)
 {
@@ -1974,26 +1287,7 @@ void RobotRaconteurNode::PeriodicCleanupTask(const TimerEvent& err)
 			{
 			}
 		}
-		
-		
-
-		std::vector<RR_SHARED_PTR<ServerContext> > sc;		
-		{
-			boost::shared_lock<boost::shared_mutex> lock (services_lock);
-			boost::copy(services | boost::adaptors::map_values, std::back_inserter(sc));						
-		}
-		
-		BOOST_FOREACH (RR_SHARED_PTR<ServerContext>& scc, sc)
-		{
-			try
-			{
-				scc->PeriodicCleanupTask();
-			}
-			catch (std::exception&)
-			{
-			}
-		}
-		
+			
 		try
 		{
 
@@ -2030,21 +1324,6 @@ void RobotRaconteurNode::RemovePeriodicCleanupTask(RR_SHARED_PTR<IPeriodicCleanu
 	cleanupobjs.remove(task);
 }
 
-
-RR_SHARED_PTR<RRObject> RobotRaconteurNode::FindObjRefTyped(RR_SHARED_PTR<RRObject> obj, const std::string& objref, const std::string& objecttype)
-{		
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be have objrefs");
-	return s->FindObjRefTyped(objref,objecttype);
-}
-
-RR_SHARED_PTR<RRObject> RobotRaconteurNode::FindObjRefTyped(RR_SHARED_PTR<RRObject> obj, const std::string& objref, const std::string& index, const std::string& objecttype)
-{
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be have objrefs");
-	return s->FindObjRefTyped(objref,index,objecttype);
-}
-
 void RobotRaconteurNode::AsyncFindObjRefTyped(RR_SHARED_PTR<RRObject> obj, const std::string& objref, const std::string& objecttype, boost::function<void (RR_SHARED_PTR<RRObject>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout)
 {
 	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
@@ -2059,20 +1338,6 @@ void RobotRaconteurNode::AsyncFindObjRefTyped(RR_SHARED_PTR<RRObject> obj, const
 	s->AsyncFindObjRefTyped(objref,index,objecttype,RR_MOVE(handler),timeout);
 }
 
-std::string RobotRaconteurNode::FindObjectType(RR_SHARED_PTR<RRObject> obj, const std::string &n)
-{
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be have objrefs");
-	return s->FindObjectType(n);
-}
-
-std::string RobotRaconteurNode::FindObjectType(RR_SHARED_PTR<RRObject> obj, const std::string &n, const std::string &i)
-{
-	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
-	if (!s) throw InvalidArgumentException("Only service stubs can be have objrefs");
-	return s->FindObjectType(n,i);
-}
-	
 void RobotRaconteurNode::AsyncFindObjectType(RR_SHARED_PTR<RRObject> obj, const std::string &n, boost::function<void (RR_SHARED_PTR<std::string>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout)
 {
 	RR_SHARED_PTR<ServiceStub> s = RR_DYNAMIC_POINTER_CAST<ServiceStub>(obj);
@@ -2337,21 +1602,6 @@ void RobotRaconteurNode::Sleep(const boost::posix_time::time_duration& duration)
 
 }
 
-RR_SHARED_PTR<AutoResetEvent> RobotRaconteurNode::CreateAutoResetEvent()
-{
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
-	if (!t)
-	{
-		return RR_MAKE_SHARED<AutoResetEvent>();
-	}
-	else
-	{
-		return t->CreateAutoResetEvent();
-	}
-
-}
-
 void RobotRaconteurNode::DownCastAndThrowException(RobotRaconteurException& exp)
 {
 	std::string type=exp.Error;
@@ -2412,29 +1662,6 @@ bool RobotRaconteurNode::IsEndpointLargeTransferAuthorized(uint32_t endpoint)
 			return true;
 		}
 
-		RR_SHARED_PTR<ServerEndpoint> s = RR_DYNAMIC_POINTER_CAST<ServerEndpoint>(e);
-		if (s)
-		{
-
-			if (s->service->RequireValidUser())
-			{
-				if (s->GetCurrentAuthenticatedUser())
-				{
-					return true;
-				}
-				else
-				{
-					return false;
-				}
-			}
-			else
-			{
-				return true;
-			}
-
-			return false;
-		}
-
 		return false;
 		
 	}
@@ -2462,35 +1689,6 @@ std::string RobotRaconteurNode::GetRandomString(size_t count)
 		o += strvals.at(distribution(*random_generator));
 	}
 	return o;
-}
-
-std::string RobotRaconteurNode::GetServiceStateNonce()
-{
-	boost::mutex::scoped_lock lock(service_state_nonce_lock);
-	return service_state_nonce;
-}
-
-void RobotRaconteurNode::UpdateServiceStateNonce()
-{
-	{
-		boost::mutex::scoped_lock lock(service_state_nonce_lock);
-
-		std::string new_nonce;
-		do
-		{
-			new_nonce = GetRandomString(16);
-		} while (new_nonce == service_state_nonce);
-
-		service_state_nonce = new_nonce;
-	}
-	
-	{
-		boost::mutex::scoped_lock lock(transports_lock);
-		BOOST_FOREACH(RR_SHARED_PTR<Transport>& t, transports | boost::adaptors::map_values)
-		{
-			t->LocalNodeServicesChanged();
-		}
-	}
 }
 
 }

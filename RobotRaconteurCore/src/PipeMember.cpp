@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef ROBOTRACONTEUR_CORE_USE_STDAFX
-#include "stdafx.h"
-#endif
-
 #include "PipeMember_private.h"
 #include "RobotRaconteur/RobotRaconteurNode.h"
 #include "RobotRaconteur/Client.h"
-#include "RobotRaconteur/Service.h"
 #include "RobotRaconteur/DataTypes.h"
 
 #include <boost/range/adaptors.hpp>
@@ -92,20 +87,12 @@ size_t PipeEndpointBase::Available()
 	return recv_packets.size();
 }
 
-void PipeEndpointBase::Close()
-{
-	RR_SHARED_PTR<detail::sync_async_handler<void> > t=RR_MAKE_SHARED<detail::sync_async_handler<void > >();
-	AsyncClose(boost::bind(&detail::sync_async_handler<void>::operator(),t,_1),GetNode()->GetRequestTimeout());
-	t->end_void();
-}
-
 void PipeEndpointBase::AsyncClose(RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 {
 	{
 		boost::mutex::scoped_lock lock(recvlock);
 		//recv_packets.clear();
-		closed = true;
-		recv_packets_wait.notify_all();
+		closed = true;		
 	}
 
 	{
@@ -131,8 +118,7 @@ void PipeEndpointBase::RemoteClose()
 {
 	{
 		boost::mutex::scoped_lock lock(recvlock);
-		closed = true;
-		recv_packets_wait.notify_all();
+		closed = true;		
 	}
 
 	RR_PIPE_ENDPOINT_LISTENER_ITER(p1->PipeEndpointClosed(shared_from_this()));
@@ -175,7 +161,7 @@ void PipeEndpointBase::AsyncSendPacketBase(RR_INTRUSIVE_PTR<RRValue> packet, RR_
 RR_INTRUSIVE_PTR<RRValue> PipeEndpointBase::ReceivePacketBase()
 {	
 	RR_INTRUSIVE_PTR<RRValue> o;
-	if (!TryReceivePacketBaseWait(o, 0))
+	if (!TryReceivePacketBase(o))
 	{
 		throw InvalidOperationException("Pipe endpoint receive queue is empty");
 	}
@@ -185,33 +171,15 @@ RR_INTRUSIVE_PTR<RRValue> PipeEndpointBase::ReceivePacketBase()
 RR_INTRUSIVE_PTR<RRValue> PipeEndpointBase::PeekPacketBase()
 {
 	RR_INTRUSIVE_PTR<RRValue> o;
-	if (!TryReceivePacketBaseWait(o, 0, true))
+	if (!TryReceivePacketBase(o, true))
 	{
 		throw InvalidOperationException("Pipe endpoint receive queue is empty");
 	}
 	return o;
 }
 
-RR_INTRUSIVE_PTR<RRValue> PipeEndpointBase::ReceivePacketBaseWait(int32_t timeout)
-{
-	RR_INTRUSIVE_PTR<RRValue> o;
-	if (!TryReceivePacketBaseWait(o, timeout))
-	{
-		throw InvalidOperationException("Pipe endpoint receive queue is empty");
-	}
-	return o;
-}
-RR_INTRUSIVE_PTR<RRValue> PipeEndpointBase::PeekPacketBaseWait(int32_t timeout)
-{
-	RR_INTRUSIVE_PTR<RRValue> o;
-	if (!TryReceivePacketBaseWait(o, timeout, true))
-	{
-		throw InvalidOperationException("Pipe endpoint receive queue is empty");
-	}
-	return o;
-}
 
-bool PipeEndpointBase::TryReceivePacketBaseWait(RR_INTRUSIVE_PTR<RRValue>& packet, int32_t timeout, bool peek)
+bool PipeEndpointBase::TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet, bool peek)
 {
 	if (direction == MemberDefinition_Direction_writeonly)
 	{
@@ -221,23 +189,7 @@ bool PipeEndpointBase::TryReceivePacketBaseWait(RR_INTRUSIVE_PTR<RRValue>& packe
 	boost::mutex::scoped_lock lock(recvlock);	
 	if (recv_packets.empty())
 	{
-		if (timeout == 0)
-		{
-			return false;
-		}
-
-		if (closed) return false;
-
-		if (timeout < 0)
-		{			
-			recv_packets_wait.wait(lock);
-		}
-		else
-		{			
-			recv_packets_wait.wait_for(lock, boost::chrono::milliseconds(timeout));
-		}
-
-		if (recv_packets.empty()) return false;
+		return false;
 	}
 
 	packet = recv_packets.front();
@@ -274,8 +226,7 @@ void PipeEndpointBase::PipePacketReceived(RR_INTRUSIVE_PTR<RRValue> packet, uint
 		RR_PIPE_ENDPOINT_LISTENER_ITER(p1->PipePacketReceived(shared_from_this(), boost::bind(&PipeEndpointBase_PipePacketReceived_recvpacket, boost::ref(recv_packets), _1)));
 		
 		if (!recv_packets.empty())
-		{
-			recv_packets_wait.notify_all();
+		{			
 
 			{
 				try
@@ -319,8 +270,6 @@ void PipeEndpointBase::PipePacketReceived(RR_INTRUSIVE_PTR<RRValue> packet, uint
 
 				if (!recv_packets.empty())
 				{
-					recv_packets_wait.notify_all();
-
 					//if (PacketReceivedEvent != 0)
 					{
 						try
@@ -398,8 +347,7 @@ void PipeEndpointBase::Shutdown()
 {
 	boost::mutex::scoped_lock lock(recvlock);
 	closed = true;
-	recv_packets_wait.notify_all();
-
+	
 	RobotRaconteurNode::TryPostToThreadPool(node, boost::bind(&PipeEndpointBase::fire_PipeEndpointClosedCallback, shared_from_this()));
 
 	std::list<RR_WEAK_PTR<PipeEndpointBaseListener> > listeners1;
@@ -946,642 +894,5 @@ void PipeClientBase::DeleteEndpoint(RR_SHARED_PTR<PipeEndpointBase> e)
 	boost::mutex::scoped_lock lock2(pipeendpoints_lock);
 	pipeendpoints.erase(e->GetIndex());
 }
-
-
-std::string PipeServerBase::GetMemberName()
-{
-	return m_MemberName;
-}
-
-void PipeServerBase::PipePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e)
-{
-	//boost::shared_lock<boost::shared_mutex> lock2(skel_lock);
-	
-	if (m->EntryType == MessageEntryType_PipePacket)
-	{
-		
-		std::vector<RR_INTRUSIVE_PTR<MessageElement> > ack;
-		BOOST_FOREACH (RR_INTRUSIVE_PTR<MessageElement>& me, m->elements)
-		{
-			try
-			{
-				int32_t index;
-				if (me->ElementFlags & MessageElementFlags_ELEMENT_NUMBER)
-				{
-					index = me->ElementNumber;
-				}
-				else
-				{
-					index = boost::lexical_cast<int32_t>(me->ElementName);
-				}
-				uint32_t pnum;
-
-				RR_SHARED_PTR<PipeEndpointBase> p;
-				{
-					boost::mutex::scoped_lock lock(pipeendpoints_lock);
-					RR_UNORDERED_MAP<pipe_endpoint_server_id, RR_SHARED_PTR<PipeEndpointBase> > ::iterator e1 = pipeendpoints.find(pipe_endpoint_server_id(e, index));
-					if (e1 == pipeendpoints.end()) return;
-					p = e1->second;
-				}
-				if (DispatchPacket(me, p, pnum))
-				{					
-					if (me->ElementFlags & MessageElementFlags_ELEMENT_NUMBER)
-					{
-						RR_INTRUSIVE_PTR<MessageElement> me1 = CreateMessageElement();
-						me1->SequenceNumber = (boost::numeric_cast<uint32_t>(pnum));
-						me1->ElementNumber = me->ElementNumber;
-						me1->ElementFlags = MessageElementFlags_ELEMENT_NUMBER | MessageElementFlags_SEQUENCE_NUMBER;
-						ack.push_back(me1);
-					}
-					else
-					{
-						ack.push_back(CreateMessageElement(me->ElementName, ScalarToRRArray(boost::numeric_cast<uint32_t>(pnum))));
-					}
-				}
-
-			}
-			catch (std::exception& exp)
-			{
-				RobotRaconteurNode::TryHandleException(node, &exp);
-			}
-
-		}
-
-		try
-		{
-			if (ack.size() > 0)
-			{				
-				RR_INTRUSIVE_PTR<MessageEntry> mack = CreateMessageEntry(MessageEntryType_PipePacketRet, m->MemberName);
-				mack->elements = ack;
-				if (!(ack.at(0)->ElementFlags & MessageElementFlags_ELEMENT_NUMBER))
-				{
-					if (unreliable)
-					{
-						mack->MetaData = "unreliable\n";
-					}
-				}
-				GetSkel()->AsyncSendPipeMessage(mack, e, unreliable, boost::bind(&PipeMember_empty_handler,_1));
-
-			}
-		}
-		catch (std::exception& exp)
-		{
-			RobotRaconteurNode::TryHandleException(node, &exp);
-		}
-	}
-	else if (m->EntryType == MessageEntryType_PipePacketRet)
-	{
-		
-		try
-		{
-			BOOST_FOREACH (RR_INTRUSIVE_PTR<MessageElement>& me, m->elements)
-			{
-				int32_t index;
-				if (me->ElementFlags & MessageElementFlags_ELEMENT_NUMBER)
-				{
-					index = me->ElementNumber;
-				}
-				else
-				{
-					index = boost::lexical_cast<int32_t>(me->ElementName);
-				}
-				
-				RR_SHARED_PTR<PipeEndpointBase> p;
-				{
-					boost::mutex::scoped_lock lock(pipeendpoints_lock);
-					RR_UNORDERED_MAP<pipe_endpoint_server_id, RR_SHARED_PTR<PipeEndpointBase> > ::iterator e1 = pipeendpoints.find(pipe_endpoint_server_id(e, index));
-					if (e1 == pipeendpoints.end()) return;
-					p = e1->second;					
-				}
-				DispatchPacketAck(me, p);
-			}
-		}
-		catch (std::exception&)
-		{
-			
-		}
-
-	}
-}
-
-void PipeServerBase::Shutdown()
-{
-	
-	{
-		std::vector<RR_SHARED_PTR<PipeEndpointBase> > p;
-		{
-			boost::mutex::scoped_lock lock(pipeendpoints_lock);
-			
-			boost::copy(pipeendpoints | boost::adaptors::map_values, std::back_inserter(p));			
-			pipeendpoints.clear();
-		}
-
-
-		BOOST_FOREACH (RR_SHARED_PTR<PipeEndpointBase>& e, p)
-		{	
-				//Cycle through and close all endpoints
-				try
-				{
-
-					RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_PipeClosed, GetMemberName());
-					m->AddElement("index", ScalarToRRArray(e->GetIndex()));
-					GetSkel()->AsyncSendPipeMessage(m, e->GetEndpoint(), false, boost::bind(&PipeMember_empty_handler,_1));
-				}
-				catch (std::exception& exp)
-				{
-					RobotRaconteurNode::TryHandleException(node, &exp);
-				}
-
-
-				try
-				{
-					e->Shutdown();
-				}
-				catch (std::exception& exp) 
-				{
-					RobotRaconteurNode::TryHandleException(node, &exp);
-				}
-
-					//(endpoint)->second->RemoteClose();
-		}
-
-		
-
-		//skel.reset();
-		
-		listener_connection.disconnect();
-	}
-
-}
-
-void PipeServerBase::AsyncSendPipePacket(RR_INTRUSIVE_PTR<RRValue> data, int32_t index, uint32_t packetnumber, bool requestack, uint32_t e, bool unreliable, bool message3, RR_MOVE_ARG(boost::function<void(uint32_t,RR_SHARED_PTR<RobotRaconteurException>)>) handler)
-{
-	
-	
-	{
-	boost::mutex::scoped_lock lock(pipeendpoints_lock);
-
-	if (pipeendpoints.find(pipe_endpoint_server_id(e,index)) == pipeendpoints.end())
-		throw InvalidOperationException("Pipe has been disconnect");
-	}
-
-	RR_INTRUSIVE_PTR<MessageElement> me = PackPacket(data, index, packetnumber, requestack, message3);
-	RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_PipePacket, GetMemberName());
-	m->AddElement(me);
-
-	if (!message3)
-	{
-		if (unreliable)
-			m->MetaData = "unreliable\n";
-	}
-
-	GetSkel()->AsyncSendPipeMessage(m, e, unreliable, boost::bind(handler,packetnumber,_1));
-}
-
-void PipeServerBase::AsyncClose(RR_SHARED_PTR<PipeEndpointBase> e, bool remote, uint32_t ee, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
-{
-	
-	if (!remote)
-	{
-	RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_PipeClosed, GetMemberName());
-	m->AddElement("index", ScalarToRRArray(e->GetIndex()));
-	GetSkel()->AsyncSendPipeMessage(m, ee, false, boost::bind(&PipeMember_empty_handler,_1));
-	}
-
-	DeleteEndpoint(e);
-
-	
-	detail::PostHandler(node, handler, true);
-	
-}
-
-void PipeServerBase::DeleteEndpoint(RR_SHARED_PTR<PipeEndpointBase> e)
-{
-	boost::mutex::scoped_lock lock(pipeendpoints_lock);
-	//if (pipeendpoints.count(pipe_endpoint_server_id(e->GetEndpoint(),e->GetIndex()))==0) return;
-	pipeendpoints.erase(pipe_endpoint_server_id(e->GetEndpoint(),e->GetIndex()));
-}
-
-void PipeServerBase::ClientDisconnected(RR_SHARED_PTR<ServerContext> context, ServerServiceListenerEventType ev, RR_SHARED_PTR<void> param)
-{
-	
-	if (ev==ServerServiceListenerEventType_ClientDisconnected)
-	{
-		uint32_t ep=*RR_STATIC_POINTER_CAST<uint32_t>(param);
-		std::vector<RR_SHARED_PTR<PipeEndpointBase> > p;
-
-		{
-			boost::mutex::scoped_lock lock(pipeendpoints_lock);
-			for (RR_UNORDERED_MAP<pipe_endpoint_server_id, RR_SHARED_PTR<PipeEndpointBase> >::iterator ee= pipeendpoints.begin(); ee!=pipeendpoints.end(); )
-			{
-				if (ee->first.endpoint==ep)
-				{
-					//ee->second->RemoteClose();
-					p.push_back(ee->second);
-
-					ee=pipeendpoints.erase(ee);
-				
-				
-				}
-				else
-				{
-					++ee;
-				}
-			}
-		}
-
-		BOOST_FOREACH (RR_SHARED_PTR<PipeEndpointBase>& e, p)
-		{
-			try
-			{
-				e->Shutdown();
-			}
-			catch (std::exception& exp) {
-				RobotRaconteurNode::TryHandleException(node, &exp);
-			}
-		}
-		
-	}
-}
-
-void pipe_server_client_disconnected(RR_SHARED_PTR<ServerContext> context, ServerServiceListenerEventType ev, RR_SHARED_PTR<void> param,RR_WEAK_PTR<PipeServerBase> w)
-{
-	RR_SHARED_PTR<PipeServerBase> p=w.lock();
-	if (!p) return;
-	p->ClientDisconnected(context,ev,param);
-
-}
-
-
-RR_INTRUSIVE_PTR<MessageEntry> PipeServerBase::PipeCommand(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e)
-{
-	{
-		boost::mutex::scoped_lock lock(pipeendpoints_lock);
-		switch (m->EntryType)
-		{
-			case MessageEntryType_PipeConnectReq:
-			{
-					if (!init)
-					{
-						RR_WEAK_PTR<PipeServerBase> weak= RR_DYNAMIC_POINTER_CAST<PipeServerBase>(shared_from_this());
-						listener_connection=GetSkel()->GetContext()->ServerServiceListener.connect(boost::bind(&pipe_server_client_disconnected,_1,_2,_3,weak));
-						init=true;
-					}
-					
-					int32_t index = RRArrayToScalar(m->FindElement("index")->CastData<RRArray<int32_t> >());
-					
-					
-					BOOST_FOREACH (pipe_endpoint_server_id ee, pipeendpoints | boost::adaptors::map_keys)
-					{
-						if (ee.endpoint==e && ee.index >=index)
-							index=ee.index+1;
-					}
-							
-					if (index == -1)
-					{
-						index = 1;
-						while (pipeendpoints.find(pipe_endpoint_server_id(e, index)) != pipeendpoints.end())
-						{
-							index++;
-						}						
-					}
-
-					if (pipeendpoints.find(pipe_endpoint_server_id(e,index))!= pipeendpoints.end())
-						throw InvalidArgumentException("Pipe endpoint index in use");
-
-					bool isunreliable=false;
-
-					RR_INTRUSIVE_PTR<MessageEntry> ret = CreateMessageEntry(MessageEntryType_PipeConnectRet, GetMemberName());
-					ret->AddElement("index", ScalarToRRArray(index));
-
-					if (unreliable)
-					{
-						try
-						{
-							if (RRArrayToScalar((m->FindElement("unreliable")->CastData<RRArray<int32_t> >()))==1)
-							{
-								isunreliable=true;
-								ret->AddElement("unreliable",ScalarToRRArray(static_cast<int32_t>(1)));
-							}
-						}
-						catch (std::exception&) {}
-					
-					
-					}					
-					
-					// Switch endpoint direction since this is the server
-					MemberDefinition_Direction ep_direction = direction;
-					if (direction == MemberDefinition_Direction_readonly) ep_direction = MemberDefinition_Direction_writeonly;
-					if (direction == MemberDefinition_Direction_writeonly) ep_direction = MemberDefinition_Direction_readonly;
-					RR_SHARED_PTR<PipeEndpointBase> p = CreateNewPipeEndpoint(index,e,isunreliable,ep_direction,GetSkel()->GetContext()->UseMessage3(e));
-					pipeendpoints.insert(std::make_pair(pipe_endpoint_server_id(e,index), p));
-
-					lock.unlock();
-
-					try
-					{
-						fire_PipeConnectCallback(p);
-					}
-					catch (std::exception& exp)
-					{
-						RobotRaconteurNode::TryHandleException(node, &exp);
-					}
-
-					
-					return ret;
-			}
-
-			case MessageEntryType_PipeDisconnectReq:
-			{
-					
-					int32_t index = RRArrayToScalar(m->FindElement("index")->CastData<RRArray<int32_t> >());
-					
-					RR_UNORDERED_MAP<pipe_endpoint_server_id, RR_SHARED_PTR<PipeEndpointBase> > ::iterator e1 = pipeendpoints.find(pipe_endpoint_server_id(e, index));
-					if (e1 == pipeendpoints.end()) throw InvalidArgumentException("Invalid pipe");;
-					RR_SHARED_PTR<PipeEndpointBase> ee = e1->second;					
-					
-					lock.unlock();
-					ee->RemoteClose();
-					//ep.erase(index);
-
-					return CreateMessageEntry(MessageEntryType_PipeDisconnectRet, GetMemberName());
-			}
-			default:
-				throw InvalidOperationException("Invalid Command");
-
-		}
-	}
-}
-
-PipeServerBase::PipeServerBase(const std::string& name, RR_SHARED_PTR<ServiceSkel> skel, bool unreliable, MemberDefinition_Direction direction)
-{
-	m_MemberName=name;
-	this->skel=skel;
-	this->init=false;
-	this->unreliable=unreliable;
-	this->direction = direction;
-	this->node=skel->RRGetNode();
-	
-
-}
-
-RR_SHARED_PTR<ServiceSkel> PipeServerBase::GetSkel()
-{
-	RR_SHARED_PTR<ServiceSkel> out=skel.lock();
-	if (!out) throw InvalidOperationException("Pipe has been closed");
-	return out;
-}
-
-
-// PipeBroadcasterBase
-
-namespace detail
-{
-	class PipeBroadcasterBase_connected_endpoint
-	{
-	public:
-		PipeBroadcasterBase_connected_endpoint(RR_SHARED_PTR<PipeEndpointBase > ep)
-		{
-			//backlog=0;
-			endpoint = ep;
-			active_send_count = 0;
-		}
-
-		//Endpoints are stored within the pipe so it is safe to use weak_ptr here
-		RR_WEAK_PTR<PipeEndpointBase > endpoint;
-		std::list<uint32_t> backlog;
-		std::list<uint32_t> forward_backlog;
-		int32_t active_send_count;
-		std::list<int32_t> active_sends;
-	};
-
-	struct PipeBroadcasterBase_async_send_operation
-	{
-		boost::mutex keys_lock;
-		std::list<int32_t> keys;
-	};
-}
-
-PipeBroadcasterBase::PipeBroadcasterBase()
-{
-	copy_element = false;
-}
-
-PipeBroadcasterBase::~PipeBroadcasterBase()
-{
-
-}
-
-void PipeBroadcasterBase::InitBase(RR_SHARED_PTR<PipeBase> pipe, int32_t maximum_backlog)
-{
-
-	RR_SHARED_PTR<PipeServerBase> pipe1 = RR_DYNAMIC_POINTER_CAST<PipeServerBase>(pipe);
-	if (!pipe1) throw InvalidArgumentException("Pipe must be a PipeServer for PipeBroadcaster");
-	
-	this->maximum_backlog = maximum_backlog;
-	this->pipe = pipe1;
-	this->node = pipe->GetNode();
-
-	AttachPipeServerEvents(pipe1);
-}
-
-void PipeBroadcasterBase::EndpointConnectedBase(RR_SHARED_PTR<PipeEndpointBase > ep)
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-
-	if (maximum_backlog != 0)
-	{
-		ep->SetRequestPacketAck(true);
-	}
-
-	RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> cep = RR_MAKE_SHARED<detail::PipeBroadcasterBase_connected_endpoint>(ep);
-	ep->SetIgnoreReceived(true);
-	AttachPipeEndpointEvents(ep, cep);
-	endpoints.push_back(cep);
-}
-
-void PipeBroadcasterBase::EndpointClosedBase(RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> ep)
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	try
-	{
-		endpoints.remove(ep);
-	}
-	catch (std::exception&) {}
-}
-
-void PipeBroadcasterBase::PacketAckReceivedBase(RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> ep, uint32_t id)
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	try
-	{
-		if (std::count(ep->backlog.begin(), ep->backlog.end(), id) == 0)
-		{
-			ep->forward_backlog.push_back(id);
-		}
-		else
-		{
-			ep->backlog.remove(id);
-		}
-	}
-	catch (std::exception&) {}
-}
-
-void PipeBroadcasterBase::handle_send(int32_t id, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> ep, RR_SHARED_PTR<detail::PipeBroadcasterBase_async_send_operation> op, int32_t key, int32_t send_key, boost::function<void()>& handler)
-{
-
-	{
-		boost::mutex::scoped_lock lock(endpoints_lock);
-		ep->active_sends.remove(send_key);
-
-		if (maximum_backlog > -1)
-		{
-
-			if (std::count(ep->forward_backlog.begin(), ep->forward_backlog.end(), id) != 0)
-			{
-				ep->forward_backlog.remove(id);
-			}
-			else
-			{
-				ep->backlog.push_back(id);
-			}
-		}
-	}
-
-	{
-		boost::mutex::scoped_lock lock(op->keys_lock);
-		op->keys.remove(key);
-		if (op->keys.size() != 0) return;
-	}
-
-	detail::InvokeHandler(node, handler);
-
-}
-
-void PipeBroadcasterBase::SendPacketBase(RR_INTRUSIVE_PTR<RRValue> packet)
-{
-	RR_SHARED_PTR<detail::sync_async_handler<void> > t = RR_MAKE_SHARED<detail::sync_async_handler<void> >();
-	AsyncSendPacketBase(packet, boost::bind(&detail::sync_async_handler<void>::operator(), t));
-	t->end_void();
-}
-
-void PipeBroadcasterBase::AsyncSendPacketBase(RR_INTRUSIVE_PTR<RRValue> packet, RR_MOVE_ARG(boost::function<void()>) handler)
-{
-
-	boost::mutex::scoped_lock lock(endpoints_lock);
-
-	RR_SHARED_PTR<PipeBroadcasterBase> this_ = shared_from_this();
-
-	RR_SHARED_PTR<detail::PipeBroadcasterBase_async_send_operation> op = RR_MAKE_SHARED<detail::PipeBroadcasterBase_async_send_operation>();
-	boost::mutex::scoped_lock lock2(op->keys_lock);
-	int32_t count = 0;
-
-	for (std::list<RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> >::iterator ee = endpoints.begin(); ee != endpoints.end(); )
-	{
-		try
-		{
-			std::list<RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> >::iterator ee2 = ee;
-
-			RR_SHARED_PTR<PipeEndpointBase> ep = (*ee)->endpoint.lock();
-			if (!ep)
-			{
-				ee = endpoints.erase(ee);
-				continue;
-			}
-			else
-			{
-				ee++;
-			}
-
-			if (predicate)
-			{
-				if (!predicate(this_, ep->GetEndpoint(), ep->GetIndex()))
-					continue;
-			}
-
-			if (maximum_backlog > -1 && (boost::numeric_cast<int32_t>((*ee2)->backlog.size()) + boost::numeric_cast<int32_t>((*ee2)->active_sends.size())) > maximum_backlog)
-			{
-				continue;
-			}
-
-			(*ee2)->active_send_count = (*ee2)->active_send_count < std::numeric_limits<int32_t>::max() ? (*ee2)->active_send_count + 1 : 0;
-			int32_t send_key = (*ee2)->active_send_count;
-			(*ee2)->active_sends.push_back(send_key);
-			if (!copy_element)
-			{
-				ep->AsyncSendPacketBase(packet, boost::bind(&PipeBroadcasterBase::handle_send, this->shared_from_this(), _1, _2, *ee2, op, count, send_key, handler));
-			}
-			else
-			{
-				RR_INTRUSIVE_PTR<MessageElement> packet2 = ShallowCopyMessageElement(rr_cast<MessageElement>(packet));
-				ep->AsyncSendPacketBase(packet2, boost::bind(&PipeBroadcasterBase::handle_send, this->shared_from_this(), _1, _2, *ee2, op, count, send_key, handler));
-			}
-			op->keys.push_back(count);
-
-
-			count++;
-		}
-		catch (std::exception&) {}
-
-	}
-
-	if (op->keys.size() == 0)
-	{
-		detail::PostHandler(node, (handler), true, true);
-	}
-
-}
-
-size_t PipeBroadcasterBase::GetActivePipeEndpointCount()
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	return endpoints.size();
-}
-
-void PipeBroadcasterBase::AttachPipeServerEvents(RR_SHARED_PTR<PipeServerBase> p)
-{
-
-}
-
-void PipeBroadcasterBase::AttachPipeEndpointEvents(RR_SHARED_PTR<PipeEndpointBase> p, RR_SHARED_PTR<detail::PipeBroadcasterBase_connected_endpoint> cep)
-{
-
-}
-
-boost::function<bool(RR_SHARED_PTR<PipeBroadcasterBase>&, uint32_t, int32_t) > PipeBroadcasterBase::GetPredicate()
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	return predicate;
-}
-
-void PipeBroadcasterBase::SetPredicate(boost::function<bool(RR_SHARED_PTR<PipeBroadcasterBase>&, uint32_t, int32_t)> f)
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	predicate = f;
-}
-
-int32_t PipeBroadcasterBase::GetMaximumBacklog()
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	return maximum_backlog;
-}
-
-void PipeBroadcasterBase::SetMaximumBacklog(int32_t maximum_backlog)
-{
-	boost::mutex::scoped_lock lock(endpoints_lock);
-	if (endpoints.size() > 0)
-	{
-		throw InvalidOperationException("Cannot change maxmimum_backlog while endpoints are connected");
-	}
-	this->maximum_backlog = maximum_backlog;
-}
-
-RR_SHARED_PTR<PipeBase> PipeBroadcasterBase::GetPipeBase()
-{
-	RR_SHARED_PTR<PipeBase> pipe1 = pipe.lock();
-	if (!pipe1) throw InvalidOperationException("Pipe released");
-	return pipe1;
-}
-
 
 }

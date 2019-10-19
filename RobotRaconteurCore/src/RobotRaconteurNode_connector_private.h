@@ -46,8 +46,6 @@ namespace RobotRaconteur
 
 			boost::mutex handler_lock;
 
-			RR_SHARED_PTR<AutoResetEvent> delay_event;
-
 			class endpoint_cleanup
 			{
 			public:
