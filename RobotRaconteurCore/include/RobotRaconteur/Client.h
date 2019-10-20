@@ -91,7 +91,6 @@ namespace RobotRaconteur
 	{
 	protected:
 		RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> > stubs;
-		boost::mutex stubs_lock;
 		std::list<std::string> active_stub_searches;
 		std::list<boost::tuple<std::string, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> > > active_stub_searches_handlers;
 		
@@ -146,8 +145,6 @@ namespace RobotRaconteur
 		void AsyncFindObjectType1(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> err, boost::function<void(RR_SHARED_PTR<std::string>, RR_SHARED_PTR<RobotRaconteurException>)>& handler);
 
 	private:
-		
-		boost::mutex pulled_service_defs_lock;
 		std::map<std::string, RR_SHARED_PTR<ServiceDefinition> > pulled_service_defs;
 		
 		//bool VerifyObjectImplements2(const std::string& objecttype, const std::string& implementstype);
@@ -158,12 +155,7 @@ namespace RobotRaconteur
 			boost::function<void(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException>)> handler;
 			RR_SHARED_PTR<Timer> timer;
 		};
-
-		boost::mutex outstanding_requests_lock;
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<outstanding_request> > outstanding_requests;
-
-
-		boost::mutex FindObjRef_lock;
 
 	public:
 		void AsyncProcessRequest(RR_INTRUSIVE_PTR<MessageEntry> m, RR_MOVE_ARG(boost::function<void(RR_INTRUSIVE_PTR<MessageEntry>, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout = RR_TIMEOUT_INFINITE);
@@ -197,8 +189,6 @@ namespace RobotRaconteur
 		bool GetConnected() const;
 	protected:
 		bool m_Connected;
-		boost::mutex m_Connected_lock;
-		boost::mutex close_lock;
 
 
 	private:
@@ -211,7 +201,6 @@ namespace RobotRaconteur
 		
 	private:
 		std::map<std::string, RR_INTRUSIVE_PTR<RRValue> > m_Attributes;
-		boost::mutex m_Attributes_lock;
 
 	public:
 		
@@ -236,12 +225,8 @@ namespace RobotRaconteur
 
 		void AsyncConnectService7(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& objecttype, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler);
 
-		boost::recursive_mutex connect_lock;
-
 	public:
 		
-		void Close();
-
 		void AsyncClose(RR_MOVE_ARG(boost::function<void()>) handler);
 	protected:
 
@@ -272,8 +257,6 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<ServiceFactory> GetPulledServiceType(const std::string& type);
 
 	private:
-
-		boost::mutex pulled_service_types_lock;
 		RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceFactory> > pulled_service_types;
 
 		bool use_pulled_types;
@@ -281,8 +264,6 @@ namespace RobotRaconteur
 	private:
 
 		RR_SHARED_PTR<ITransportConnection> TransportConnection;
-
-		boost::mutex m_Authentication_lock;
 
 		bool m_UserAuthenticated;
 
@@ -316,8 +297,8 @@ namespace RobotRaconteur
 		void ProcessCallbackCall(RR_INTRUSIVE_PTR<MessageEntry> m);
 
 	protected:
-		boost::atomic<bool> use_message3;
-		boost::atomic<bool> use_combined_connection;
+		bool use_message3 = false;
+		bool use_combined_connection = false;
 
 	public:
 		bool UseMessage3();

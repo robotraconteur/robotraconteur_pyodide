@@ -29,7 +29,6 @@ namespace detail
 	class Discovery_nodestorage
 	{
 	public:
-		boost::mutex this_lock;
 		RR_SHARED_PTR<NodeDiscoveryInfo> info;
 		RR_SHARED_PTR<std::vector<ServiceInfo2> > services;
 		std::string last_update_nonce;
@@ -49,7 +48,6 @@ namespace detail
 
 		boost::initialized<uint32_t> max_DiscoveredNodes;
 		std::map<std::string, RR_SHARED_PTR<Discovery_nodestorage> > m_DiscoveredNodes;
-		boost::mutex m_DiscoveredNodes_lock;
 
 		std::list<RR_WEAK_PTR<IServiceSubscription> > subscriptions;
 
@@ -106,7 +104,6 @@ namespace detail
 
 	class Discovery_updatediscoverednodes : public RR_ENABLE_SHARED_FROM_THIS<Discovery_updatediscoverednodes>
 	{
-		boost::mutex active_lock;
 		std::list<int32_t>  active;
 		int32_t active_count;
 		boost::function<void()> handler;
@@ -115,9 +112,6 @@ namespace detail
 		std::list<RR_SHARED_PTR<RobotRaconteurException> > errors;
 
 		RR_SHARED_PTR<Timer> timeout_timer;
-		boost::mutex timeout_timer_lock;
-
-		boost::mutex work_lock;
 
 		std::vector<std::string> schemes;
 
@@ -136,7 +130,6 @@ namespace detail
 
 	class Discovery_findservicebytype : public RR_ENABLE_SHARED_FROM_THIS<Discovery_findservicebytype>
 	{
-		boost::mutex active_lock;
 		std::list<int32_t>  active;
 		int32_t active_count;
 		boost::function<void(RR_SHARED_PTR<std::vector<ServiceInfo2> >)> handler;
@@ -146,16 +139,11 @@ namespace detail
 		std::list<RR_SHARED_PTR<RobotRaconteurException> > errors;
 
 		RR_SHARED_PTR<Timer> timeout_timer;
-		boost::mutex timeout_timer_lock;
-
-		boost::mutex ret_lock;
 		RR_SHARED_PTR<std::vector<ServiceInfo2> > ret;
 
 		std::string servicetype;
 
 		RR_SHARED_PTR<RobotRaconteurNode> node;
-
-		boost::recursive_mutex work_lock;
 
 		std::vector<std::string> schemes;
 
@@ -182,7 +170,6 @@ namespace detail
 	class Discovery_updateserviceinfo : public RR_ENABLE_SHARED_FROM_THIS<Discovery_updateserviceinfo>
 	{
 	protected:
-		boost::mutex this_lock;
 		boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, const std::string&, RR_SHARED_PTR<RobotRaconteurException>)> handler;
 		RR_SHARED_PTR<Timer> timeout_timer;
 		RR_SHARED_PTR<Discovery_nodestorage> storage;

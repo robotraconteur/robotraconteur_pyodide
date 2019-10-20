@@ -50,10 +50,6 @@ namespace RobotRaconteur
 
 	};
 
-RR_RELEASE_GIL()
-	std::vector<RobotRaconteur::ServiceInfo2Wrapped> WrappedFindServiceByType(boost::shared_ptr<RobotRaconteurNode> node, const std::string& servicetype, const std::vector<std::string>& transportschemes);
-RR_KEEP_GIL()
-		
 	void AsyncWrappedFindServiceByType(boost::shared_ptr<RobotRaconteurNode> node, const std::string &servicetype, const std::vector<std::string>& transportschemes, int32_t timeout, AsyncServiceInfo2VectorReturnDirector* handler, int32_t id);
 	
 }
@@ -73,20 +69,12 @@ namespace RobotRaconteur
 		std::vector<std::string> ConnectionURL;
 	};
 
-RR_RELEASE_GIL()
-	std::vector<RobotRaconteur::NodeInfo2> WrappedFindNodeByID(boost::shared_ptr<RobotRaconteurNode> node, NodeID id, const std::vector<std::string>& transportschemes);
-	std::vector<RobotRaconteur::NodeInfo2> WrappedFindNodeByName(boost::shared_ptr<RobotRaconteurNode> node, const std::string& name, const std::vector<std::string>& transportschemes);
-	
 	void AsyncWrappedFindNodeByID(boost::shared_ptr<RobotRaconteurNode> node, const NodeID& id, const std::vector<std::string>& transportschemes, int32_t timeout, AsyncNodeInfo2VectorReturnDirector* handler, int32_t id1);
 	void AsyncWrappedFindNodeByName(boost::shared_ptr<RobotRaconteurNode> node, const std::string& name, const std::vector<std::string>& transportschemes, int32_t timeout, AsyncNodeInfo2VectorReturnDirector* handler, int32_t id);
-
-	void WrappedUpdateDetectedNodes(boost::shared_ptr<RobotRaconteurNode> node, const std::vector<std::string>& schemes);
 
 	void AsyncWrappedUpdateDetectedNodes(boost::shared_ptr<RobotRaconteurNode> node, const std::vector<std::string>& schemes, int32_t timeout, AsyncVoidNoErrReturnDirector* handler, int32_t id1);
 
 	std::vector<std::string> WrappedGetDetectedNodes(boost::shared_ptr<RobotRaconteurNode> node);
-
-RR_KEEP_GIL()
 
 }
 

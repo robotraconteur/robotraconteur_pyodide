@@ -168,8 +168,6 @@ namespace RobotRaconteur
 		WrappedService_typed_packet GetInValue(TimeSpec* time = NULL);
 		bool TryGetInValue(WrappedService_typed_packet& val, TimeSpec* time = NULL);
 
-		bool WaitInValueValid(int32_t timeout = RR_TIMEOUT_INFINITE);
-
 		bool GetIgnoreInValue();
 		void SetIgnoreInValue(bool ignore);		
 
@@ -206,8 +204,7 @@ namespace RobotRaconteur
 	public:
 			
 		WrappedService_typed_packet ReceivePacket();
-		bool TryReceivePacket(WrappedService_typed_packet& packet);
-		bool TryReceivePacketWait(WrappedService_typed_packet& packet, int32_t timeout = RR_TIMEOUT_INFINITE, bool peek = false);
+		bool TryReceivePacket(WrappedService_typed_packet& packet, bool peek = false);
 
 		size_t Available();
 		size_t GetActivePipeEndpointCount();

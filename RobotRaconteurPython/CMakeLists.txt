@@ -1,8 +1,8 @@
 
-set(Python_ADDITIONAL_VERSIONS 2.7)
+set(Python_ADDITIONAL_VERSIONS 3.6 3.7)
 
-find_package(PythonInterp REQUIRED)
-find_package(PythonLibs REQUIRED)
+find_package(PythonInterp REQUIRED 3.7)
+find_package(PythonLibs REQUIRED 3.7)
 
 ADD_DEFINITIONS(-DRR_PYTHON -DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION)
 
@@ -110,38 +110,5 @@ add_custom_target(RobotRaconteurPython_Wheel ALL ${CMAKE_COMMAND} -E chdir "$<TA
 if (WIN32)
 set_target_properties(RobotRaconteurPython_Wheel PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG TRUE)
 endif()
-endif()
-
-set(RR_PYTHON_TEST_CMD "\"${CMAKE_COMMAND}\"")
-set(RR_PYTHON_TEST_CMD_ARGS "-E env PYTHONPATH=${CMAKE_BINARY_DIR}/@OUT_DIR_NAME@/Python ROBOTRACONTEUR_ROBDEF_PATH=${CMAKE_SOURCE_DIR}/testing/RobotRaconteurTest \"${PYTHON_EXECUTABLE}\" ${CMAKE_SOURCE_DIR}/RobotRaconteurPython/test/RobotRaconteurPythonTest.py")
-RRConfigureTest(test_prog_python "${RR_PYTHON_TEST_CMD}" "test_prog" NOCTEST NODEBUG ARGS "${RR_PYTHON_TEST_CMD_ARGS}")
-RRConfigureTest(test_python_loopback "${RR_PYTHON_TEST_CMD}" "test_prog" NODEBUG ARGS "${RR_PYTHON_TEST_CMD_ARGS} loopback")
-RRConfigureTest(test_python_loopback2 "${RR_PYTHON_TEST_CMD}" "test_prog" NODEBUG ARGS "${RR_PYTHON_TEST_CMD_ARGS} loopback2")
-
-if(ROBOTRACONTEUR_ROS)
-
-# This mess is taken from github.com/ros/catkin/cmake/python.cmake...
-set(enable_setuptools_deb_layout OFF)
-if(EXISTS "/etc/debian_version")
-  set(enable_setuptools_deb_layout ON)
-endif()
-option(SETUPTOOLS_DEB_LAYOUT "Enable debian style python package layout" ${enable_setuptools_deb_layout})
-if(SETUPTOOLS_DEB_LAYOUT)
-  message(STATUS "Using Debian Python package layout")
-  set(SETUPTOOLS_ARG_EXTRA "--install-layout=deb")
-endif()
-
-install(CODE "if (\"$\{CMAKE_INSTALL_CONFIG_NAME\}\" STREQUAL \"Release\")
-set(RR_BUILD_CONFIG_DIR \"out\")
-elseif (\"$\{CMAKE_INSTALL_CONFIG_NAME\}\" STREQUAL \"RelWithDebInfo\")
-set(RR_BUILD_CONFIG_DIR \"out_reldebug\")
-elseif (\"$\{CMAKE_INSTALL_CONFIG_NAME\}\" STREQUAL \"Debug\")
-set(RR_BUILD_CONFIG_DIR \"out_debug\")
-else()
-set(RR_BUILD_CONFIG_DIR \"out\")
-endif()
-message(STATUS \"Running setup.py in ${CMAKE_BINARY_DIR}/$\{RR_BUILD_CONFIG_DIR\}/Python\")
-execute_process(COMMAND python setup.py install -f
---root=/ --prefix=${CMAKE_INSTALL_PREFIX} ${SETUPTOOLS_ARG_EXTRA} --single-version-externally-managed WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/$\{RR_BUILD_CONFIG_DIR\}/Python)")
 endif()
 

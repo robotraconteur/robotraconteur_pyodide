@@ -20,7 +20,6 @@
 #include "RobotRaconteur/DataTypes.h"
 #include "RobotRaconteur/Message.h"
 #include <boost/date_time.hpp>
-#include <boost/atomic.hpp>
 
 //Workaround for Windows headers
 #ifdef SendMessage
@@ -36,21 +35,17 @@ namespace RobotRaconteur
 	class ROBOTRACONTEUR_CORE_API Endpoint : private boost::noncopyable
 	{
 	private:		
-		boost::atomic<uint32_t> m_LocalEndpoint;
-		boost::atomic<uint32_t> m_RemoteEndpoint;
-		boost::shared_mutex m_RemoteNodeName_lock;
+		uint32_t m_LocalEndpoint = 0;
+		uint32_t m_RemoteEndpoint = 0;
 		std::string m_RemoteNodeName;
-		boost::shared_mutex m_RemoteNodeID_lock;
 		NodeID m_RemoteNodeID;
-		boost::atomic<uint32_t> m_transport;
-
-		boost::mutex m_TransportConnection_lock;
+		uint32_t m_transport = 0;
 		RR_WEAK_PTR<ITransportConnection> m_TransportConnection;
 
-		boost::atomic<boost::posix_time::ptime> m_LastMessageReceivedTime;
-		boost::atomic<boost::posix_time::ptime> m_LastMessageSentTime;
+		boost::posix_time::ptime m_LastMessageReceivedTime;
+		boost::posix_time::ptime m_LastMessageSentTime;
 
-		boost::atomic<uint16_t> MessageNumber;
+		uint16_t MessageNumber = 0;
 
 	public:
 		uint32_t GetLocalEndpoint();

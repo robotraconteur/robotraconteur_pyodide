@@ -19,8 +19,8 @@ INCLUDE(${CMAKE_SOURCE_DIR}/SWIG/RobotRaconteurSWIGSources.cmake)
 
 set(Python_SWIG_sources ${CMAKE_CURRENT_LIST_DIR}/ClientPython.i
     ${CMAKE_CURRENT_LIST_DIR}/DiscoveryPython.i
-	${CMAKE_CURRENT_LIST_DIR}/HardwareTransportPython.i
-	${CMAKE_CURRENT_LIST_DIR}/LocalTransportPython.i 
+	
+	
 	${CMAKE_CURRENT_LIST_DIR}/MessagePython.i 
 	${CMAKE_CURRENT_LIST_DIR}/NodeIDPython.i 
     ${CMAKE_CURRENT_LIST_DIR}/PythonExceptionTypemaps.i 
@@ -30,7 +30,7 @@ set(Python_SWIG_sources ${CMAKE_CURRENT_LIST_DIR}/ClientPython.i
 	${CMAKE_CURRENT_LIST_DIR}/ServiceDefinitionPython.i 
 	${CMAKE_CURRENT_LIST_DIR}/ServicePython.i 
 	${CMAKE_CURRENT_LIST_DIR}/ServiceSecurityPython.i
-    ${CMAKE_CURRENT_LIST_DIR}/TcpTransportPython.i 
+    
 	${CMAKE_CURRENT_LIST_DIR}/TimerPython.i 
 	${CMAKE_CURRENT_LIST_DIR}/TimeSpecPython.i
 )

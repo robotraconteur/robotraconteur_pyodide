@@ -13,12 +13,9 @@
 // limitations under the License.
 
 #include "RobotRaconteur/RobotRaconteurNode.h"
-#include <boost/asio.hpp>
 #include <list>
 #include <boost/bind/protect.hpp>
 #include <boost/shared_array.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/atomic.hpp>
 #include "RobotRaconteur/AsyncMessageIO.h"
 
 #pragma once
@@ -45,18 +42,10 @@ namespace RobotRaconteur
 				boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> callback;
 			};
 
-
-			RR_BOOST_ASIO_IO_CONTEXT& _io_context;
-
-			boost::atomic<bool> connected;
+			bool connected = false;
 
 			boost::shared_array<uint8_t> sendbuf;
 			size_t sendbuf_len;
-
-
-
-			boost::mutex send_lock;
-			boost::mutex sync_send_lock;
 			bool sending;
 			bool send_pause_request;
 			bool send_paused;
@@ -64,10 +53,9 @@ namespace RobotRaconteur
 
 			std::list<message_queue_entry > send_queue;
 			size_t send_message_size;
-			boost::condition_variable send_event;
-
-			boost::atomic<boost::posix_time::ptime> tlastsend;
-			boost::atomic<boost::posix_time::ptime> tlastrecv;
+			
+			boost::posix_time::ptime tlastsend;
+			boost::posix_time::ptime tlastrecv;
 
 			uint8_t streamseed[8];
 			uint32_t recv_message_size;
@@ -78,11 +66,10 @@ namespace RobotRaconteur
 			bool recv_pause_request;
 			bool recv_paused;
 			bool receiving;
+			bool send_version3;
 			boost::function<void(const boost::system::error_code&)> recv_pause_request_handler;
 
-			boost::mutex recv_lock;
-
-			RR_SHARED_PTR<boost::asio::deadline_timer> heartbeat_timer;
+			RR_SHARED_PTR<Timer> heartbeat_timer;
 
 			uint32_t ReceiveTimeout;
 			uint32_t HeartbeatPeriod;
@@ -91,21 +78,18 @@ namespace RobotRaconteur
 
 			bool CheckStreamCapability_closed;
 			bool CheckStreamCapability_waiting;
-			boost::mutex CheckStreamCapability_lock;
 			boost::function<void(uint32_t, RR_SHARED_PTR<RobotRaconteurException>)> CheckStreamCapability_callback;
 			std::queue<boost::tuple<std::string, boost::function<void(uint32_t, RR_SHARED_PTR<RobotRaconteurException>)> > > CheckStreamCapability_queue;
 
-			RR_SHARED_PTR<boost::asio::deadline_timer> CheckStreamCapability_timer;
+			RR_SHARED_PTR<Timer> CheckStreamCapability_timer;
 
 			bool streamop_closed;
 			bool streamop_waiting;
-			boost::mutex streamop_lock;
 			boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> streamop_callback;
 			std::queue<boost::tuple<std::string, RR_SHARED_PTR<RRObject>, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> > > streamop_queue;
 
-			RR_SHARED_PTR<boost::asio::deadline_timer> streamop_timer;
+			RR_SHARED_PTR<Timer> streamop_timer;
 			NodeID RemoteNodeID;
-			boost::shared_mutex RemoteNodeID_lock;
 
 			NodeID target_nodeid;
 			std::string target_nodename;
@@ -114,26 +98,10 @@ namespace RobotRaconteur
 
 			bool send_large_transfer_authorized;
 			bool recv_large_transfer_authorized;
-
-			boost::atomic<bool> send_version3;
-			boost::atomic<bool> use_string_table3;
-
-			RR_SHARED_PTR<detail::StringTable> string_table3;
-			boost::mutex string_table3_lock;
-			std::list<uint32_t> string_table_3_confirming;
-
-			RR_UNORDERED_MAP<uint32_t, boost::tuple<std::vector<uint32_t>, boost::posix_time::ptime> > string_table_3_requests;
-			uint32_t string_table_3_requestid;
-
-			std::list<RR_SHARED_PTR<boost::asio::deadline_timer> > string_table_3_timers;
-			bool string_table_3_pause_updates;
-
-			bool string_table_3_closed;
-
+						
 			bool server;
 
 			bool disable_message3;
-			bool disable_string_table;
 			bool disable_async_io;
 
 			mutable_buffers active_recv_bufs;
@@ -151,8 +119,7 @@ namespace RobotRaconteur
 			const_buffers async_send_bufs;
 
 			uint32_t active_capabilities_message2_basic;
-			uint32_t active_capabilities_message3_basic;
-			uint32_t active_capabilities_message3_stringtable;
+			uint32_t active_capabilities_message3_basic;			
 
 		protected:
 
@@ -239,9 +206,7 @@ namespace RobotRaconteur
 
 			virtual void Close();
 
-			virtual void heartbeat_timer_func(const boost::system::error_code& e);
-
-			boost::mutex heartbeat_timer_lock;
+			virtual void heartbeat_timer_func(const TimerEvent& e);
 
 		public:
 			virtual void MessageReceived(RR_INTRUSIVE_PTR<Message> m) = 0;
@@ -258,7 +223,7 @@ namespace RobotRaconteur
 
 			void CheckStreamCapability_EndSendMessage(RR_SHARED_PTR<RobotRaconteurException> err);
 
-			static void CheckStreamCapability_timercallback(RR_WEAK_PTR<ASIOStreamBaseTransport> t, const boost::system::error_code& e);
+			static void CheckStreamCapability_timercallback(RR_WEAK_PTR<ASIOStreamBaseTransport> t, const TimerEvent& e);
 
 			void CheckStreamCapability_MessageReceived(RR_INTRUSIVE_PTR<Message> m);
 
@@ -278,7 +243,7 @@ namespace RobotRaconteur
 
 			virtual void StreamOp_EndSendMessage(RR_SHARED_PTR<RobotRaconteurException> err);
 
-			static void StreamOp_timercallback(RR_WEAK_PTR<ASIOStreamBaseTransport> t, const boost::system::error_code& e);
+			static void StreamOp_timercallback(RR_WEAK_PTR<ASIOStreamBaseTransport> t, const TimerEvent& e);
 
 			virtual void StreamOpMessageReceived(RR_INTRUSIVE_PTR<Message> m);
 
@@ -293,22 +258,11 @@ namespace RobotRaconteur
 			virtual size_t available() = 0;
 
 			virtual bool IsLargeTransferAuthorized();
-
-			void UpdateStringTable();
-
-			void UpdateStringTable1(RR_SHARED_PTR<RobotRaconteurException> ret, RR_INTRUSIVE_PTR<Message> m);
-
-			void UpdateStringTable2(RR_INTRUSIVE_PTR<Message> m);
-
-			void UpdateStringTable3(const boost::system::error_code& ec, RR_SHARED_PTR<boost::asio::deadline_timer> t, uint32_t request_id);
-
+			
 		public:
 
 			virtual bool GetDisableMessage3();
 			virtual void SetDisableMessage3(bool d);
-
-			virtual bool GetDisableStringTable();
-			virtual void SetDisableStringTable(bool d);
 
 			virtual bool CheckCapabilityActive(uint32_t flag);
 

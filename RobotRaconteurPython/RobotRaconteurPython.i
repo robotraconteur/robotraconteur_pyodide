@@ -36,12 +36,9 @@ RR_Py_Exception()
 %init
 {
 
-PyEval_InitThreads();
-
 RobotRaconteur::PythonTypeSupport_Init();
 
 RobotRaconteur::RobotRaconteurNode::s()->SetDynamicServiceFactory(RR_MAKE_SHARED<RobotRaconteur::WrappedDynamicServiceFactory>());
-RobotRaconteur::RobotRaconteurNode::s()->SetThreadPoolFactory(RR_MAKE_SHARED<RobotRaconteur::PythonThreadPoolFactory>());
 //RobotRaconteur::RobotRaconteurNode::s()->UnregisterServiceType("RobotRaconteurServiceIndex");
 //RobotRaconteur::RobotRaconteurNode::s()->RegisterServiceType(RR_MAKE_SHARED<RobotRaconteur::WrappedServiceFactory>(RR_MAKE_SHARED<RobotRaconteurServiceIndex::RobotRaconteurServiceIndexFactory>()->DefString()));
 }
@@ -70,9 +67,6 @@ RobotRaconteur::RobotRaconteurNode::s()->SetThreadPoolFactory(RR_MAKE_SHARED<Rob
 %include "ServiceDefinitionPython.i"
 
 %include "Transport.i"
-%include "TcpTransportPython.i"
-%include "LocalTransportPython.i"
-%include "HardwareTransportPython.i"
 
 %include "TimerPython.i"
 
@@ -80,14 +74,10 @@ RobotRaconteur::RobotRaconteurNode::s()->SetThreadPoolFactory(RR_MAKE_SHARED<Rob
 
 %include "PipeMember.i"
 %include "WireMember.i"
-%include "MemoryMember.i"
 %include "Generator.i"
 
 
 %include "ClientPython.i"
-
-%include "ServicePython.i"
-%include "ServiceSecurityPython.i"
 
 %include "DiscoveryPython.i"
 %include "Subscription.i"

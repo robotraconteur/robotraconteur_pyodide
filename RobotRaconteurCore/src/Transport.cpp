@@ -37,24 +37,24 @@ namespace RobotRaconteur
 
 	//template <class T>
 	//void thread_null_deleter(T* a) {}
-	boost::thread_specific_ptr<std::string> Transport::m_CurrentThreadTransportConnectionURL;
+	std::string Transport::m_CurrentThreadTransportConnectionURL;
 	
 	
 	std::string Transport::GetCurrentTransportConnectionURL()
 	{
-		if (!m_CurrentThreadTransportConnectionURL.get()) throw InvalidOperationException("Not set");
-		return std::string(*m_CurrentThreadTransportConnectionURL);
+		if (m_CurrentThreadTransportConnectionURL.empty()) throw InvalidOperationException("Not set");
+		return std::string(m_CurrentThreadTransportConnectionURL);
 	}
 
 
-	boost::thread_specific_ptr<RR_SHARED_PTR<ITransportConnection> > Transport::m_CurrentThreadTransport;
+	RR_SHARED_PTR<ITransportConnection> Transport::m_CurrentThreadTransport;
 
 	
 	RR_SHARED_PTR<ITransportConnection> Transport::GetCurrentThreadTransport()
 	{
 		
-		if (!m_CurrentThreadTransport.get()) throw InvalidOperationException("Not set");
-		return *m_CurrentThreadTransport.get();
+		if (m_CurrentThreadTransport) throw InvalidOperationException("Not set");
+		return m_CurrentThreadTransport;
 	}
 
 

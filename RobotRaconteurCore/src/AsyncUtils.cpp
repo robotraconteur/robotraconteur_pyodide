@@ -26,16 +26,6 @@ namespace detail
 		return node->CreateTimer(period,handler,oneshot);
 	}
 
-	void async_signal_pool_semaphore::do_post(RR_SHARED_PTR<RobotRaconteurNode> node1, RR_MOVE_ARG(boost::function<void()>) h)
-	{
-		RobotRaconteurNode::TryPostToThreadPool(node1, boost::bind(&async_signal_pool_semaphore::do_fire_next, shared_from_this(), h));
-	}
-
-	void async_signal_pool_semaphore::handle_exception(std::exception* exp)
-	{
-		RobotRaconteurNode::TryHandleException(node, exp);		
-	}
-
 	ROBOTRACONTEUR_CORE_API void InvokeHandler_HandleException(RR_WEAK_PTR<RobotRaconteurNode> node, std::exception& exp)
 	{
 		RobotRaconteurNode::TryHandleException(node, &exp);

@@ -50,8 +50,6 @@ namespace RobotRaconteur
 
 		virtual RR_SHARED_PTR<Timer> CreateTimer(const boost::posix_time::time_duration& duration, boost::function<void(const TimerEvent&)>& handler, bool oneshot=false)=0;
 
-		virtual RR_SHARED_PTR<Rate> CreateRate(double frequency)=0;
-
 		virtual void Sleep(const boost::posix_time::time_duration& duration)=0;
 
 		virtual ~ITransportTimeProvider() {}
@@ -101,13 +99,13 @@ namespace RobotRaconteur
 
 		Transport(RR_SHARED_PTR<RobotRaconteurNode> node);
 		
-		static boost::thread_specific_ptr<std::string> m_CurrentThreadTransportConnectionURL;
+		static std::string m_CurrentThreadTransportConnectionURL;
 	
 		static std::string GetCurrentTransportConnectionURL();
 		
 	public:
 
-		static boost::thread_specific_ptr<RR_SHARED_PTR<ITransportConnection> > m_CurrentThreadTransport;
+		static RR_SHARED_PTR<ITransportConnection> m_CurrentThreadTransport;
 
 	public:
 	   static RR_SHARED_PTR<ITransportConnection> GetCurrentThreadTransport();

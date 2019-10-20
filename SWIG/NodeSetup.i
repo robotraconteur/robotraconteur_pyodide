@@ -26,9 +26,9 @@ namespace RobotRaconteur
 		//RobotRaconteurNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
 		//	const std::string& node_name, uint16_t tcp_port, uint32_t flags);
 		
-		boost::shared_ptr<LocalTransport> GetLocalTransport();
-		boost::shared_ptr<TcpTransport> GetTcpTransport();
-		boost::shared_ptr<HardwareTransport> GetHardwareTransport();
+		//TODO: Add transport
+		//boost::shared_ptr<TcpTransport> GetTcpTransport();
+		
 		
 		virtual ~RobotRaconteurNodeSetup();
 	};

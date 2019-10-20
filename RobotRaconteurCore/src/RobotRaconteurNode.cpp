@@ -18,7 +18,6 @@
 #include "RobotRaconteur/RobotRaconteurServiceIndex.h"
 #include "RobotRaconteur/DataTypes.h"
 #include <boost/regex.hpp>
-#include <boost/asio/steady_timer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
@@ -39,7 +38,6 @@ RobotRaconteurNode RobotRaconteurNode::m_s;
 RR_SHARED_PTR<RobotRaconteurNode> RobotRaconteurNode::m_sp;
 
 bool RobotRaconteurNode::is_init=false;
-boost::mutex RobotRaconteurNode::init_lock;
 
 RobotRaconteurNode::RobotRaconteurNode()
 {
@@ -61,12 +59,9 @@ RobotRaconteurNode::RobotRaconteurNode()
 
 void RobotRaconteurNode::Init()
 {
-
-	boost::mutex::scoped_lock lock(init_lock);
 	if (instance_is_init) return;
 
 	{
-		boost::mutex::scoped_lock lock(random_generator_lock);
 		random_generator = RR_MAKE_SHARED<boost::random::random_device>();
 	}
 
@@ -102,7 +97,6 @@ RR_SHARED_PTR<RobotRaconteurNode> RobotRaconteurNode::sp()
 
 NodeID RobotRaconteurNode::NodeID()
 {
-	boost::mutex::scoped_lock lock(id_lock);
 	if (!NodeID_set)
 	{
 		m_NodeID=RobotRaconteur::NodeID::NewUniqueID();
@@ -114,7 +108,6 @@ NodeID RobotRaconteurNode::NodeID()
 
 std::string RobotRaconteurNode::NodeName()
 {
-	boost::mutex::scoped_lock lock(id_lock);
 	if (!NodeName_set)
 	{
 		m_NodeName="";
@@ -125,7 +118,6 @@ std::string RobotRaconteurNode::NodeName()
 
 void RobotRaconteurNode::SetNodeID(const RobotRaconteur::NodeID& id)
 {
-	boost::mutex::scoped_lock lock(id_lock);
 	if (NodeID_set) throw InvalidOperationException("NodeID already set");
 	m_NodeID=id;
 	NodeID_set=true;
@@ -138,8 +130,6 @@ void RobotRaconteurNode::SetNodeName(const std::string& name)
 	{
 		throw InvalidArgumentException("\"" + name + "\" is an invalid NodeName");
 	}
-
-	boost::mutex::scoped_lock lock(id_lock);
 	if (NodeName_set) throw InvalidOperationException("NodeName already set");
 	m_NodeName=name;
 	NodeName_set=true;
@@ -147,8 +137,6 @@ void RobotRaconteurNode::SetNodeName(const std::string& name)
 
 RR_SHARED_PTR<ServiceFactory> RobotRaconteurNode::GetServiceType(const std::string& servicename)
 {
-	
-	boost::shared_lock<boost::shared_mutex> lock(service_factories_lock);
 	RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceFactory> >::iterator e1 = service_factories.find(servicename);
 	if(e1==service_factories.end())
 	{
@@ -160,14 +148,12 @@ RR_SHARED_PTR<ServiceFactory> RobotRaconteurNode::GetServiceType(const std::stri
 
 bool RobotRaconteurNode::IsServiceTypeRegistered(const std::string& servicename)
 {
-	boost::shared_lock<boost::shared_mutex> lock(service_factories_lock);
 	RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceFactory> >::iterator e1 = service_factories.find(servicename);
 	return e1 != service_factories.end();
 }
 
 void RobotRaconteurNode::RegisterServiceType(RR_SHARED_PTR<ServiceFactory> factory)
 {
-	boost::unique_lock<boost::shared_mutex> lock(service_factories_lock);
 	
 	if (boost::ends_with(factory->GetServiceName(),"_signed")) throw ServiceException("Could not verify signed service definition");
 
@@ -190,7 +176,6 @@ void RobotRaconteurNode::RegisterServiceType(RR_SHARED_PTR<ServiceFactory> facto
 
 void RobotRaconteurNode::UnregisterServiceType(const std::string& type)
 {
-	boost::unique_lock<boost::shared_mutex> lock(service_factories_lock);
 	RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceFactory> >::iterator e1 = service_factories.find(type);
 	if (e1==service_factories.end()) throw InvalidArgumentException("Service type not registered");
 	service_factories.erase(e1);
@@ -199,7 +184,6 @@ void RobotRaconteurNode::UnregisterServiceType(const std::string& type)
 
 std::vector<std::string> RobotRaconteurNode::GetRegisteredServiceTypes()
 {
-	boost::shared_lock<boost::shared_mutex> lock(service_factories_lock);
 	std::vector<std::string> o;
 	boost::copy(service_factories | boost::adaptors::map_keys, std::back_inserter(o));
 	return o;
@@ -208,7 +192,6 @@ std::vector<std::string> RobotRaconteurNode::GetRegisteredServiceTypes()
 uint32_t RobotRaconteurNode::RegisterTransport(RR_SHARED_PTR<Transport> transport)
 {
 	{
-		boost::mutex::scoped_lock lock(transports_lock);
 		if (transport_count >= std::numeric_limits<uint32_t>::max())
 			transport_count=0;
 		else
@@ -220,7 +203,6 @@ uint32_t RobotRaconteurNode::RegisterTransport(RR_SHARED_PTR<Transport> transpor
 	RR_SHARED_PTR<ITransportTimeProvider> t=RR_DYNAMIC_POINTER_CAST<ITransportTimeProvider>(transport);
 	if (t)
 	{
-		boost::unique_lock<boost::shared_mutex> lock(time_provider_lock);
 		RR_SHARED_PTR<ITransportTimeProvider> t2=time_provider.lock();
 		if (!t2)
 		{
@@ -586,16 +568,13 @@ void RobotRaconteurNode::Shutdown()
 {
 	{
 		if (!instance_is_init) return;
-		boost::mutex::scoped_lock lock2(shutdown_lock);
 		if (is_shutdown) return;
 		{
-			boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
 			is_shutdown = true;
 		}
 
 		std::vector<RR_SHARED_PTR<Endpoint> > endpointsv;
 		{
-			boost::mutex::scoped_lock lock(endpoint_lock);
 			boost::copy(endpoints | boost::adaptors::map_values, std::back_inserter(endpointsv));
 		}
 	
@@ -612,7 +591,6 @@ void RobotRaconteurNode::Shutdown()
 	
 
 		{
-			boost::mutex::scoped_lock lock(endpoint_lock);
 			endpoints.clear();
 		}
 
@@ -627,7 +605,6 @@ void RobotRaconteurNode::Shutdown()
 		}
 
 		{
-			boost::mutex::scoped_lock lock(transports_lock);
 			BOOST_FOREACH(RR_SHARED_PTR<Transport>& e, transports | boost::adaptors::map_values)
 			{
 				try
@@ -642,7 +619,6 @@ void RobotRaconteurNode::Shutdown()
 		}
 
 		{
-			boost::mutex::scoped_lock lock(cleanupobjs_lock);
 
 			cleanupobjs.clear();
 		}
@@ -651,7 +627,6 @@ void RobotRaconteurNode::Shutdown()
 	shutdown_listeners();
 
 	{
-		boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
 		if (this->PeriodicCleanupTask_timer)
 		{
 			try
@@ -663,45 +638,15 @@ void RobotRaconteurNode::Shutdown()
 			this->PeriodicCleanupTask_timer.reset();
 		}
 	}
+			
 	
-		
 	{
-		RR_SHARED_PTR<ThreadPool> thread_pool1;
-
-		{
-			boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
-			thread_pool1 = thread_pool;
-		}
-		if (thread_pool1)
-		{
-			thread_pool1->Shutdown();
-		}
-	}
-
-	{
-		boost::mutex::scoped_lock lock(exception_handler_lock);
 		exception_handler.clear();
 	}
 
 	discovery_updated_listeners.disconnect_all_slots();
 	discovery_lost_listeners.disconnect_all_slots();
 	
-}
-
-
-void RobotRaconteurNode::ReleaseThreadPool()
-{
-	boost::mutex::scoped_lock lock2(shutdown_lock);
-
-	if (!is_shutdown)
-	{
-		throw InvalidOperationException("Node must be shut down to release thread pool");
-	}
-
-	{
-		boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
-		thread_pool.reset();
-	}
 }
 
 RobotRaconteurNode::~RobotRaconteurNode()
@@ -722,7 +667,6 @@ void RobotRaconteurNode::SendMessage(RR_INTRUSIVE_PTR<Message> m)
 		
 	RR_SHARED_PTR<Endpoint> e;		
 	{
-		boost::mutex::scoped_lock lock (endpoint_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(m->header->SenderEndpoint);
 		if (e1==endpoints.end()) throw InvalidEndpointException("Could not find endpoint");
 		e = e1->second;
@@ -730,7 +674,6 @@ void RobotRaconteurNode::SendMessage(RR_INTRUSIVE_PTR<Message> m)
 
 	RR_SHARED_PTR<Transport> c;			
 	{
-		boost::shared_lock<boost::shared_mutex> lock (transport_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Transport> >::iterator e1 = transports.find(e->GetTransport());
 		if (e1==transports.end()) throw ConnectionException("Could not find transport");
 		c = e1->second;
@@ -752,7 +695,6 @@ void RobotRaconteurNode::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::fu
 
 	RR_SHARED_PTR<Endpoint> e;
 	{
-		boost::mutex::scoped_lock lock(endpoint_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(m->header->SenderEndpoint);
 		if (e1 == endpoints.end()) throw InvalidEndpointException("Could not find endpoint");
 		e = e1->second;
@@ -760,7 +702,6 @@ void RobotRaconteurNode::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::fu
 
 	RR_SHARED_PTR<Transport> c;
 	{
-		boost::shared_lock<boost::shared_mutex> lock(transport_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Transport> >::iterator e1 = transports.find(e->GetTransport());
 		if (e1 == transports.end()) throw ConnectionException("Could not find transport");
 		c = e1->second;
@@ -788,7 +729,6 @@ void RobotRaconteurNode::MessageReceived(RR_INTRUSIVE_PTR<Message> m)
 			RR_SHARED_PTR<Endpoint> e;
 				
 			{
-				boost::mutex::scoped_lock lock (endpoint_lock);
 				RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(m->header->ReceiverEndpoint);
 				if (e1 != endpoints.end())
 				{
@@ -819,7 +759,6 @@ void RobotRaconteurNode::TransportConnectionClosed(uint32_t endpoint)
 {
 	RR_SHARED_PTR<Endpoint> e;
 	{
-		boost::mutex::scoped_lock lock(endpoint_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(endpoint);
 		if (e1 != endpoints.end())
 		{
@@ -837,60 +776,50 @@ void RobotRaconteurNode::TransportConnectionClosed(uint32_t endpoint)
 
 uint32_t RobotRaconteurNode::GetRequestTimeout()
 {
-	boost::mutex::scoped_lock lock(RequestTimeout_lock);
 	return RequestTimeout;
 }
 void RobotRaconteurNode::SetRequestTimeout(uint32_t timeout)
 {
-	boost::mutex::scoped_lock lock(RequestTimeout_lock);
 	RequestTimeout=timeout;
 }
 
 uint32_t RobotRaconteurNode::GetTransportInactivityTimeout()
 {
-	boost::mutex::scoped_lock lock(TransportInactivityTimeout_lock);
 	return TransportInactivityTimeout;
 }
 void RobotRaconteurNode::SetTransportInactivityTimeout(uint32_t timeout)
 {
-	boost::mutex::scoped_lock lock(TransportInactivityTimeout_lock);
 	TransportInactivityTimeout=timeout;
 }
 
 uint32_t RobotRaconteurNode::GetEndpointInactivityTimeout()
 {
-	boost::mutex::scoped_lock lock(EndpointInactivityTimeout_lock);
 	return EndpointInactivityTimeout;
 }
 
 void RobotRaconteurNode::SetEndpointInactivityTimeout(uint32_t timeout)
 {
-	boost::mutex::scoped_lock lock(EndpointInactivityTimeout_lock);
 	EndpointInactivityTimeout=timeout;
 }
 
 uint32_t RobotRaconteurNode::GetMemoryMaxTransferSize()
 {
-	boost::mutex::scoped_lock lock(MemoryMaxTransferSize_lock);
 	return MemoryMaxTransferSize;
 }
 
 void RobotRaconteurNode::SetMemoryMaxTransferSize(uint32_t size)
 {
-	boost::mutex::scoped_lock lock(MemoryMaxTransferSize_lock);
 	MemoryMaxTransferSize=size;
 }
 
 
 const RR_SHARED_PTR<RobotRaconteur::DynamicServiceFactory> RobotRaconteurNode::GetDynamicServiceFactory() 
 {
-	boost::mutex::scoped_lock lock(dynamic_factory_lock);
 	return dynamic_factory;
 }
 
 void RobotRaconteurNode::SetDynamicServiceFactory(RR_SHARED_PTR<RobotRaconteur::DynamicServiceFactory> f)
 {
-	boost::mutex::scoped_lock lock(dynamic_factory_lock);
 
 	if (this->dynamic_factory != 0)
 		throw InvalidOperationException("Dynamic service factory already set");
@@ -937,7 +866,6 @@ void RobotRaconteurNode::AsyncConnectService(const std::vector<std::string> &url
 
 	std::map<std::string,RR_WEAK_PTR<Transport> > connectors;
 	{
-		boost::shared_lock<boost::shared_mutex> lock(transport_lock);
 		boost::copy(transports | boost::adaptors::map_values, std::back_inserter(atransports));		
 	}
 
@@ -962,7 +890,7 @@ void RobotRaconteurNode::AsyncConnectService(const std::vector<std::string> &url
 		if (connectors.empty()) throw ConnectionException("Could not find any valid transports for requested connection URLs");
 
 		RR_SHARED_PTR<detail::RobotRaconteurNode_connector> connector=RR_MAKE_SHARED<detail::RobotRaconteurNode_connector>(shared_from_this());
-		GetThreadPool()->Post(boost::bind(&detail::RobotRaconteurNode_connector::connect, connector, connectors, username, credentials, listener, objecttype, boost::protect(handler), timeout));
+		Post(boost::bind(&detail::RobotRaconteurNode_connector::connect, connector, connectors, username, credentials, listener, objecttype, boost::protect(handler), timeout));
 		return;	
 }
 
@@ -985,11 +913,8 @@ uint32_t RobotRaconteurNode::RegisterEndpoint(RR_SHARED_PTR<Endpoint> e)
 	
 	{
 		boost::random::uniform_int_distribution<uint32_t> distribution(0,std::numeric_limits<uint32_t>::max());
-
-		boost::mutex::scoped_lock lock(endpoint_lock);
 		uint32_t id;
 		{
-			boost::mutex::scoped_lock lock(random_generator_lock);
 		do
 		{
 			id=distribution(*random_generator);
@@ -1011,7 +936,6 @@ void RobotRaconteurNode::DeleteEndpoint(RR_SHARED_PTR<Endpoint> e)
 	{
 		
 		{			
-			boost::mutex::scoped_lock lock(endpoint_lock);
 			RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(e->GetLocalEndpoint());
 			if (e1 != endpoints.end())			
 			{
@@ -1028,7 +952,6 @@ void RobotRaconteurNode::DeleteEndpoint(RR_SHARED_PTR<Endpoint> e)
 	{
 		RR_SHARED_PTR<Transport> c;		
 		{
-			boost::shared_lock<boost::shared_mutex> lock(transport_lock);
 			RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Transport> >::iterator e1 = transports.find(e->GetTransport());
 			if (e1 != transports.end())
 			{
@@ -1046,7 +969,6 @@ void RobotRaconteurNode::CheckConnection(uint32_t endpoint)
 {	
 	RR_SHARED_PTR<Endpoint> e;
 	{
-		boost::mutex::scoped_lock lock(endpoint_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(endpoint);
 		if (e1 == endpoints.end()) throw InvalidEndpointException("Invalid Endpoint");
 		e = e1->second;
@@ -1054,7 +976,6 @@ void RobotRaconteurNode::CheckConnection(uint32_t endpoint)
 
 	RR_SHARED_PTR<Transport> c;		
 	{
-		boost::shared_lock<boost::shared_mutex> lock(transport_lock);
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Transport> >::iterator e1 = transports.find(e->GetTransport());
 		if (e1 == transports.end()) throw ConnectionException("Transport connection not found");
 		c = e1->second;
@@ -1241,7 +1162,6 @@ void RobotRaconteurNode::PeriodicCleanupTask(const TimerEvent& err)
 		std::vector<RR_SHARED_PTR<Endpoint> > e;
 		
 		{
-			boost::mutex::scoped_lock lock (endpoint_lock);
 			boost::copy(endpoints | boost::adaptors::map_values, std::back_inserter(e));
 						
 			for(std::map<uint32_t,boost::posix_time::ptime>::iterator e=recent_endpoints.begin(); e!=recent_endpoints.end(); )
@@ -1273,7 +1193,6 @@ void RobotRaconteurNode::PeriodicCleanupTask(const TimerEvent& err)
 
 		std::vector<RR_SHARED_PTR<Transport> > c;		
 		{
-			boost::shared_lock<boost::shared_mutex> lock (transport_lock);
 			boost::copy(transports | boost::adaptors::map_values, std::back_inserter(c));
 		}
 		
@@ -1313,14 +1232,12 @@ void RobotRaconteurNode::PeriodicCleanupTask(const TimerEvent& err)
 
 void RobotRaconteurNode::AddPeriodicCleanupTask(RR_SHARED_PTR<IPeriodicCleanupTask> task)
 {
-	boost::mutex::scoped_lock lock(cleanupobjs_lock);
 	
 	cleanupobjs.push_back(task);
 }
 
 void RobotRaconteurNode::RemovePeriodicCleanupTask(RR_SHARED_PTR<IPeriodicCleanupTask> task)
 {
-	boost::mutex::scoped_lock lock(cleanupobjs_lock);
 	cleanupobjs.remove(task);
 }
 
@@ -1373,139 +1290,13 @@ void RobotRaconteurNode::StartPeriodicCleanupTask(RR_SHARED_PTR<RobotRaconteurNo
 	node->PeriodicCleanupTask_timer->Start();
 }
 
-RR_SHARED_PTR<ThreadPool> RobotRaconteurNode::GetThreadPool()
-{
-	{
-		boost::shared_lock<boost::shared_mutex> lock(thread_pool_lock);
-		if (thread_pool) 
-			return thread_pool;
-	}
-	
-	InitThreadPool(20);
-	
-	{
-		boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
-		if (!thread_pool)
-		{
-			throw InternalErrorException("Could not initialize thread pool");
-		}
-			
-		return thread_pool;
-	}
-}
-
-bool RobotRaconteurNode::TryGetThreadPool(RR_SHARED_PTR<ThreadPool>& t)
-{
-	{
-		boost::shared_lock<boost::shared_mutex> t_lock(thread_pool_lock);
-		t = thread_pool;
-	}
-	if (t)
-	{
-		return true;
-	}
-	else
-	{
-		try
-		{
-			t = GetThreadPool();
-		}
-		catch (std::exception&)
-		{
-			return false;
-		}
-	}
-
-	return t != NULL;
-}
-
-void RobotRaconteurNode::SetThreadPool(RR_SHARED_PTR<ThreadPool> pool)
-{
-
-	if (is_shutdown) throw InvalidOperationException("Node has been shutdown");
-	boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
-	if (thread_pool) throw InvalidOperationException("Thread pool already set");
-	thread_pool=pool;
-
-}
-
-RR_SHARED_PTR<ThreadPoolFactory> RobotRaconteurNode::GetThreadPoolFactory()
-{
-	
-	boost::mutex::scoped_lock lock(thread_pool_factory_lock);
-
-	if (!thread_pool_factory)
-	{
-		thread_pool_factory=RR_MAKE_SHARED<ThreadPoolFactory>();
-				
-	}
-
-	return thread_pool_factory;
-}
-
-void RobotRaconteurNode::SetThreadPoolFactory(RR_SHARED_PTR<ThreadPoolFactory> factory)
-{
-
-	
-	boost::mutex::scoped_lock lock(thread_pool_factory_lock);
-	if (thread_pool_factory) throw InvalidOperationException("Thread pool already set");
-	thread_pool_factory=factory;
-
-}
-
-int32_t RobotRaconteurNode::GetThreadPoolCount()
-{
-	return boost::numeric_cast<int32_t>(GetThreadPool()->GetThreadPoolCount());
-}
-
-void RobotRaconteurNode::SetThreadPoolCount(int32_t count)
-{
-	InitThreadPool(count);
-	GetThreadPool()->SetThreadPoolCount(count);
-}
-
-bool RobotRaconteurNode::TryLockThreadPool(RR_WEAK_PTR<RobotRaconteurNode> node, thread_pool_lock_type& lock, bool shutdown_op)
-{
-	RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-	if (!node1) return false;
-	thread_pool_lock_type lock1(node1->thread_pool_lock);
-	if (!shutdown_op && node1->is_shutdown) return false;
-	lock.swap(lock1);
-	return true;
-}
-
-bool RobotRaconteurNode::InitThreadPool(int32_t thread_count)
-{
-	boost::unique_lock<boost::shared_mutex> lock(thread_pool_lock);
-	if (thread_pool) return false;
-
-	
-	if (is_shutdown)
-	{
-		throw InvalidOperationException("Node has been shutdown");
-	}
-
-	thread_pool = GetThreadPoolFactory()->NewThreadPool(shared_from_this());
-	thread_pool->SetThreadPoolCount(thread_count);
-	
-	if (!PeriodicCleanupTask_timerstarted)
-	{
-		PeriodicCleanupTask_timerstarted = true;
-		thread_pool->Post(boost::bind(&StartPeriodicCleanupTask, shared_from_this()));
-	}
-
-	return true;
-}
-
 void RobotRaconteurNode::SetExceptionHandler(boost::function<void (const std::exception*)> handler)
 {
-	boost::mutex::scoped_lock lock(exception_handler_lock);
 	exception_handler=handler;
 }
 
 boost::function<void (const std::exception*)> RobotRaconteurNode::GetExceptionHandler()
 {
-	boost::mutex::scoped_lock lock(exception_handler_lock);
 	return exception_handler;
 }
 
@@ -1515,7 +1306,6 @@ void RobotRaconteurNode::HandleException(const std::exception* exp)
 
 	boost::function<void (const std::exception*)> h;
 	{
-		boost::mutex::scoped_lock lock(exception_handler_lock);
 		h=exception_handler;
 	}
 
@@ -1539,7 +1329,6 @@ bool RobotRaconteurNode::TryHandleException(RR_WEAK_PTR<RobotRaconteurNode> node
 
 boost::posix_time::ptime RobotRaconteurNode::NowUTC()
 {
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
 
 	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
 
@@ -1557,8 +1346,6 @@ boost::posix_time::ptime RobotRaconteurNode::NowUTC()
 
 RR_SHARED_PTR<Timer> RobotRaconteurNode::CreateTimer(const boost::posix_time::time_duration& period, boost::function<void (const TimerEvent&)> handler, bool oneshot)
 {
-	
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
 	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
 	if (!t)
 	{
@@ -1570,36 +1357,9 @@ RR_SHARED_PTR<Timer> RobotRaconteurNode::CreateTimer(const boost::posix_time::ti
 	}
 }
 
-RR_SHARED_PTR<Rate> RobotRaconteurNode::CreateRate(double frequency)
+void RobotRaconteurNode::AsyncSleep(const boost::posix_time::time_duration& duration, boost::function<void()> handler)
 {
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
-	if (!t)
-	{
-		return RR_MAKE_SHARED<WallRate>(frequency,shared_from_this());
-	}
-	else
-	{
-		return t->CreateRate(frequency);
-	}
-}
-
-void RobotRaconteurNode::Sleep(const boost::posix_time::time_duration& duration)
-{
-	RR_SHARED_PTR<ITransportTimeProvider> t;
-	{
-		boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-		t=time_provider.lock();
-	}
-	if (!t)
-	{
-		boost::this_thread::sleep(duration);
-	}
-	else
-	{
-		t->Sleep(duration);
-	}
-
+	RobotRaconteurNode::SetTimeout(((double)duration.total_microseconds())*1e-3, boost::bind(handler));
 }
 
 void RobotRaconteurNode::DownCastAndThrowException(RobotRaconteurException& exp)
@@ -1650,7 +1410,6 @@ bool RobotRaconteurNode::IsEndpointLargeTransferAuthorized(uint32_t endpoint)
 	{
 		RR_SHARED_PTR<Endpoint> e;
 		{
-			boost::mutex::scoped_lock lock(endpoint_lock);
 			RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(endpoint);
 			if (e1 == endpoints.end()) return false;
 			e = e1->second;
@@ -1681,7 +1440,6 @@ std::string RobotRaconteurNode::GetRobotRaconteurVersion()
 std::string RobotRaconteurNode::GetRandomString(size_t count)
 {
 	std::string o;
-	boost::mutex::scoped_lock lock(random_generator_lock);
 	std::string strvals = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 	boost::random::uniform_int_distribution<uint32_t> distribution(0, boost::numeric_cast<uint32_t>(strvals.size() - 1));
 	for (size_t i = 0; i<count; i++)
@@ -1689,6 +1447,24 @@ std::string RobotRaconteurNode::GetRandomString(size_t count)
 		o += strvals.at(distribution(*random_generator));
 	}
 	return o;
+}
+
+// Emscripten Functions
+void RobotRaconteurNode::Post(boost::function<void()> f)
+{
+	//TODO: implement this
+	throw NotImplementedException("Post not implemented");
+}
+
+long RobotRaconteurNode::SetTimeout(double msecs, boost::function<void(boost::system::error_code)> f)
+{
+	//TODO: implement this
+	throw NotImplementedException("SetTimeout not implemented");
+}
+void RobotRaconteurNode::ClearTimeout(long timer)
+{
+	//TODO: implement this
+	throw NotImplementedException("ClearTimeout not implemented");
 }
 
 }

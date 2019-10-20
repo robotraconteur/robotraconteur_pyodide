@@ -176,9 +176,6 @@ namespace RobotRaconteur
 	{
 
 		if (!GetConnected()) throw ConnectionException("Service client not connected");
-
-		boost::mutex::scoped_lock lock2(FindObjRef_lock);
-		boost::mutex::scoped_lock lock(stubs_lock);
 		RR_SHARED_PTR<ServiceStub> stub;
 		{
 			RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> >::iterator e1 = stubs.find(path);
@@ -311,7 +308,6 @@ namespace RobotRaconteur
 
 								for (size_t i = 0; i < missingdefs.size(); i++)
 								{
-									boost::mutex::scoped_lock lock(pulled_service_types_lock);
 									pulled_service_types.insert(std::make_pair(di2.at(i)->GetServiceName(), di2.at(i)));
 								}
 							}
@@ -343,7 +339,6 @@ namespace RobotRaconteur
 
 
 				{
-					boost::mutex::scoped_lock lock(stubs_lock);
 					RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> >::iterator e1 = stubs.find(path);
 					if (e1 == stubs.end())
 					{
@@ -373,7 +368,6 @@ namespace RobotRaconteur
 
 		try
 		{
-			boost::mutex::scoped_lock lock(stubs_lock);
 			active_stub_searches.remove(path);
 			for (std::list<boost::tuple<std::string, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> > >::iterator ee = active_stub_searches_handlers.begin(); ee != active_stub_searches_handlers.end();)
 			{
@@ -454,7 +448,6 @@ namespace RobotRaconteur
 		t->handler.swap(handler);
 
 		{
-			boost::mutex::scoped_lock lock(outstanding_requests_lock);
 
 			do {
 				request_number++;
@@ -504,7 +497,6 @@ namespace RobotRaconteur
 			std::list<boost::function<void(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> error)> > handlers;
 
 			{
-				boost::mutex::scoped_lock lock(outstanding_requests_lock);
 				BOOST_FOREACH(RR_SHARED_PTR<outstanding_request>& e, outstanding_requests | boost::adaptors::map_values)
 				{
 					//e->evt->Set();
@@ -542,7 +534,6 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<outstanding_request> t;
 
 			{
-				boost::mutex::scoped_lock lock(outstanding_requests_lock);
 				RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<outstanding_request> >::iterator e1 = outstanding_requests.find(requestid);
 				if (e1 == outstanding_requests.end()) return;
 				t = e1->second;
@@ -571,7 +562,6 @@ namespace RobotRaconteur
 
 
 				{
-					boost::mutex::scoped_lock lock(outstanding_requests_lock);
 					RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<outstanding_request> >::iterator e1 = outstanding_requests.find(requestid);
 					if (e1 == outstanding_requests.end()) return;
 					t = e1->second;
@@ -672,7 +662,6 @@ namespace RobotRaconteur
 			{
 				RR_SHARED_PTR<ServiceStub> stub;
 				{
-					boost::mutex::scoped_lock lock(stubs_lock);
 					RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> >::iterator e1 = stubs.find(m->ServicePath);
 					if (e1 == stubs.end()) return;
 					stub = e1->second;
@@ -698,7 +687,6 @@ namespace RobotRaconteur
 				uint32_t transid = m->RequestID;
 				try
 				{
-					boost::mutex::scoped_lock lock(outstanding_requests_lock);
 					RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<outstanding_request> >::iterator e1 = outstanding_requests.find(transid);
 					if (e1 == outstanding_requests.end()) return;
 					t = e1->second;
@@ -722,7 +710,6 @@ namespace RobotRaconteur
 						{
 
 							{
-								boost::mutex::scoped_lock lock(outstanding_requests_lock);
 								outstanding_requests.erase(transid);
 
 								try
@@ -800,7 +787,6 @@ namespace RobotRaconteur
 			{
 				RR_SHARED_PTR<ServiceStub> stub;
 				{
-					boost::mutex::scoped_lock lock(stubs_lock);
 					RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> >::iterator e1 = stubs.find(m->ServicePath);
 					if (e1 == stubs.end()) return;
 					stub = e1->second;
@@ -812,7 +798,6 @@ namespace RobotRaconteur
 			{
 				RR_SHARED_PTR<ServiceStub> stub;
 				{
-					boost::mutex::scoped_lock lock(stubs_lock);
 					RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> >::iterator e1 = stubs.find(m->ServicePath);
 					if (e1 == stubs.end()) return;
 					stub = e1->second;
@@ -821,7 +806,6 @@ namespace RobotRaconteur
 			}
 			else if (m->EntryType == MessageEntryType_ServicePathReleasedReq)
 			{
-				boost::mutex::scoped_lock lock(stubs_lock);
 				std::string path = m->ServicePath;
 				std::vector<std::string> objkeys;
 				BOOST_FOREACH(const std::string& ee, stubs | boost::adaptors::map_keys)
@@ -888,7 +872,6 @@ namespace RobotRaconteur
 	
 	void ClientContext::AsyncConnectService(RR_SHARED_PTR<Transport> c, const std::string &url, const std::string &username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 
 		ParseConnectionURLResult url_res = ParseConnectionURL(url);
 
@@ -912,7 +895,6 @@ namespace RobotRaconteur
 	
 	void ClientContext::AsyncConnectService1(RR_SHARED_PTR<Transport> c, RR_SHARED_PTR<ITransportConnection> tc, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& url, const std::string& username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 		if (e)
 		{
 			detail::InvokeHandlerWithException(node, handler, e);
@@ -938,7 +920,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService(RR_SHARED_PTR<Transport> c, RR_SHARED_PTR<ITransportConnection> tc, const std::string &url, const std::string &username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 
 		this->connecttransport = c;
 		this->connecturl = url;
@@ -959,8 +940,8 @@ namespace RobotRaconteur
 				| TransportCapabilityCode_MESSAGE3_BASIC_CONNECTCOMBINED);
 		}
 
-		use_message3.store(use_message3_);
-		use_combined_connection.store(use_combined_connection_);
+		use_message3=(use_message3_);
+		use_combined_connection=(use_combined_connection_);
 		ParseConnectionURLResult url_res = ParseConnectionURL(url);
 
 		m_ServiceName = url_res.service;
@@ -996,7 +977,7 @@ namespace RobotRaconteur
 			RobotRaconteurNode::TryHandleException(node, &exp);
 		}
 
-		if (use_combined_connection.load())
+		if (use_combined_connection)
 		{
 			RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry();
 			m->ServicePath = GetServiceName();
@@ -1038,7 +1019,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService2(RR_SHARED_PTR<std::vector<RR_SHARED_PTR<ServiceDefinition> > > d, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 		//std::cout << "AsyncConnectService2" << std::endl;
 		if (e)
 		{
@@ -1052,7 +1032,6 @@ namespace RobotRaconteur
 			try
 			{
 				{
-					boost::mutex::scoped_lock lock(pulled_service_defs_lock);
 					BOOST_FOREACH(RR_SHARED_PTR<ServiceDefinition>& e, *d)
 					{
 						if (pulled_service_defs.find(e->Name) == pulled_service_defs.end())
@@ -1085,7 +1064,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService3(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, RR_SHARED_PTR<std::vector<RR_SHARED_PTR<ServiceDefinition> > > d, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 		//std::cout << "AsyncConnectService3" << std::endl;
 		if (e)
 		{
@@ -1135,7 +1113,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService4(RR_SHARED_PTR<std::vector<RR_SHARED_PTR<ServiceDefinition> > > d, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, const std::string& type, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 		//std::cout << "AsyncConnectService4" << std::endl;
 		if (e)
 		{
@@ -1174,7 +1151,6 @@ namespace RobotRaconteur
 
 						for (size_t i = 0; i < missingdefs.size(); i++)
 						{
-							boost::mutex::scoped_lock lock(pulled_service_types_lock);
 							pulled_service_types.insert(std::make_pair(di2.at(i)->GetServiceName(), di2.at(i)));
 						}
 					}
@@ -1213,7 +1189,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService5(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& username, RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > credentials, const std::string& objecttype, const std::string& type, RR_SHARED_PTR<std::vector<RR_SHARED_PTR<ServiceDefinition> > > d, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 		//std::cout << "AsyncConnectService5" << std::endl;
 		if (e)
 		{
@@ -1263,7 +1238,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService6(RR_SHARED_PTR<std::string> ret, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& type, RR_SHARED_PTR<std::vector<RR_SHARED_PTR<ServiceDefinition> > > d, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 		//std::cout << "AsyncConnectService6" << std::endl;
 		if (e)
 		{
@@ -1286,7 +1260,6 @@ namespace RobotRaconteur
 			{
 				RR_SHARED_PTR<ServiceStub> stub = GetServiceDef()->CreateStub(type, GetServiceName(), shared_from_this());
 				{
-					boost::mutex::scoped_lock lock(stubs_lock);
 					stubs.insert(make_pair(GetServiceName(), stub));
 				}
 
@@ -1305,7 +1278,6 @@ namespace RobotRaconteur
 
 	void ClientContext::AsyncConnectService7(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> e, const std::string& objecttype, boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 	{
-		boost::recursive_mutex::scoped_lock cl_lock(connect_lock);
 
 		if (e)
 		{
@@ -1317,7 +1289,6 @@ namespace RobotRaconteur
 		try
 		{
 			{
-				boost::mutex::scoped_lock lock(pulled_service_defs_lock);
 				RR_INTRUSIVE_PTR<MessageElementList> l = ret->FindElement("servicedefs")->CastData<MessageElementList>();
 				if (!l) throw ServiceException("servicedefs cannot be null on connect");
 				BOOST_FOREACH(RR_INTRUSIVE_PTR<MessageElement> l1, l->Elements)
@@ -1346,7 +1317,6 @@ namespace RobotRaconteur
 			{
 				if (GetNode()->GetDynamicServiceFactory())
 				{
-					boost::mutex::scoped_lock lock(pulled_service_defs_lock);
 					use_pulled_types = true;
 
 					std::vector<std::string> pulleddefs_str;
@@ -1359,7 +1329,6 @@ namespace RobotRaconteur
 
 					for (size_t i = 0; i < pulleddefs_str.size(); i++)
 					{
-						boost::mutex::scoped_lock lock(pulled_service_types_lock);
 						pulled_service_types.insert(std::make_pair(di2.at(i)->GetServiceName(), di2.at(i)));
 					}
 
@@ -1377,7 +1346,6 @@ namespace RobotRaconteur
 
 			RR_SHARED_PTR<ServiceStub> stub = GetServiceDef()->CreateStub(type, GetServiceName(), shared_from_this());
 			{
-				boost::mutex::scoped_lock lock(stubs_lock);
 				stubs.insert(make_pair(GetServiceName(), stub));
 			}
 
@@ -1396,8 +1364,6 @@ namespace RobotRaconteur
 	/*bool ClientContext::VerifyObjectImplements2(const std::string& objecttype, const std::string& implementstype)
 	{
 		if (objecttype == implementstype) return true;
-
-		boost::mutex::scoped_lock lock(pulled_service_defs_lock);
 
 		boost::tuple<std::string, std::string> s1 = SplitQualifiedName(objecttype);
 
@@ -1458,11 +1424,7 @@ namespace RobotRaconteur
 	
 	void ClientContext::AsyncClose(RR_MOVE_ARG(boost::function<void()>) handler)
 	{
-
-
-		boost::mutex::scoped_lock lock3(close_lock);
 		{
-			boost::mutex::scoped_lock lock(m_Connected_lock);
 			if (!m_Connected) return;
 		}
 		try
@@ -1475,7 +1437,6 @@ namespace RobotRaconteur
 		catch (std::exception&)
 		{
 			{
-				boost::mutex::scoped_lock lock(m_Connected_lock);
 				m_Connected = false;
 			}
 			
@@ -1490,14 +1451,12 @@ namespace RobotRaconteur
 		{
 
 			{
-				boost::mutex::scoped_lock lock(m_Connected_lock);
 				m_Connected = false;
 			}
 
 			std::list<boost::function<void(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> error)> > handlers;
 
 			{
-				boost::mutex::scoped_lock lock(outstanding_requests_lock);
 				BOOST_FOREACH(RR_SHARED_PTR<outstanding_request>& e, outstanding_requests | boost::adaptors::map_values)
 				{
 					if (e->handler) handlers.push_back(e->handler);
@@ -1530,7 +1489,6 @@ namespace RobotRaconteur
 			//TODO fix this...
 
 			{
-				boost::mutex::scoped_lock lock(stubs_lock);
 				BOOST_FOREACH(RR_SHARED_PTR<ServiceStub>& s, stubs | boost::adaptors::map_values)
 				{
 					try
@@ -1542,11 +1500,9 @@ namespace RobotRaconteur
 			}
 
 			{
-				boost::mutex::scoped_lock lock(stubs_lock);
 				stubs.clear();
 			}
 			{
-				boost::mutex::scoped_lock lock(outstanding_requests_lock);
 				outstanding_requests.clear();
 			}
 			//m_Connected = false;
@@ -1687,7 +1643,6 @@ namespace RobotRaconteur
 
 					if (attrib_found)
 					{
-						boost::mutex::scoped_lock lock(m_Attributes_lock);
 						m_Attributes = rr_cast<RRMap<std::string, RRValue> >((GetNode()->UnpackMapType<std::string, RRValue>(ret3->FindElement("attributes")->CastData<MessageElementMap<std::string> >())))->GetStorageContainer();
 
 					}
@@ -1707,7 +1662,6 @@ namespace RobotRaconteur
 
 	std::map<std::string, RR_INTRUSIVE_PTR<RRValue> > ClientContext::GetAttributes()
 	{
-		boost::mutex m_Attributes_lock;
 		return m_Attributes;
 	}
 
@@ -1841,7 +1795,6 @@ namespace RobotRaconteur
 
 	std::vector<std::string> ClientContext::GetPulledServiceTypes()
 	{
-		boost::mutex::scoped_lock lock(pulled_service_types_lock);
 
 		std::vector<std::string> o;
 		boost::copy(pulled_service_types | boost::adaptors::map_keys, std::back_inserter(o));
@@ -1851,7 +1804,6 @@ namespace RobotRaconteur
 
 	RR_SHARED_PTR<ServiceFactory> ClientContext::GetPulledServiceType(const std::string& type)
 	{
-		boost::mutex::scoped_lock lock(pulled_service_types_lock);
 		RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceFactory> >::iterator e1 = pulled_service_types.find(type);
 		if (e1 == pulled_service_types.end())
 		{
@@ -1863,20 +1815,16 @@ namespace RobotRaconteur
 
 	const bool ClientContext::GetUserAuthenticated()
 	{
-		boost::mutex::scoped_lock lock(m_Authentication_lock);
 		return m_UserAuthenticated;
 	}
 
 	const std::string ClientContext::GetAuthenticatedUsername()
 	{
-		boost::mutex::scoped_lock lock(m_Authentication_lock);
 		return m_AuthenticatedUsername;
 	}
 
 	void ClientContext::AsyncAuthenticateUser(const std::string &username, RR_INTRUSIVE_PTR<RRValue> credentials, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<std::string>, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
-
-		boost::mutex::scoped_lock lock(m_Authentication_lock);
 		if (!GetConnected()) throw ConnectionException("Service client not connected");
 
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_ClientSessionOpReq, "AuthenticateUser");
@@ -2024,7 +1972,6 @@ namespace RobotRaconteur
 		{
 			RR_SHARED_PTR<ServiceStub> stub;
 			{
-				boost::mutex::scoped_lock lock(stubs_lock);
 				RR_UNORDERED_MAP<std::string, RR_SHARED_PTR<ServiceStub> >::iterator e1 = stubs.find(m->ServicePath);
 				if (e1 == stubs.end())
 					throw ServiceException("Stub not found");
@@ -2051,7 +1998,7 @@ namespace RobotRaconteur
 	bool ClientContext::UseMessage3()
 	{
 		bool f = false;
-		use_message3.compare_exchange_strong(f, false);
+		use_message3=false;
 		return f;
 	}
 
@@ -2064,7 +2011,7 @@ namespace RobotRaconteur
 		m_UserAuthenticated = false;
 		use_pulled_types = false;
 		//LastMessageSentTime = GetNode()->NowUTC();
-		use_message3.store(false);
+		use_message3=false;
 	}
 
 	void ClientContext::TransportConnectionClosed(uint32_t endpoint)

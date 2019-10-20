@@ -25,7 +25,6 @@
 #define RR_WIRE_CONNECTION_LISTENER_ITER(command) \
 	try \
 	{ \
-		boost::mutex::scoped_lock listen_lock(listeners_lock); \
 		for (std::list<RR_WEAK_PTR<WireConnectionBaseListener> >::iterator e = listeners.begin(); e != listeners.end();) \
 		{ \
 			RR_SHARED_PTR<WireConnectionBaseListener> w1 = e->lock(); \
@@ -52,7 +51,6 @@ namespace RobotRaconteur
 
 	TimeSpec WireConnectionBase::GetLastValueReceivedTime()
 	{
-		boost::mutex::scoped_lock lock (inval_lock);
 		if (!inval_valid)
 			throw ValueNotSetException("No value received");
 		return lasttime_recv;
@@ -60,7 +58,6 @@ namespace RobotRaconteur
 
 	TimeSpec WireConnectionBase::GetLastValueSentTime()
 	{
-		boost::mutex::scoped_lock lock (outval_lock);
 		if (!outval_valid)
 			throw ValueNotSetException("No value sent");
 		return lasttime_send;
@@ -76,14 +73,12 @@ namespace RobotRaconteur
 	void WireConnectionBase::AsyncClose(RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
 		{
-			boost::mutex::scoped_lock lock(outval_lock);
 			send_closed = true;
 			
 			GetParent()->AsyncClose(shared_from_this(), false, endpoint, RR_MOVE(handler), timeout);
 		}
 
 		{
-			boost::mutex::scoped_lock lock(inval_lock);
 			recv_closed = true;
 		}		
 	}
@@ -112,7 +107,6 @@ namespace RobotRaconteur
 	void WireConnectionBase::WirePacketReceived(TimeSpec timespec, RR_INTRUSIVE_PTR<RRValue> packet)
 	{		
 		{
-			boost::mutex::scoped_lock lock (recvlock);
 
 			if (ignore_inval)
 			{
@@ -122,7 +116,6 @@ namespace RobotRaconteur
 			if (lasttime_recv == TimeSpec(0,0) || timespec > lasttime_recv)
 			{
 				{
-					boost::mutex::scoped_lock lock2(inval_lock);
 					inval = packet;
 					lasttime_recv = timespec;
 					inval_valid = true;					
@@ -130,14 +123,10 @@ namespace RobotRaconteur
 
 				
 				RR_WIRE_CONNECTION_LISTENER_ITER(w1->WireValueChanged(shared_from_this(), packet, timespec));
-						
-
-				lock.unlock();
-
+				
 				try
 				{
-					this->wire_value_changed_semaphore.try_fire_next(
-					boost::bind(&WireConnectionBase::fire_WireValueChanged, this, packet, timespec));
+					fire_WireValueChanged(packet, timespec);
 				}
 				catch (std::exception& exp)
 				{
@@ -154,12 +143,10 @@ namespace RobotRaconteur
 	void WireConnectionBase::RemoteClose()
 	{
 		{
-			boost::mutex::scoped_lock lock(outval_lock);
 			send_closed = true;			
 		}
 
 		{
-			boost::mutex::scoped_lock lock(inval_lock);
 			recv_closed = true;			
 		}
 
@@ -177,7 +164,6 @@ namespace RobotRaconteur
 		
 		try
 		{
-			boost::mutex::scoped_lock lock (sendlock);
 			//if (parent.expired()) return;
 			//boost::mutex::scoped_lock lock2 (recvlock);
 			GetParent()->AsyncClose(shared_from_this(),true,endpoint,&WireConnectionBase_RemoteClose_emptyhandler,1000);
@@ -192,7 +178,6 @@ namespace RobotRaconteur
 			throw WriteOnlyMemberException("Write only member");
 		RR_INTRUSIVE_PTR<RRValue> val;
 		{
-			boost::mutex::scoped_lock lock2(inval_lock);
 		if (!inval_valid)
 			throw ValueNotSetException("Value not set");
 		val=inval;
@@ -206,7 +191,6 @@ namespace RobotRaconteur
 			throw ReadOnlyMemberException("Read only member");
 		RR_INTRUSIVE_PTR<RRValue> val;
 		{
-			boost::mutex::scoped_lock lock2(outval_lock);
 		if (!outval_valid)
 			throw ValueNotSetException("Value not set");
 		val=outval;
@@ -220,7 +204,6 @@ namespace RobotRaconteur
 			throw ReadOnlyMemberException("Read only member");
 
 		{
-			boost::mutex::scoped_lock lock (sendlock);
 			
 			TimeSpec time = TimeSpec::Now();
 			if (time <= lasttime_send)
@@ -232,8 +215,6 @@ namespace RobotRaconteur
 			
 			
 			GetParent()->SendWirePacket(value, time, endpoint, message3);
-			
-			boost::mutex::scoped_lock lock2(outval_lock);
 			outval = value;
 			lasttime_send = time;
 			outval_valid = true;			
@@ -242,7 +223,6 @@ namespace RobotRaconteur
 
 	bool WireConnectionBase::TryGetInValueBase(RR_INTRUSIVE_PTR<RRValue>& value, TimeSpec& time)
 	{
-		boost::mutex::scoped_lock lock2(inval_lock);
 		if (!inval_valid) return false;
 		value = inval;
 		time = lasttime_recv;
@@ -251,7 +231,6 @@ namespace RobotRaconteur
 
 	bool WireConnectionBase::TryGetOutValueBase(RR_INTRUSIVE_PTR<RRValue>& value, TimeSpec& time)
 	{
-		boost::mutex::scoped_lock lock2(outval_lock);
 		if (!outval_valid) return false;				
 		value = outval;
 		time = lasttime_send;
@@ -260,43 +239,36 @@ namespace RobotRaconteur
 
 	bool WireConnectionBase::GetInValueValid()
 	{
-		boost::mutex::scoped_lock lock2(inval_lock);
 		return inval_valid;
 	}
 
 	bool WireConnectionBase::GetOutValueValid()
 	{
-		boost::mutex::scoped_lock lock2(outval_lock);
 		return outval_valid;
 	}
 
 	bool WireConnectionBase::GetIgnoreInValue()
 	{
-		boost::mutex::scoped_lock lock2(inval_lock);
 		return ignore_inval;
 	}
 
 	void WireConnectionBase::SetIgnoreInValue(bool ignore)
 	{
-		boost::mutex::scoped_lock lock2(inval_lock);
 		ignore_inval = ignore;
 	}
 
 	void WireConnectionBase::AddListener(RR_SHARED_PTR<WireConnectionBaseListener> listener)
 	{
-		boost::mutex::scoped_lock lock(listeners_lock);
 		listeners.push_back(listener);
 	}
 
 	void WireConnectionBase::Shutdown()
 	{
 		{
-			boost::mutex::scoped_lock lock(outval_lock);
 			send_closed = true;			
 		}
 
 		{
-			boost::mutex::scoped_lock lock(inval_lock);
 			recv_closed = true;			
 		}
 
@@ -304,7 +276,6 @@ namespace RobotRaconteur
 
 		std::list<RR_WEAK_PTR<WireConnectionBaseListener> > listeners1;
 		{
-			boost::mutex::scoped_lock lock(listeners_lock);
 			listeners.swap(listeners1);
 		}
 		
@@ -434,7 +405,6 @@ namespace RobotRaconteur
 			{
 				try
 				{
-					boost::mutex::scoped_lock lock (connection_lock);
 					connection->AsyncClose(&empty_close_handler,GetNode()->GetRequestTimeout());
 					connection.reset();
 				}
@@ -448,7 +418,6 @@ namespace RobotRaconteur
 				{
 					RR_SHARED_PTR<WireConnectionBase> c;
 					{
-					boost::mutex::scoped_lock lock (connection_lock);
 					c=connection;
 					if (!c)
 						return;
@@ -469,7 +438,6 @@ namespace RobotRaconteur
 		{
 			RR_SHARED_PTR<WireConnectionBase> c;
 			{
-				boost::mutex::scoped_lock lock (connection_lock);
 				c=connection;
 			}
 			
@@ -512,7 +480,6 @@ namespace RobotRaconteur
 		
 		
 		{
-			boost::mutex::scoped_lock lock (connection_lock);
 			if (!remote)
 			{
 			RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WireDisconnectReq, GetMemberName());
@@ -527,7 +494,6 @@ namespace RobotRaconteur
 		
 		
 		{
-			boost::mutex::scoped_lock lock (connection_lock);
 			try
 			{
 				if (connection != 0)
@@ -559,7 +525,6 @@ namespace RobotRaconteur
 		try
 		{		
 			{
-				boost::mutex::scoped_lock lock (connection_lock);
 				if (connection)
 				{
 					

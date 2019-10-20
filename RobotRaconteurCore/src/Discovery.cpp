@@ -64,7 +64,6 @@ namespace RobotRaconteur
 
 		void Discovery_updatediscoverednodes::timeout_timer_callback(const TimerEvent& e)
 		{
-			boost::mutex::scoped_lock lock(work_lock);
 
 			if (!e.stopped)
 			{
@@ -75,7 +74,6 @@ namespace RobotRaconteur
 				}
 
 				{
-					boost::mutex::scoped_lock lock(timeout_timer_lock);
 					try
 					{
 						if (timeout_timer) timeout_timer->Stop();
@@ -93,7 +91,6 @@ namespace RobotRaconteur
 
 		void Discovery_updatediscoverednodes::getdetectednodes_callback(RR_SHARED_PTR<std::vector<NodeDiscoveryInfo> > ret, int32_t key)
 		{
-			boost::mutex::scoped_lock lock(work_lock);
 
 			bool c;
 			{
@@ -112,7 +109,6 @@ namespace RobotRaconteur
 			bool done = false;
 
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				active.remove(key);
 				if (active.size() == 0) done = true;
 			}
@@ -127,7 +123,6 @@ namespace RobotRaconteur
 				if (!c) return;
 
 				{
-					boost::mutex::scoped_lock lock(timeout_timer_lock);
 					try
 					{
 						if (timeout_timer) timeout_timer->Stop();
@@ -144,7 +139,6 @@ namespace RobotRaconteur
 
 		void Discovery_updatediscoverednodes::UpdateDiscoveredNodes(const std::vector<std::string>& schemes, const std::vector<RR_SHARED_PTR<Transport> >& transports, RR_MOVE_ARG(boost::function<void()>) handler, int32_t timeout)
 		{
-			boost::mutex::scoped_lock lock(work_lock);
 
 			this->handler = handler;
 			this->schemes = schemes;
@@ -157,7 +151,6 @@ namespace RobotRaconteur
 			}
 
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				int32_t timeout1 = timeout;
 				if (timeout1 > 0)
 				{
@@ -185,7 +178,6 @@ namespace RobotRaconteur
 
 			bool done = false;
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				if (active.size() == 0) done = true;
 			}
 
@@ -206,7 +198,6 @@ namespace RobotRaconteur
 
 		void Discovery_findservicebytype::handle_error(const int32_t& key, RR_SHARED_PTR<RobotRaconteurException> err)
 		{
-			boost::recursive_mutex::scoped_lock lock2(work_lock);
 
 			{
 				//boost::mutex::scoped_lock lock(searching_lock);
@@ -215,7 +206,6 @@ namespace RobotRaconteur
 
 
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				active.remove(key);
 				errors.push_back(err);
 
@@ -231,7 +221,6 @@ namespace RobotRaconteur
 			}
 
 			{
-				boost::mutex::scoped_lock lock(timeout_timer_lock);
 				try
 				{
 					if (timeout_timer) timeout_timer->Stop();
@@ -239,9 +228,6 @@ namespace RobotRaconteur
 				catch (std::exception&) {}
 				timeout_timer.reset();
 			}
-
-			
-			boost::mutex::scoped_lock lock(ret_lock);
 			detail::InvokeHandler(node, handler, ret);
 			
 
@@ -249,7 +235,6 @@ namespace RobotRaconteur
 
 		void Discovery_findservicebytype::timeout_timer_callback(const TimerEvent& e)
 		{
-			boost::recursive_mutex::scoped_lock lock2(work_lock);
 
 			if (!e.stopped)
 			{
@@ -260,7 +245,6 @@ namespace RobotRaconteur
 				}
 
 				{
-					boost::mutex::scoped_lock lock(timeout_timer_lock);
 					try
 					{
 						if (timeout_timer) timeout_timer->Stop();
@@ -268,9 +252,6 @@ namespace RobotRaconteur
 					catch (std::exception&) {}
 					timeout_timer.reset();
 				}
-
-				
-				boost::mutex::scoped_lock lock(ret_lock);
 				detail::InvokeHandler(node, handler, ret);
 				
 			}
@@ -284,7 +265,6 @@ namespace RobotRaconteur
 
 		void Discovery_findservicebytype::serviceinfo_callback(RR_INTRUSIVE_PTR<MessageEntry> ret1, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<ServiceStub> client, std::string url, uint32_t key)
 		{
-			boost::recursive_mutex::scoped_lock lock2(work_lock);
 			if (err)
 			{
 				try
@@ -351,8 +331,6 @@ namespace RobotRaconteur
 								if (ii->RootObjectType == servicetype)
 								{
 
-									boost::mutex::scoped_lock lock(ret_lock);
-
 									ServiceInfo2 si(*ii, *n);
 
 									//TODO: what is this?
@@ -378,7 +356,6 @@ namespace RobotRaconteur
 									{
 										if (RRArrayToString(impl) == servicetype)
 										{
-											boost::mutex::scoped_lock lock(ret_lock);
 
 											ServiceInfo2 si(*ii, *n);
 											//TODO: What is this?
@@ -408,7 +385,6 @@ namespace RobotRaconteur
 					bool done = false;
 
 					{
-						boost::mutex::scoped_lock lock(active_lock);
 						active.remove(key);
 						done = active.empty();
 					}
@@ -426,7 +402,6 @@ namespace RobotRaconteur
 						if (c2)
 						{
 							{
-								boost::mutex::scoped_lock lock(timeout_timer_lock);
 								try
 								{
 									if (timeout_timer) timeout_timer->Stop();
@@ -434,9 +409,6 @@ namespace RobotRaconteur
 								catch (std::exception&) {}
 								timeout_timer.reset();
 							}
-
-							
-							boost::mutex::scoped_lock lock(ret_lock);
 							detail::InvokeHandler(node, handler, this->ret);							
 						}
 					}
@@ -451,7 +423,6 @@ namespace RobotRaconteur
 
 		void Discovery_findservicebytype::connect_callback(RR_SHARED_PTR<RRObject> client, RR_SHARED_PTR<RobotRaconteurException> err, std::string url, uint32_t key)
 		{
-			boost::recursive_mutex::scoped_lock lock2(work_lock);
 
 			if (err)
 			{
@@ -483,7 +454,6 @@ namespace RobotRaconteur
 
 					int32_t key2;
 					{
-						boost::mutex::scoped_lock lock(active_lock);
 						active_count++;
 						key2 = active_count;
 
@@ -516,7 +486,6 @@ namespace RobotRaconteur
 		
 		void Discovery_findservicebytype::find2()
 		{
-			boost::recursive_mutex::scoped_lock lock2(work_lock);
 
 			std::list<std::vector<std::string> > urls;
 
@@ -561,7 +530,6 @@ namespace RobotRaconteur
 				{
 					int32_t key;
 					{
-						boost::mutex::scoped_lock lock(active_lock);
 						active_count++;
 						key = active_count;
 
@@ -576,7 +544,6 @@ namespace RobotRaconteur
 
 		void Discovery_findservicebytype::AsyncFindServiceByType(const std::string& servicetype, const std::vector<std::string>& schemes, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<std::vector<ServiceInfo2> >)>) handler, int32_t timeout)
 		{
-			boost::recursive_mutex::scoped_lock lock2(work_lock);
 			this->handler = handler;
 			this->schemes = schemes;
 			this->timeout = timeout;
@@ -639,7 +606,6 @@ namespace RobotRaconteur
 			handler.clear();
 
 			{
-				boost::mutex::scoped_lock lock2(storage->this_lock);
 				if (storage->updater.lock() == shared_from_this())
 				{
 					storage->updater.reset();
@@ -670,7 +636,6 @@ namespace RobotRaconteur
 
 		void Discovery_updateserviceinfo::serviceinfo_handler(RR_INTRUSIVE_PTR<MessageEntry> ret1, RR_SHARED_PTR<RobotRaconteurException> err)
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 
 			if (err)
 			{
@@ -744,9 +709,7 @@ namespace RobotRaconteur
 			boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, const std::string&, RR_SHARED_PTR<RobotRaconteurException>)> handler2 = handler;
 			handler.clear();
 						
-			lock.unlock();	
 			{
-				boost::mutex::scoped_lock lock2(storage->this_lock);
 				if (storage->updater.lock() == shared_from_this())
 				{
 					storage->updater.reset();
@@ -761,7 +724,6 @@ namespace RobotRaconteur
 
 		void Discovery_updateserviceinfo::connect_handler(RR_SHARED_PTR<RRObject> client, RR_SHARED_PTR<RobotRaconteurException> err)
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 
 			if (err)
 			{
@@ -815,7 +777,6 @@ namespace RobotRaconteur
 
 		void Discovery_updateserviceinfo::backoff_timer_handler(const TimerEvent& evt)
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 			timeout_timer.reset();
 						
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
@@ -827,7 +788,6 @@ namespace RobotRaconteur
 
 			std::vector<std::string> urls;
 			{
-				boost::mutex::scoped_lock lock(storage->this_lock);
 				urls.reserve(storage->info->URLs.size());
 				BOOST_FOREACH(NodeDiscoveryInfoURL& u, storage->info->URLs)
 				{
@@ -884,10 +844,8 @@ namespace RobotRaconteur
 		std::vector<NodeDiscoveryInfo> Discovery::GetDetectedNodes()
 		{
 			std::vector<NodeDiscoveryInfo> o;
-			boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 			BOOST_FOREACH(RR_SHARED_PTR<Discovery_nodestorage>& o1, m_DiscoveredNodes | boost::adaptors::map_values)
 			{
-				boost::mutex::scoped_lock lock2(o1->this_lock);
 				o.push_back(*o1->info);
 			}
 			return o;
@@ -904,7 +862,6 @@ namespace RobotRaconteur
 
 			try
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 
 				if (info.NodeName.size() > 128)
 				{
@@ -976,7 +933,6 @@ namespace RobotRaconteur
 				}
 				else
 				{
-					boost::mutex::scoped_lock lock2(e1->second->this_lock);
 					RR_SHARED_PTR<NodeDiscoveryInfo>& i = e1->second->info;
 					BOOST_FOREACH(const NodeDiscoveryInfoURL& e, info.URLs)
 					{
@@ -1061,11 +1017,6 @@ namespace RobotRaconteur
 			if (!n) return;
 
 			if (!info) return;
-
-			boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
-
-			
-			boost::mutex::scoped_lock lock2(storage->this_lock);
 			storage->services = info;
 			storage->last_update_nonce = nonce;
 			storage->last_update_time = n->NowUTC();
@@ -1146,7 +1097,6 @@ namespace RobotRaconteur
 
 			std::vector<RR_SHARED_PTR<Transport> > t;
 			{
-				boost::mutex::scoped_lock lock(n->transports_lock);
 				boost::copy(n->transports | boost::adaptors::map_values, std::back_inserter(t));
 			}
 
@@ -1259,7 +1209,6 @@ namespace RobotRaconteur
 			if (!n) return;
 
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 				boost::posix_time::ptime now = n->NowUTC();
 
 
@@ -1274,7 +1223,6 @@ namespace RobotRaconteur
 						std::vector<NodeDiscoveryInfoURL> newurls = std::vector<NodeDiscoveryInfoURL>();
 						std::map<std::string, RR_SHARED_PTR<Discovery_nodestorage> >::iterator e1 = m_DiscoveredNodes.find(e);
 						if (e1 == m_DiscoveredNodes.end()) continue;
-						boost::mutex::scoped_lock lock2(e1->second->this_lock);
 						std::vector<NodeDiscoveryInfoURL> urls = e1->second->info->URLs;
 						BOOST_FOREACH(NodeDiscoveryInfoURL& u, urls)
 						{
@@ -1302,8 +1250,7 @@ namespace RobotRaconteur
 								}
 								catch (std::exception&) {}
 							}
-
-							lock2.unlock();
+							
 							m_DiscoveredNodes.erase(e1);
 
 							RobotRaconteurNode::TryPostToThreadPool(node, boost::bind(&RobotRaconteurNode::FireNodeLost, n, e2->info));
@@ -1316,12 +1263,10 @@ namespace RobotRaconteur
 
 		uint32_t Discovery::GetNodeDiscoveryMaxCacheCount()
 		{
-			boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 			return max_DiscoveredNodes;
 		}
 		void Discovery::SetNodeDiscoveryMaxCacheCount(uint32_t count)
 		{
-			boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 			max_DiscoveredNodes.data() = count;
 		}
 
@@ -1338,19 +1283,16 @@ namespace RobotRaconteur
 			std::vector<std::string> nodeids;
 
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 				boost::copy(m_DiscoveredNodes | boost::adaptors::map_keys, std::back_inserter(nodeids));
 			}
 			for (size_t i = 0; i < nodeids.size(); i++)
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 
 				try
 				{
 					std::vector<std::string> urls = std::vector<std::string>();
 					std::map<std::string, RR_SHARED_PTR<Discovery_nodestorage> >::iterator e1 = m_DiscoveredNodes.find(nodeids.at(i));
 					if (e1 == m_DiscoveredNodes.end()) continue;
-					boost::mutex::scoped_lock lock2(e1->second->this_lock);
 					BOOST_FOREACH(NodeDiscoveryInfoURL& url, e1->second->info->URLs)
 					{
 						BOOST_FOREACH(const std::string& e, transportschemes)
@@ -1388,11 +1330,9 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<std::vector<NodeInfo2> > ret = RR_MAKE_SHARED<std::vector<NodeInfo2> >();
 			std::string sid = id.ToString();
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 				std::map<std::string, RR_SHARED_PTR<Discovery_nodestorage> >::iterator e1 = m_DiscoveredNodes.find(sid);
 				if (e1 != m_DiscoveredNodes.end())
 				{
-					boost::mutex::scoped_lock lock2(e1->second->this_lock);
 					RR_SHARED_PTR<NodeDiscoveryInfo> ni = e1->second->info;
 					NodeInfo2 n;
 					n.NodeID = sid;
@@ -1450,10 +1390,8 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<std::vector<NodeInfo2> > ret = RR_MAKE_SHARED<std::vector<NodeInfo2> >();
 
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 				BOOST_FOREACH(RR_SHARED_PTR<Discovery_nodestorage>& e, m_DiscoveredNodes | boost::adaptors::map_values)
 				{
-					boost::mutex::scoped_lock lock2(e->this_lock);
 					if (e->info->NodeName == name)
 					{
 						NodeInfo2 n;
@@ -1524,18 +1462,14 @@ namespace RobotRaconteur
 
 		void Discovery::DoSubscribe(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter, RR_SHARED_PTR<IServiceSubscription> s)
 		{
-			boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 			subscriptions.push_back(s);
 			s->Init(service_types, filter);
 
 			std::vector<RR_SHARED_PTR<Discovery_nodestorage> > storage;
 			boost::range::copy(m_DiscoveredNodes | boost::adaptors::map_values, std::back_inserter(storage));
 			
-			lock.unlock();
-
 			BOOST_FOREACH(RR_SHARED_PTR<Discovery_nodestorage>& n, storage)
 			{
-				boost::mutex::scoped_lock(n->this_lock);
 
 				if (n->last_update_nonce != n->info->ServiceStateNonce || n->info->ServiceStateNonce.empty())
 				{
@@ -1556,7 +1490,6 @@ namespace RobotRaconteur
 
 		void Discovery::SubscriptionClosed(RR_SHARED_PTR<IServiceSubscription> subscription)
 		{
-			boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 			
 			for (std::list<RR_WEAK_PTR<IServiceSubscription> >::iterator e = subscriptions.begin(); e != subscriptions.end(); )
 			{
@@ -1584,7 +1517,6 @@ namespace RobotRaconteur
 			std::list<RR_WEAK_PTR<IServiceSubscription> > subscriptions1;
 
 			{
-				boost::mutex::scoped_lock lock(m_DiscoveredNodes_lock);
 				is_shutdown.data() = true;
 				subscriptions.swap(subscriptions1);
 			}

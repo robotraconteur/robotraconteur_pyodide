@@ -41,7 +41,6 @@ namespace RobotRaconteur
 		{
 			RR_SHARED_PTR<ClientContext> ep1;
 			{
-				boost::mutex::scoped_lock lock(eplock);
 				ep1 = ep;
 				ep.reset();
 			}
@@ -56,7 +55,6 @@ namespace RobotRaconteur
 
 		void RobotRaconteurNode_connector::endpoint_cleanup::release()
 		{
-			boost::mutex::scoped_lock lock(eplock);
 			ep.reset();
 		}			
 
@@ -75,13 +73,11 @@ namespace RobotRaconteur
 		{
 			//std::cout << "Got error" << std::endl;
 			{
-				boost::mutex::scoped_lock lock(connecting_lock);
 				if (!connecting) return;
 			}
 
 
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				active.remove(key);
 				errors.push_back(err);
 
@@ -89,10 +85,7 @@ namespace RobotRaconteur
 
 			}
 
-			boost::mutex::scoped_lock lock2(handler_lock);
-
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				//std::cout << active.size() << std::endl;
 				if (active.size() != 0) return;
 
@@ -113,7 +106,6 @@ namespace RobotRaconteur
 
 			bool c;
 			{
-				boost::mutex::scoped_lock lock(connecting_lock);
 				c = connecting;
 				connecting = false;
 			}
@@ -121,7 +113,6 @@ namespace RobotRaconteur
 			if (!c) return;
 
 			{
-				boost::mutex::scoped_lock lock(connect_timer_lock);
 				try
 				{
 					if (connect_timer) connect_timer->Stop();
@@ -144,7 +135,6 @@ namespace RobotRaconteur
 			{
 				bool c;
 				{
-					boost::mutex::scoped_lock lock(connecting_lock);
 					c = connecting;
 					connecting = false;
 				}
@@ -182,7 +172,6 @@ namespace RobotRaconteur
 
 			bool c;
 			{
-				boost::mutex::scoped_lock lock(connecting_lock);
 				c = connecting;
 				connecting = false;
 			}
@@ -203,7 +192,6 @@ namespace RobotRaconteur
 			else
 			{
 				{
-					boost::mutex::scoped_lock lock(connect_timer_lock);
 					try
 					{
 						if (connect_timer) connect_timer->Stop();
@@ -237,8 +225,6 @@ namespace RobotRaconteur
 				handle_error(key, err);
 				return;
 			}
-
-			boost::mutex::scoped_lock lock(connecting_lock);
 			//std::cout << "Transport connected" << std::endl;
 			bool c;
 			bool tc;
@@ -262,7 +248,6 @@ namespace RobotRaconteur
 			}
 			else if (tc)
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				active.remove(key);
 				try
 				{
@@ -278,7 +263,6 @@ namespace RobotRaconteur
 				{
 					int32_t key2;
 					{
-						boost::mutex::scoped_lock lock(active_lock);
 						active_count++;
 						key2 = active_count;
 
@@ -305,8 +289,7 @@ namespace RobotRaconteur
 						}
 						catch (std::exception&) {}
 					}
-
-					connecting_lock.unlock();
+					
 					handle_error(key, RobotRaconteurExceptionUtil::DownCastException(err2));
 
 				}
@@ -320,7 +303,7 @@ namespace RobotRaconteur
 						}
 						catch (std::exception&) {}
 					}
-					connecting_lock.unlock();
+					
 					handle_error(key, RR_MAKE_SHARED<ConnectionException>(err2.what()));
 
 				}
@@ -336,12 +319,9 @@ namespace RobotRaconteur
 			//if (!e.stopped) //Allow the cancellation of the timer to kill the connect attempt
 			{
 				{
-					boost::mutex::scoped_lock lock(connecting_lock);
 					if (!connecting) return;
 					connecting = false;
 				}
-
-				boost::mutex::scoped_lock lock2(handler_lock);
 
 				if (connect_timer)
 				{
@@ -378,7 +358,6 @@ namespace RobotRaconteur
 
 			int32_t key;
 			{
-				boost::mutex::scoped_lock lock(active_lock);
 				active_count++;
 				key = active_count;
 				active.push_back(key);
@@ -386,7 +365,6 @@ namespace RobotRaconteur
 
 			try
 			{
-				boost::mutex::scoped_lock lock2(handler_lock);
 
 				size_t active_started = 0;
 
@@ -410,8 +388,6 @@ namespace RobotRaconteur
 						RR_SHARED_PTR<ClientContext> c = RR_MAKE_SHARED<ClientContext>(node);
 						node->RegisterEndpoint(rr_cast<Endpoint>(c));
 						RR_SHARED_PTR<endpoint_cleanup> ep = RR_MAKE_SHARED<endpoint_cleanup>(c, node);
-
-						boost::mutex::scoped_lock lock(active_lock);
 						active_count++;
 						key2 = active_count;
 
@@ -432,7 +408,6 @@ namespace RobotRaconteur
 					if (urls.size() == 0) break;
 
 					{
-						boost::mutex::scoped_lock lock(connecting_lock);
 						if (!connecting) break;
 					}
 
@@ -440,7 +415,6 @@ namespace RobotRaconteur
 					//delay_event->WaitOne(15);
 
 					{
-						boost::mutex::scoped_lock lock(connecting_lock);
 						if (!connecting) break;
 					}
 				}
@@ -449,13 +423,11 @@ namespace RobotRaconteur
 
 				if (timeout != RR_TIMEOUT_INFINITE)
 				{
-					boost::mutex::scoped_lock lock(connect_timer_lock);
 					connect_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&RobotRaconteurNode_connector::connect_timer_callback, shared_from_this(), _1), true);
 					connect_timer->Start();
 				}
 
 				{
-					boost::mutex::scoped_lock lock(active_lock);
 					active.remove(key);
 				}
 

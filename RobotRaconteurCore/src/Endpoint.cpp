@@ -23,90 +23,84 @@ namespace RobotRaconteur
 
 uint32_t Endpoint::GetLocalEndpoint()
 {	
-	return m_LocalEndpoint.load();	
+	return m_LocalEndpoint;	
 }
 
 void Endpoint::SetLocalEndpoint(uint32_t endpoint)
 {	
-	m_LocalEndpoint.store(endpoint);
+	m_LocalEndpoint=(endpoint);
 }
 
 uint32_t Endpoint::GetRemoteEndpoint()
 {	
-	return m_RemoteEndpoint.load();	
+	return m_RemoteEndpoint;	
 }
 
 void Endpoint::SetRemoteEndpoint(uint32_t endpoint)
 {	
-	m_RemoteEndpoint.store(endpoint);
+	m_RemoteEndpoint=(endpoint);
 }
 
 std::string Endpoint::GetRemoteNodeName()
 {
-	boost::shared_lock<boost::shared_mutex> lock(m_RemoteNodeName_lock);
 	std::string ret=m_RemoteNodeName;
 	return ret;
 }
 
 void Endpoint::SetRemoteNodeName(std::string name)
 {
-	boost::unique_lock<boost::shared_mutex> lock(m_RemoteNodeName_lock);
 	m_RemoteNodeName=name;
 }
 
 NodeID Endpoint::GetRemoteNodeID()
 {	
-	boost::shared_lock<boost::shared_mutex> lock(m_RemoteNodeID_lock);
 	NodeID ret = m_RemoteNodeID;
 	return ret;
 }
 
 void Endpoint::SetRemoteNodeID(NodeID id)
 {	
-	boost::unique_lock<boost::shared_mutex> lock(m_RemoteNodeName_lock);
 	m_RemoteNodeID=id;
 }
 
 uint32_t Endpoint::GetTransport()
 {	
-	return m_transport.load();	
+	return m_transport;	
 }
 
 void Endpoint::SetTransport(uint32_t transport)
 {	
-	m_transport.store(transport);
+	m_transport=(transport);
 }
 
 RR_SHARED_PTR<ITransportConnection> Endpoint::GetTransportConnection()
 {
-	boost::mutex::scoped_lock lock(m_TransportConnection_lock);
 	return m_TransportConnection.lock();
 }
 void Endpoint::SetTransportConnection(RR_SHARED_PTR<ITransportConnection> c)
 {
-	boost::mutex::scoped_lock lock(m_TransportConnection_lock);
 	m_TransportConnection = c;
 }
 
 boost::posix_time::ptime Endpoint::GetLastMessageReceivedTime()
 {	
-	return m_LastMessageReceivedTime.load();
+	return m_LastMessageReceivedTime;
 	
 }
 
 void Endpoint::SetLastMessageReceivedTime(boost::posix_time::ptime time)
 {	
-	m_LastMessageReceivedTime.store(time);
+	m_LastMessageReceivedTime=(time);
 }
 
 boost::posix_time::ptime Endpoint::GetLastMessageSentTime()
 {	
-	return m_LastMessageSentTime.load();	
+	return m_LastMessageSentTime;	
 }
 
 void Endpoint::SetLastMessageSentTime(boost::posix_time::ptime time)
 {	
-	m_LastMessageSentTime.store(time);
+	m_LastMessageSentTime=(time);
 }
 
 void Endpoint::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void (RR_SHARED_PTR<RobotRaconteurException> )>& callback)
@@ -128,7 +122,7 @@ void Endpoint::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<voi
 
 		
 	{		
-		m->header->MessageID = MessageNumber.load();
+		m->header->MessageID = MessageNumber;
 
 		MessageNumber = static_cast<uint16_t>((MessageNumber == (static_cast<uint16_t>(std::numeric_limits<uint16_t>::max()))) ? 0 : MessageNumber + 1);
 	}
@@ -151,17 +145,17 @@ void Endpoint::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<voi
 
 	Endpoint::Endpoint(RR_SHARED_PTR<RobotRaconteurNode> node)
 	{
-		m_LocalEndpoint.store(0);
-		m_RemoteEndpoint.store(0);
+		m_LocalEndpoint=(0);
+		m_RemoteEndpoint=(0);
 		m_RemoteNodeName = "";
 		m_RemoteNodeID=NodeID::GetAny();
 		//TransportConnection = 0;
-		m_LastMessageReceivedTime.store(boost::posix_time::microsec_clock::universal_time());
-		m_LastMessageSentTime.store(boost::posix_time::microsec_clock::universal_time());
-		MessageNumber.store(0);
+		m_LastMessageReceivedTime=(boost::posix_time::microsec_clock::universal_time());
+		m_LastMessageSentTime=(boost::posix_time::microsec_clock::universal_time());
+		MessageNumber=(0);
 		//MessageNumberLock = RR_MAKE_SHARED<Object>();
 		this->node=node;
-		m_transport.store(std::numeric_limits<uint32_t>::max());
+		m_transport=(std::numeric_limits<uint32_t>::max());
 	}
 
 	RR_SHARED_PTR<RobotRaconteurNode> Endpoint::GetNode()

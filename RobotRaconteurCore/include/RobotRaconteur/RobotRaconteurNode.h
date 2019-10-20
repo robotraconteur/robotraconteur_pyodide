@@ -21,11 +21,9 @@
 #include "RobotRaconteur/Transport.h"
 #include "RobotRaconteur/Error.h"
 #include "RobotRaconteur/AsyncUtils.h"
-#include "RobotRaconteur/ThreadPool.h"
 #include "RobotRaconteur/Timer.h"
 #include "RobotRaconteur/Discovery.h"
 #include <queue>
-#include <boost/asio.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/function.hpp>
 #include <boost/bind/protect.hpp>
@@ -69,13 +67,11 @@ namespace RobotRaconteur
 	private:
 		
 		bool is_shutdown;
-		boost::mutex shutdown_lock;
 		boost::signals2::signal<void ()> shutdown_listeners;
 				
 		static bool is_init;
 
-		bool instance_is_init;
-		static boost::mutex init_lock;
+		bool instance_is_init;	
 
 	public:
 
@@ -515,16 +511,12 @@ namespace RobotRaconteur
 
 	private:
 		uint32_t RequestTimeout;
-		boost::mutex RequestTimeout_lock;
 
 		uint32_t TransportInactivityTimeout;
-		boost::mutex TransportInactivityTimeout_lock;
 
 		uint32_t EndpointInactivityTimeout;
-		boost::mutex EndpointInactivityTimeout_lock;
 		
 		uint32_t MemoryMaxTransferSize;
-		boost::mutex MemoryMaxTransferSize_lock;
 				
 	public:
 
@@ -545,10 +537,8 @@ namespace RobotRaconteur
 		std::map<uint32_t,boost::posix_time::ptime> recent_endpoints;
 		
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Transport> > transports;
-		boost::mutex transports_lock;
 	
 		RR_SHARED_PTR<RobotRaconteur::DynamicServiceFactory> dynamic_factory;
-		boost::mutex dynamic_factory_lock;
 	public:
 
 		const RR_SHARED_PTR<RobotRaconteur::DynamicServiceFactory> GetDynamicServiceFactory() ;
@@ -581,10 +571,6 @@ namespace RobotRaconteur
 
 		
 		uint32_t transport_count;
-		
-
-		boost::shared_mutex transport_lock;
-		boost::mutex endpoint_lock;
 
 		static RobotRaconteurNode m_s;
 		static RR_SHARED_PTR<RobotRaconteurNode> m_sp;
@@ -596,8 +582,6 @@ namespace RobotRaconteur
 		bool NodeName_set;
 
 		RR_UNORDERED_MAP<std::string,RR_SHARED_PTR<ServiceFactory> > service_factories;
-		boost::shared_mutex service_factories_lock;
-		boost::mutex id_lock;
 		
 		RR_SHARED_PTR<detail::Discovery> m_Discovery;
 		boost::signals2::signal<void(const NodeDiscoveryInfo&, const std::vector<ServiceInfo2>& )> discovery_updated_listeners;
@@ -611,7 +595,6 @@ namespace RobotRaconteur
 		template<typename Handler>
 		node_updated_listener_connection AddNodeServicesDetectedListener(BOOST_ASIO_MOVE_ARG(Handler) h)
 		{
-			boost::shared_lock<boost::shared_mutex> l(thread_pool_lock);
 			if (is_shutdown)
 			{
 				throw InvalidOperationException("Node has been shut down");
@@ -624,7 +607,6 @@ namespace RobotRaconteur
 		template<typename Handler>
 		node_lost_listener_connection AddNodeDetectionLostListener(BOOST_ASIO_MOVE_ARG(Handler) h)
 		{
-			boost::shared_lock<boost::shared_mutex> l(thread_pool_lock);
 			if (is_shutdown)
 			{
 				throw InvalidOperationException("Node has been shut down");
@@ -677,10 +659,6 @@ namespace RobotRaconteur
 
 		std::list<RR_SHARED_PTR<IPeriodicCleanupTask> > cleanupobjs;
 
-		boost::mutex cleanupobjs_lock;
-
-		boost::mutex cleanup_thread_lock;
-
 	public:
 		void AddPeriodicCleanupTask(RR_SHARED_PTR<IPeriodicCleanupTask> task);
 
@@ -700,51 +678,20 @@ namespace RobotRaconteur
 		void AsyncFindObjectType(RR_SHARED_PTR<RRObject> obj, const std::string &n, const std::string &i, boost::function<void (RR_SHARED_PTR<std::string>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout=RR_TIMEOUT_INFINITE);
 
 
-	private:
-		RR_SHARED_PTR<ThreadPool> thread_pool;
-		boost::shared_mutex thread_pool_lock;
-		RR_SHARED_PTR<ThreadPoolFactory> thread_pool_factory;
-		boost::mutex thread_pool_factory_lock;
-
 	public:
-
-		RR_SHARED_PTR<ThreadPool> GetThreadPool();
-
-		bool TryGetThreadPool(RR_SHARED_PTR<ThreadPool>& t);
-
-		void SetThreadPool(RR_SHARED_PTR<ThreadPool> pool);
-
-		RR_SHARED_PTR<ThreadPoolFactory> GetThreadPoolFactory();
-
-		void SetThreadPoolFactory(RR_SHARED_PTR<ThreadPoolFactory> factory);
-
-		int32_t GetThreadPoolCount();
-
-		void SetThreadPoolCount(int32_t count);
-
+		
 		template<typename HandlerType>
 		static bool TryPostToThreadPool(RR_WEAK_PTR<RobotRaconteurNode> node, BOOST_ASIO_MOVE_ARG(HandlerType) h, bool shutdown_op=false)
 		{			
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			{
-				boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-				if (!shutdown_op && node1->is_shutdown) return false;
-			}
-			RR_SHARED_PTR<ThreadPool> t;
-			if (!node1->TryGetThreadPool(t)) return false;
-			return t->TryPost(RR_MOVE(h));
+			Post(h);
+			return true;
 		}
+		
+		// Emscripten Functions
+		static void Post(boost::function<void()> f);
 
-		typedef boost::shared_lock<boost::shared_mutex> thread_pool_lock_type;
-
-		static bool TryLockThreadPool(RR_WEAK_PTR<RobotRaconteurNode> node, thread_pool_lock_type& lock, bool shutdown_op=false);
-
-		//Do not call ReleaseThreadPool unless you really know what you are doing. In most cases it will be destroyed automatically.
-		void ReleaseThreadPool();
-
-	protected:
-
-		bool InitThreadPool(int32_t thread_count);
+		static long SetTimeout(double msecs, boost::function<void(boost::system::error_code)> f);
+		static void ClearTimeout(long timer);
 
 	public:
 
@@ -763,9 +710,6 @@ namespace RobotRaconteur
 	protected:
 
 		boost::function<void (const std::exception*) > exception_handler;
-		boost::mutex exception_handler_lock;
-
-		boost::mutex random_generator_lock;
 		RR_SHARED_PTR<boost::random::random_device> random_generator;
 
 	public:
@@ -775,15 +719,12 @@ namespace RobotRaconteur
 	protected:
 
 		RR_WEAK_PTR<ITransportTimeProvider> time_provider;
-		boost::shared_mutex time_provider_lock;
 
 	public:
 
 		virtual RR_SHARED_PTR<Timer> CreateTimer(const boost::posix_time::time_duration& period, boost::function<void (const TimerEvent&)> handler, bool oneshot=false);
 		
-		virtual RR_SHARED_PTR<Rate> CreateRate(double frequency);
-
-		virtual void Sleep(const boost::posix_time::time_duration& duration);
+		virtual void AsyncSleep(const boost::posix_time::time_duration& duration, boost::function<void()> handler);
 
 		void DownCastAndThrowException(RobotRaconteurException& exp);
 
@@ -798,7 +739,6 @@ namespace RobotRaconteur
 		template<typename T>
 		T GetRandomInt(T min, T max)
 		{
-			boost::mutex::scoped_lock lock(random_generator_lock);
 			boost::random::uniform_int_distribution<T> d(min, max);
 			return d(*random_generator);
 		}
@@ -808,7 +748,6 @@ namespace RobotRaconteur
 		{
 			std::vector<T> o;
 			o.resize(count);
-			boost::mutex::scoped_lock lock(random_generator_lock);
 			for (size_t i = 0; i < count; i++)
 			{
 				boost::random::uniform_int_distribution<T> d(min, max);
@@ -818,164 +757,6 @@ namespace RobotRaconteur
 		}
 
 		std::string GetRandomString(size_t count);
-
-	public:
-
-		//Race free functions for ASIO
-		template<typename T, typename F>
-		static bool asio_async_wait(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted));
-			}
-
-			t->async_wait(f);
-			node1->shutdown_listeners.connect(
-				boost::signals2::signal<void()>::slot_type(
-					boost::bind(&T::cancel, t.get())
-				).track(t));
-			return true;
-		}
-
-		template<typename T, typename B, typename F>
-		static bool asio_async_read_some(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, B& b, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted, 0));
-			}
-
-			t->async_read_some(b,f);			
-			return true;
-		}
-
-		template<typename T, typename B, typename F>
-		static bool asio_async_write_some(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, B& b, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (!node1->thread_pool) return false;
-			t->async_write_some(b, f);
-			return true;
-		}
-
-		template<typename T, typename B, typename F>
-		static bool asio_async_connect(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, const B& b, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (!node1->thread_pool) return false;
-			t->async_connect(b, f);
-			return true;
-		}
-#if BOOST_ASIO_VERSION < 101200
-		template<typename T, typename B, typename F>
-		static bool asio_async_resolve(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, const B& b, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;
-				boost::asio::ip::tcp::resolver::iterator iter;
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted, iter));
-			}
-
-			t->async_resolve(b, f);
-			return true;
-		}
-#else
-		template<typename T, typename B, typename C, typename F>
-		static bool asio_async_resolve(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, const B& b, const C& c, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;
-				boost::asio::ip::tcp::resolver::results_type results;
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted, results));
-			}
-
-			t->async_resolve(b, c, f);
-			return true;
-		}
-#endif
-
-		template<typename T, typename F>
-		static bool asio_async_handshake(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;				
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted));
-			}
-
-			t->async_handshake(f);
-			return true;
-		}
-
-		template<typename T, typename U, typename F>
-		static bool asio_async_handshake(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, const U& u, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;				
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted));
-			}
-
-			t->async_handshake(u, f);
-			return true;
-		}
-
-		template<typename T, typename F>
-		static bool asio_async_shutdown(RR_WEAK_PTR<RobotRaconteurNode> node, RR_SHARED_PTR<T>& t, BOOST_ASIO_MOVE_ARG(F) f)
-		{
-			RR_SHARED_PTR<RobotRaconteurNode> node1 = node.lock();
-			if (!node1) return false;
-			boost::shared_lock<boost::shared_mutex> l(node1->thread_pool_lock);
-			if (node1->is_shutdown)
-			{
-				l.unlock();
-				RR_SHARED_PTR<ThreadPool> t;
-				if (!node1->TryGetThreadPool(t)) return false;				
-				return t->TryPost(boost::bind(f, boost::asio::error::operation_aborted));
-			}
-
-			t->async_shutdown(f);
-			return true;
-		}
 
 	};
 

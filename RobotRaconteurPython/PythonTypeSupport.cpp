@@ -971,18 +971,6 @@ namespace RobotRaconteur
 		throw DataTypeException("Could not pack message element " + type1->Name);
 	}
 
-	boost::intrusive_ptr<MessageElement>  PackMessageElement(PyObject* data, boost::shared_ptr<TypeDefinition> type1, boost::shared_ptr<ServerContext> obj, boost::shared_ptr<RobotRaconteurNode> node)
-	{
-		if (!node && obj)
-		{
-			node = obj->GetNode();
-		}
-
-		return PackMessageElement(data, type1, boost::shared_ptr<WrappedServiceStub>(), node);
-
-	}
-
-	
 	PyObject* UnpackMessageElement_namedarray(boost::intrusive_ptr<MessageElement> element, boost::shared_ptr<TypeDefinition> type1, boost::shared_ptr<WrappedServiceStub> stub, boost::shared_ptr<RobotRaconteurNode> node)
 	{
 		std::string& typestr = element->ElementTypeName;
@@ -1753,16 +1741,6 @@ namespace RobotRaconteur
 		}
 
 		throw DataTypeException("Invalid data type");
-	}
-
-	PyObject* UnpackMessageElement(boost::intrusive_ptr<MessageElement> element, boost::shared_ptr<TypeDefinition> type1, boost::shared_ptr<ServerContext> obj, boost::shared_ptr<RobotRaconteurNode> node)
-	{
-		if (!node && obj)
-		{
-			node = obj->GetNode();
-		}
-
-		return UnpackMessageElement(element, type1, boost::shared_ptr<WrappedServiceStub>(), node);
 	}
 
 	template<typename type2>

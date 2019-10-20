@@ -24,19 +24,19 @@ namespace RobotRaconteur
 	{
 	public:		
 
-	RR_RELEASE_GIL()
-		virtual boost::intrusive_ptr<MessageElement> Next(boost::intrusive_ptr<MessageElement> v);
+	
+		
 		virtual void AsyncNext(boost::intrusive_ptr<MessageElement> v, int32_t timeout, AsyncRequestDirector* handler, int32_t id);
 
-		virtual void Abort();
+		
 		virtual void AsyncAbort(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id);
 
-		virtual void Close();
+		
 		virtual void AsyncClose(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id);
 
 		
-		virtual std::vector<boost::intrusive_ptr<MessageElement> > NextAll();	
-	RR_KEEP_GIL()
+		
+	
 	};
 
 	class AsyncGeneratorClientReturnDirector
@@ -44,19 +44,5 @@ namespace RobotRaconteur
 	public:
 		virtual ~AsyncGeneratorClientReturnDirector() {}
 		virtual void handler(boost::shared_ptr<WrappedGeneratorClient> ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage);
-	};
-
-	class WrappedGeneratorServerDirector
-	{
-	public:
-		WrappedGeneratorServerDirector();
-		virtual ~WrappedGeneratorServerDirector() {}
-
-		virtual boost::intrusive_ptr<MessageElement> Next(boost::intrusive_ptr<MessageElement> m);
-
-		virtual void Abort();
-		virtual void Close();
-
-		int32_t objectheapid;
-	};
+	};	
 }

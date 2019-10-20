@@ -14,13 +14,10 @@
 
 %shared_ptr(RobotRaconteur::WrappedPipeEndpoint)
 %shared_ptr(RobotRaconteur::WrappedPipeClient)
-%shared_ptr(RobotRaconteur::WrappedPipeServer)
-%shared_ptr(RobotRaconteur::WrappedPipeBroadcaster)
+
 
 %feature("director") RobotRaconteur::WrappedPipeEndpointDirector;
 %feature("director") RobotRaconteur::AsyncPipeEndpointReturnDirector;
-%feature("director") RobotRaconteur::WrappedPipeServerConnectDirector;
-%feature("director") RobotRaconteur::WrappedPipeBroadcasterPredicateDirector;
 
 namespace RobotRaconteur
 {
@@ -46,19 +43,13 @@ class WrappedPipeEndpoint
 {
 
 public:
-RR_RELEASE_GIL()
-	virtual uint32_t SendPacket(boost::intrusive_ptr<RobotRaconteur::MessageElement> packet);
-RR_KEEP_GIL()
+
 	virtual boost::intrusive_ptr<RobotRaconteur::MessageElement> ReceivePacket();
 	virtual boost::intrusive_ptr<RobotRaconteur::MessageElement> PeekNextPacket();
-RR_RELEASE_GIL()
 
-	boost::intrusive_ptr<MessageElement> ReceivePacketWait(int32_t timeout = RR_TIMEOUT_INFINITE);
-	boost::intrusive_ptr<MessageElement> PeekNextPacketWait(int32_t timeout = RR_TIMEOUT_INFINITE);	
-	bool TryReceivePacketWait(boost::intrusive_ptr<MessageElement>& packet, int32_t timeout = RR_TIMEOUT_INFINITE, bool peek = false);
+	bool TryReceivePacket(boost::intrusive_ptr<MessageElement>& packet, bool peek = false);
 	
-	virtual void Close();
-RR_KEEP_GIL()
+	
 	virtual int32_t GetIndex();
 	virtual uint32_t GetEndpoint();
 	size_t Available();
@@ -85,12 +76,6 @@ class WrappedPipeClient
 {
 public:	
 
-RR_RELEASE_GIL()
-
-	virtual boost::shared_ptr<RobotRaconteur::WrappedPipeEndpoint> Connect(int32_t index);
-	
-RR_KEEP_GIL()
-	
 	void AsyncConnect(int32_t index, int32_t timeout, AsyncPipeEndpointReturnDirector* handler, int32_t id);
 	std::string GetMemberName();
 	boost::shared_ptr<RobotRaconteur::TypeDefinition> Type;
@@ -98,54 +83,6 @@ RR_KEEP_GIL()
 	boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
 
 	MemberDefinition_Direction Direction();
-};
-
-class WrappedPipeServerConnectDirector
-{
-public:
-	virtual ~WrappedPipeServerConnectDirector() {}
-	virtual void PipeConnectCallback(boost::shared_ptr<WrappedPipeEndpoint> pipeendpoint) {};
-};
-
-%nodefaultctor WrappedPipeServer;
-class WrappedPipeServer 
-{
-public:	
-		
-	std::string GetMemberName();
-	boost::shared_ptr<RobotRaconteur::TypeDefinition> Type;
-	void SetWrappedPipeConnectCallback(WrappedPipeServerConnectDirector* director, int32_t id);
-	boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
-
-	MemberDefinition_Direction Direction();
-};
-
-class WrappedPipeBroadcasterPredicateDirector
-{
-public:
-	virtual bool Predicate(uint32_t client_endpoint, int32_t index) = 0;		
-	virtual ~WrappedPipeBroadcasterPredicateDirector() {}
-};
-
-class WrappedPipeBroadcaster
-{
-public:
-
-	void Init(boost::shared_ptr<WrappedPipeServer> pipe, int32_t maximum_backlog = -1);
-
-RR_RELEASE_GIL()
-	void SendPacket(boost::intrusive_ptr<MessageElement> packet);
-RR_KEEP_GIL()
-
-	void AsyncSendPacket(boost::intrusive_ptr<MessageElement> packet, AsyncVoidNoErrReturnDirector* handler, int32_t id);	
-
-	size_t GetActivePipeEndpointCount();
-
-	void SetPredicateDirector(WrappedPipeBroadcasterPredicateDirector* f, int32_t id);
-
-	int32_t GetMaximumBacklog();
-	void SetMaximumBacklog(int32_t maximum_backlog);
-
 };
 
 }

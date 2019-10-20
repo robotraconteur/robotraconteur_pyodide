@@ -12,7 +12,6 @@ set(RobotRaconteurCore_src
 	src/Endpoint.cpp 
 	src/Error.cpp
 	src/IOUtils.cpp
-	src/ThreadPool.cpp
 	src/Message.cpp
 	src/NodeID.cpp
 	src/PipeMember.cpp
@@ -31,8 +30,7 @@ set(RobotRaconteurCore_src
 	src/ASIOStreamBaseTransport.h
 	src/ASIOStreamBaseTransport.cpp
 	src/Timer.cpp
-	src/AsyncUtils.cpp
-	src/StringTable.cpp
+	src/AsyncUtils.cpp	
 	src/AsyncMessageReader.cpp
 	src/AsyncMessageReader.h
 	src/AsyncMessageWriter.cpp
@@ -69,9 +67,7 @@ set(RobotRaconteurCore_header
 	include/RobotRaconteur.h
 	include/RobotRaconteur/RobotRaconteurConstants.h
 	include/RobotRaconteur/AsyncUtils.h
-	include/RobotRaconteur/ThreadPool.h
-	include/RobotRaconteur/Timer.h
-	include/RobotRaconteur/StringTable.h
+	include/RobotRaconteur/Timer.h	
 	include/RobotRaconteur/AsyncMessageIO.h
 	include/RobotRaconteur/Discovery.h 
 	include/RobotRaconteur/Subscription.h

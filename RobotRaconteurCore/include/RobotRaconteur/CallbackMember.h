@@ -68,17 +68,14 @@ namespace RobotRaconteur
 
 	private:
 		T function;
-		boost::mutex function_lock;
 	public:
 		virtual T GetFunction() 
 		{
-			boost::mutex::scoped_lock lock(function_lock);
 			if (!function) throw InvalidOperationException("Callback function not set");
 			return function;
 		}
 		virtual void SetFunction(T value)
 		{
-			boost::mutex::scoped_lock lock(function_lock);
 			function = value;
 		}
 
@@ -94,7 +91,6 @@ namespace RobotRaconteur
 
 		virtual void Shutdown()
 		{
-			boost::mutex::scoped_lock lock(function_lock);
 			function.clear();
 		}
 

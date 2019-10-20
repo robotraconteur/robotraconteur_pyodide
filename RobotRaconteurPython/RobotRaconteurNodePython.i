@@ -7,39 +7,12 @@
 public:
 	void Init(size_t thread_count=20)
 	{
-	$self->SetDynamicServiceFactory(RR_MAKE_SHARED<RobotRaconteur::WrappedDynamicServiceFactory>());
-	$self->SetThreadPoolFactory(RR_MAKE_SHARED<RobotRaconteur::PythonThreadPoolFactory>());
-
-	if (thread_count!=20)
-	{
-		boost::shared_ptr<RobotRaconteur::ThreadPool> thread_pool=$self->GetThreadPoolFactory()->NewThreadPool($self->shared_from_this());
-		thread_pool->SetThreadPoolCount(thread_count);
-		$self->SetThreadPool(thread_pool);
-		$self->GetThreadPool();
-	}
 	
 	$self->Init();
 	
 	}
 
 %pythoncode %{
-def ConnectService(self,*args):
-	from .RobotRaconteurPythonUtil import PackMessageElement, WrappedClientServiceListenerDirector, InitStub
-	args2=list(args)
-	if (len(args) >= 3):
-		if (args[1]==None): args2[1]=""
-		args2[2]=PackMessageElement(args[2],"varvalue{string}",None,self).GetData()
-	if (len(args)>=4):
-		args2[3]=WrappedClientServiceListenerDirector(args[3])
-		args2[3].__disown__()
-	if (len(args2) > 4):
-		args2=args2[0:4]
-	res=self._ConnectService(*args2)
-	stub=InitStub(res)
-	if (len(args2)>=4):
-		args2[3].stub=stub
-	return stub
-
 def AsyncConnectService(self, url, username, credentials, listener, handler, timeout=RR_TIMEOUT_INFINITE):
 	
 	from .RobotRaconteurPythonUtil import PackMessageElement, WrappedClientServiceListenerDirector, AsyncStubReturnDirectorImpl, async_call, adjust_timeout
@@ -52,9 +25,6 @@ def AsyncConnectService(self, url, username, credentials, listener, handler, tim
 		listener2.__disown__()
 	
 	return async_call(self._AsyncConnectService,(url, username, credentials, listener2, "", adjust_timeout(timeout)), AsyncStubReturnDirectorImpl, handler)
-
-def DisconnectService(self, stub):
-	self._DisconnectService(stub.rrinnerstub)
 
 def AsyncDisconnectService(self, stub, handler):
 	from .RobotRaconteurPythonUtil import async_call, AsyncVoidNoErrReturnDirectorImpl
@@ -113,41 +83,6 @@ def ArrayToNamedArray(self,a,named_array_dt):
 	from .RobotRaconteurPythonUtil import ArrayToNamedArray
 	return ArrayToNamedArray(a,named_array_dt)
 
-class ScopedMonitorLock(object):
-    def __init__(self,obj,timeout=-1):
-    	self.obj=obj
-    	self.timeout=timeout
-    	self.node=obj.rrinnerstub.RRGetNode()
-    	self.locked=False
-    def __enter__(self):
-    	self.node.MonitorEnter(self.obj,self.timeout)
-    	self.locked=True
-    def __exit__(self,type, value, traceback):
-    	self.node.MonitorExit(self.obj)
-    	self.locked=False
-    def lock(self,timeout):
-    	self.node.MonitorEnter(self.obj,timeout)
-    	self.locked=True
-    def unlock(self):
-    	self.node.MonitorExit(self.obj,)
-    	self.locked=False
-    def release(self):
-    	self.obj=None
-
-def RequestObjectLock(self,obj,flags):
-	return self._RequestObjectLock(obj.rrinnerstub,flags)
-		
-def ReleaseObjectLock(self,obj):
-	return self._ReleaseObjectLock(obj.rrinnerstub)
-		
-def MonitorEnter(self,obj,timeout=-1):
-	from .RobotRaconteurPythonUtil import adjust_timeout	
-	self._MonitorEnter(obj.rrinnerstub,adjust_timeout(timeout))
-			
-def MonitorExit(self,obj):
-	#obj.rrlock.release()
-	self._MonitorExit(obj.rrinnerstub)
-
 def AsyncRequestObjectLock(self,obj,flags,handler,timeout=RR_TIMEOUT_INFINITE):
 	from .RobotRaconteurPythonUtil import async_call, adjust_timeout, AsyncStringReturnDirectorImpl
 	return async_call(self._AsyncRequestObjectLock,(obj.rrinnerstub,flags,adjust_timeout(timeout)),AsyncStringReturnDirectorImpl,handler)
@@ -160,16 +95,8 @@ def GetServiceAttributes(self,obj):
 	from .RobotRaconteurPythonUtil import UnpackMessageElement
 	return UnpackMessageElement(self._GetServiceAttributes(obj.rrinnerstub),"varvalue{string} value",None,self)
 	
-def RegisterService(self, name, objecttype, obj, securitypolicy=None):
-	from .RobotRaconteurPythonUtil import WrappedServiceSkelDirectorPython, SplitQualifiedName
-	director=WrappedServiceSkelDirectorPython(obj)
-	rrobj=WrappedRRObject(objecttype,director,0)
-	director.__disown__()
-	return self._RegisterService(name,SplitQualifiedName(objecttype)[0],rrobj,securitypolicy)
-
 NodeID = property(lambda self: self._NodeID(), lambda self,nodeid: self._SetNodeID(nodeid))
 NodeName =property(lambda self: self._NodeName(), lambda self,nodename: self._SetNodeName(nodename))
-ThreadPoolCount = property(lambda self: self._GetThreadPoolCount(), lambda self,c: self._SetThreadPoolCount(c))
 	
 RequestTimeout = property(lambda self : self._GetRequestTimeout()/1000.0, lambda self,t : self._SetRequestTimeout(t*1000))
 TransportInactivityTimeout = property(lambda self : self._GetTransportInactivityTimeout()/1000.0, lambda self,t : self._SetTransportInactivityTimeout(t*1000))
@@ -196,12 +123,6 @@ def GetExceptionType(self, exceptionname, obj=None):
 	if (not t[1] in d.Exceptions): raise Exception('Invalid exception type')
 	return GetExceptionType(exceptionname)
 		
-def FindObjectType(self,obj,member,ind=None):
-	if (ind is None):
-		return self._FindObjectType(obj.rrinnerstub,member)
-	else:
-		return self._FindObjectType(obj.rrinnerstub,member,ind)
-
 def AsyncFindObjectType(self,obj,member,handler,timeout=RR_TIMEOUT_INFINITE):
 	from .RobotRaconteurPythonUtil import async_call, adjust_timeout, AsyncStringReturnDirectorImpl
 	return async_call(self._AsyncFindObjectType,(obj.rrinnerstub,member,adjust_timeout(timeout)),AsyncStringReturnDirectorImpl,handler)

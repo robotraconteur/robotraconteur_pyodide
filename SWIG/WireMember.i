@@ -69,9 +69,6 @@ public:
 	void SetRRDirector(WrappedWireConnectionDirector* director, int32_t id);
 	
 	boost::shared_ptr<TypeDefinition> Type;
-RR_RELEASE_GIL()
-	virtual void Close();
-RR_KEEP_GIL()
 
 	virtual uint32_t GetEndpoint();
 
@@ -93,11 +90,6 @@ RR_KEEP_GIL()
 	bool GetIgnoreInValue();
 	void SetIgnoreInValue(bool ignore);
 
-RR_RELEASE_GIL()
-	bool WaitInValueValid(int32_t timeout = RR_TIMEOUT_INFINITE);
-	bool WaitOutValueValid(int32_t timeout = RR_TIMEOUT_INFINITE);
-RR_KEEP_GIL()
-
     MemberDefinition_Direction Direction();
 
 	
@@ -108,19 +100,9 @@ class WrappedWireClient
 {
 public:
 
-RR_RELEASE_GIL()
-	virtual boost::shared_ptr<WrappedWireConnection> Connect();
-RR_KEEP_GIL()
-
 	void AsyncConnect(int32_t timeout, AsyncWireConnectionReturnDirector* handler, int32_t id);
 	virtual std::string GetMemberName();
 
-RR_RELEASE_GIL()
-    boost::intrusive_ptr<RobotRaconteur::MessageElement> PeekInValue(TimeSpec& ts);
-	boost::intrusive_ptr<RobotRaconteur::MessageElement> PeekOutValue(TimeSpec& ts);
-	void PokeOutValue(const boost::intrusive_ptr<RobotRaconteur::MessageElement>& value);
-RR_KEEP_GIL()
-		
 	void AsyncPeekInValue(int32_t timeout, AsyncWirePeekReturnDirector* handler, int32_t id);
 	void AsyncPeekOutValue(int32_t timeout, AsyncWirePeekReturnDirector* handler, int32_t id);
 	void AsyncPokeOutValue(const boost::intrusive_ptr<RobotRaconteur::MessageElement>& value, int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id);
@@ -131,81 +113,6 @@ RR_KEEP_GIL()
 	boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
 
 	MemberDefinition_Direction Direction();
-};
-
-class WrappedWireServerConnectDirector
-{
-public:
-	virtual ~WrappedWireServerConnectDirector() {}
-	virtual void WireConnectCallback(boost::shared_ptr<WrappedWireConnection> c) {};	
-};
-
-class WrappedWireServerPeekValueDirector
-{
-public:	
-    virtual ~WrappedWireServerPeekValueDirector() {}
-	virtual boost::intrusive_ptr<RobotRaconteur::MessageElement> PeekValue(const uint32_t& ep) = 0;
-};
-
-class WrappedWireServerPokeValueDirector
-{
-public:	
-    virtual ~WrappedWireServerPokeValueDirector() {}
-	virtual void PokeValue(boost::intrusive_ptr<RobotRaconteur::MessageElement> value, const RobotRaconteur::TimeSpec& ts, const uint32_t& ep) = 0;
-};
-
-%nodefaultctor WrappedWireServer;
-class WrappedWireServer
-{
-public:
-	
-	virtual std::string GetMemberName();
-	
-	boost::shared_ptr<RobotRaconteur::TypeDefinition> Type;
-	
-	void SetWrappedWireConnectCallback(WrappedWireServerConnectDirector* director, int32_t id);
-	
-	boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
-	
-	void SetPeekInValueCallback(WrappedWireServerPeekValueDirector* director, int32_t id);
-	void SetPeekOutValueCallback(WrappedWireServerPeekValueDirector* director, int32_t id);
-	void SetPokeOutValueCallback(WrappedWireServerPokeValueDirector* director, int32_t id);
-	
-	MemberDefinition_Direction Direction();
-
-};
-
-class WrappedWireBroadcasterPredicateDirector
-{
-public:
-
-	virtual bool Predicate(uint32_t client_endpoint) = 0;
-	virtual ~WrappedWireBroadcasterPredicateDirector() {}
-};
-
-class WrappedWireBroadcaster
-{
-public:		
-
-	void Init(boost::shared_ptr<WrappedWireServer> wire);
-
-	void SetOutValue(boost::intrusive_ptr<MessageElement> value);
-	
-	size_t GetActiveWireConnectionCount();
-
-	void SetPredicateDirector(WrappedWireBroadcasterPredicateDirector* f, int32_t id);
-};
-
-%apply uint32_t& OUTPUT {uint32_t& ep};
-
-class WrappedWireUnicastReceiver
-{
-public:
-	void Init(boost::shared_ptr<WrappedWireServer> wire);
-
-	boost::intrusive_ptr<MessageElement> GetInValue(TimeSpec& ts, uint32_t& ep);	
-
-	void AddInValueChangedListener(WrappedWireServerPokeValueDirector* director, int32_t id);
 };
 
 }

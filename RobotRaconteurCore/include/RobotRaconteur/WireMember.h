@@ -86,9 +86,6 @@ namespace RobotRaconteur
 		uint32_t endpoint;
 		RR_WEAK_PTR<WireBase> parent;
 
-		boost::mutex sendlock;
-		boost::mutex recvlock;
-
 		bool send_closed;
 		bool recv_closed;
 
@@ -110,17 +107,10 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<WireBase> GetParent();
 
-		boost::mutex inval_lock;
-		boost::mutex outval_lock;
-
 		bool ignore_inval;
 
 		bool message3;
-		
-		boost::mutex listeners_lock;
 		std::list<RR_WEAK_PTR<WireConnectionBaseListener> > listeners;
-
-		detail::async_signal_semaphore wire_value_changed_semaphore;
 
 		RR_WEAK_PTR<RobotRaconteurNode> node;
 
@@ -133,19 +123,16 @@ namespace RobotRaconteur
 	{
 	private:
 		boost::function<void (RR_SHARED_PTR<WireConnection<T> >)> WireConnectionClosedCallback;
-		boost::mutex WireConnectionClosedCallback_lock;
 
 	public:
 		boost::signals2::signal<void (RR_SHARED_PTR<WireConnection<T> > connection, T value, TimeSpec time)> WireValueChanged;
 		boost::function<void (RR_SHARED_PTR<WireConnection<T> >)> GetWireConnectionClosedCallback()
 		{
-			boost::mutex::scoped_lock lock(WireConnectionClosedCallback_lock);
 			return WireConnectionClosedCallback;
 		}
 
 		void SetWireConnectionClosedCallback(boost::function<void (RR_SHARED_PTR<WireConnection<T> >)> callback)
 		{
-			boost::mutex::scoped_lock lock(WireConnectionClosedCallback_lock);
 			WireConnectionClosedCallback=callback;
 		}
 
@@ -203,7 +190,6 @@ namespace RobotRaconteur
 		{
 			WireConnectionBase::Close();
 			{
-				boost::mutex::scoped_lock lock(WireConnectionClosedCallback_lock);
 				WireConnectionClosedCallback.clear();
 			}
 			WireValueChanged.disconnect_all_slots();
@@ -216,7 +202,6 @@ namespace RobotRaconteur
 			try
 			{
 				{
-					boost::mutex::scoped_lock lock(WireConnectionClosedCallback_lock);
 					WireConnectionClosedCallback.clear();
 				}
 				WireValueChanged.disconnect_all_slots();
@@ -239,7 +224,6 @@ namespace RobotRaconteur
 		{
 			WireConnectionBase::RemoteClose();
 			{
-				boost::mutex::scoped_lock lock(WireConnectionClosedCallback_lock);
 				WireConnectionClosedCallback.clear();
 			}
 			WireValueChanged.disconnect_all_slots();
@@ -386,7 +370,6 @@ namespace RobotRaconteur
 		std::string m_MemberName;
 
 		RR_SHARED_PTR<WireConnectionBase> connection;
-		boost::mutex connection_lock;
 
 		RR_WEAK_PTR<ServiceStub> stub;
 

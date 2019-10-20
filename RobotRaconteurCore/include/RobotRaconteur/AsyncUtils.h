@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <boost/asio.hpp>
 #include <boost/scope_exit.hpp>
 
 #include "RobotRaconteur/Error.h"
 #include "RobotRaconteur/DataTypes.h"
 #include "RobotRaconteur/ErrorUtil.h"
 #include "RobotRaconteur/Timer.h"
+#include <boost/bind.hpp>
+#include <boost/system/error_code.hpp>
 
 #pragma once
 
@@ -40,6 +41,8 @@ namespace RobotRaconteur
 			catch (std::exception&) {}
 		}
 
+		static void async_timeout_wrapper_closer_handler() {}
+
 		template<typename T, typename T2>
 		void async_timeout_wrapper_closer(RR_SHARED_PTR<T> d) 
 		{
@@ -47,7 +50,7 @@ namespace RobotRaconteur
 			{
 				RR_SHARED_PTR<T2> t2=RR_DYNAMIC_POINTER_CAST<T2>(d);
 				if (!t2) return;
-				t2->Close();
+				t2->AsyncClose(boost::bind(&async_timeout_wrapper_closer_handler));
 			}
 			catch (std::exception&) {}
 		}
@@ -58,7 +61,6 @@ namespace RobotRaconteur
 		private:
 			boost::function<void (RR_SHARED_PTR<T>,RR_SHARED_PTR<RobotRaconteurException>)> handler_;
 			RR_SHARED_PTR<Timer> timeout_timer_;
-			boost::mutex handled_lock;
 			bool handled;
 			RR_SHARED_PTR<RobotRaconteurException> timeout_exception_;
 			boost::function<void(RR_SHARED_PTR<T>)> deleter_;
@@ -83,7 +85,6 @@ namespace RobotRaconteur
 			void operator() (RR_SHARED_PTR<T> data, RR_SHARED_PTR<RobotRaconteurException> err)
 			{
 				{
-					boost::mutex::scoped_lock lock(handled_lock);
 					if (handled)
 					{
 						if (data && deleter_) deleter_(data);
@@ -106,7 +107,6 @@ namespace RobotRaconteur
 			void handle_error(RR_SHARED_PTR<RobotRaconteurException> err)
 			{
 				{
-					boost::mutex::scoped_lock lock(handled_lock);
 					if (handled) return;
 					handled=true;
 
@@ -137,7 +137,6 @@ namespace RobotRaconteur
 			void timeout_handler(const TimerEvent& /*e*/)
 			{
 				{
-					boost::mutex::scoped_lock lock(handled_lock);
 					if (handled) return;
 					handled=true;
 				//	timeout_timer_.reset();
@@ -160,9 +159,6 @@ namespace RobotRaconteur
 		{
 			RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
 			if (!n) InvalidOperationException("Node has been released");
-
-
-			boost::mutex::scoped_lock lock(handled_lock);
 
 			if (handled) return;
 
@@ -199,133 +195,6 @@ namespace RobotRaconteur
 			return handler_move_wrapper<Handler>(handler);
 		}*/
 		
-		class ROBOTRACONTEUR_CORE_API async_signal_semaphore : private boost::noncopyable
-		{
-		protected:
-			boost::mutex this_lock;
-			boost::condition_variable next_wait;
-			boost::initialized<bool> running;
-			boost::initialized<bool> next;
-			boost::initialized<uint64_t> next_id;
-
-		public:
-			
-			template<typename F>
-			bool try_fire_next(BOOST_ASIO_MOVE_ARG(F) h)
-			{
-				boost::mutex::scoped_lock lock(this_lock);
-
-				if (running || next)
-				{
-					uint64_t my_id = ++next_id.data();
-
-					if (next.data())
-					{						
-						next_wait.notify_all();
-					}
-					else
-					{
-						next.data() = true;
-					}
-
-					while(running)
-					{
-						next_wait.wait(lock);
-						if (my_id != next_id)
-							return false;
-					} 
-
-					next.data() = false;					
-				}
-
-				running.data() = true;
-
-				BOOST_SCOPE_EXIT_TPL(this_)
-				{
-					boost::mutex::scoped_lock lock2(this_->this_lock);
-					this_->running.data() = false;
-					this_->next_wait.notify_all();
-				} BOOST_SCOPE_EXIT_END;
-
-				lock.unlock();
-
-				h();
-				
-				return true;
-			}
-		};
-
-		class ROBOTRACONTEUR_CORE_API async_signal_pool_semaphore : public RR_ENABLE_SHARED_FROM_THIS<async_signal_pool_semaphore>, private boost::noncopyable
-		{
-		protected:
-			boost::mutex this_lock;			
-			boost::initialized<bool> running;
-			boost::function<void()> next;
-			RR_WEAK_PTR<RobotRaconteurNode> node;
-
-		public:
-
-			async_signal_pool_semaphore(RR_SHARED_PTR<RobotRaconteurNode> node)
-			{
-				this->node = node;
-			}
-
-			template<typename F>
-			void try_fire_next(BOOST_ASIO_MOVE_ARG(F) h)
-			{
-				boost::mutex::scoped_lock lock(this_lock);
-
-				if (!running)
-				{
-					RR_SHARED_PTR<RobotRaconteurNode> node1 = this->node.lock();
-					if (!node1) return;
-					do_post(node1, h);
-				}
-				else
-				{
-					next = h;
-				}				
-			}
-
-		protected:
-
-			void do_fire_next(boost::function<void()>& h)
-			{
-				try
-				{
-					h();
-				}
-				catch (std::exception& exp)
-				{
-					handle_exception(&exp);
-				}
-
-				BOOST_SCOPE_EXIT(this_)
-				{
-					boost::mutex::scoped_lock lock2(this_->this_lock);
-					
-					boost::function<void()> h2;
-					h2.swap(this_->next);
-					this_->next.clear();
-					this_->running.data() = false;
-					if (!h2) return;
-					RR_SHARED_PTR<RobotRaconteurNode> node=this_->node.lock();
-					if (!node) return;
-					try
-					{
-						this_->do_post(node, boost::bind(&async_signal_pool_semaphore::do_fire_next, this_->shared_from_this(), h2));
-					}
-					catch (std::exception&) {}
-					this_->running.data() = true;
-
-				} BOOST_SCOPE_EXIT_END;
-			}
-
-			void do_post(RR_SHARED_PTR<RobotRaconteurNode> node1, RR_MOVE_ARG(boost::function<void()>) h);
-
-			void handle_exception(std::exception* exp);
-
-		};
 
 		ROBOTRACONTEUR_CORE_API void InvokeHandler_HandleException(RR_WEAK_PTR<RobotRaconteurNode> node, std::exception& exp);
 

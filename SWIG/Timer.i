@@ -14,9 +14,6 @@
 
 %shared_ptr(RobotRaconteur::Timer);
 %shared_ptr(RobotRaconteur::WallTimer);
-%shared_ptr(RobotRaconteur::Rate);
-%shared_ptr(RobotRaconteur::WallRate);
-%shared_ptr(RobotRaconteur::AutoResetEvent);
 %feature("director") RobotRaconteur::AsyncTimerEventReturnDirector;
 
 namespace RobotRaconteur
@@ -79,46 +76,6 @@ public:
 
 	virtual ~WallTimer() {}
 
-};
-
-class Rate
-{
-public:
-RR_RELEASE_GIL()
-	virtual void Sleep()=0;
-RR_KEEP_GIL()
-
-	virtual ~Rate() {};
-};
-
-class WallRate : public Rate
-{
-public:
-	
-	WallRate(double frequency, boost::shared_ptr<RobotRaconteurNode> node=boost::shared_ptr<RobotRaconteurNode>());
-	
-RR_RELEASE_GIL()
-	virtual void Sleep();
-RR_KEEP_GIL()
-	
-	virtual ~WallRate() {}
-};
-
-class AutoResetEvent
-{
-public:
-
-	AutoResetEvent();
-	virtual ~AutoResetEvent();
-
-	virtual void Set();
-
-	virtual void Reset();
-RR_RELEASE_GIL()
-	virtual void WaitOne();
-	
-	virtual bool WaitOne(int32_t timeout);
-RR_KEEP_GIL()
 };
 
 }

@@ -161,14 +161,7 @@ def InitStub(stub):
     for i in range(len(odef.Members)):
         m=odef.Members[i]
         if (isinstance(m,RobotRaconteurPython.PropertyDefinition)):
-            def inner_prop(m1):
-                fget=lambda  self : stub_getproperty(stub,m1.Name,m1)
-                fset=lambda self, value : stub_setproperty(stub,m1.Name,m1,value)
-                return property(fget,fset)
-            p1=inner_prop(m)
-
-            mdict[m.Name]=p1
-
+            
             def inner_async_prop(m1):
                 fget=lambda  self,handler,timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE : stub_async_getproperty(stub,m1.Name,m1,handler,timeout)
                 fset=lambda self, value,handler,timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE : stub_async_setproperty(stub,m1.Name,m1,value,handler,timeout)
@@ -180,18 +173,7 @@ def InitStub(stub):
 
 
         if (isinstance(m,RobotRaconteurPython.FunctionDefinition)):
-            def inner_func(m1):
-                if (not m1.IsGenerator()):                
-                    if (m1.ReturnType.Type==RobotRaconteurPython.DataTypes_void_t):
-                        f=lambda self,*args : stub_functioncallvoid(stub,m1.Name,m1,*args)
-                    else:
-                        f=lambda self,*args : stub_functioncall(stub,m1.Name,m1,*args)
-                    return f
-                else:
-                    return lambda self,*args : stub_functioncallgenerator(stub,m1.Name,m1,*args)
-            f1=inner_func(m)
-            mdict[m.Name]=f1
-
+            
             def inner_async_func(m1):              
                 if not m1.IsGenerator():
                     if (m1.ReturnType.Type==RobotRaconteurPython.DataTypes_void_t):
@@ -216,15 +198,7 @@ def InitStub(stub):
             mdict[m.Name]=new_evt_hook()
 
         if (isinstance(m,RobotRaconteurPython.ObjRefDefinition)):
-            def inner_objref(m1):
-                if(m1.ArrayType != RobotRaconteurPython.DataTypes_ArrayTypes_none or m1.ContainerType != RobotRaconteurPython.DataTypes_ContainerTypes_none):
-                    f=lambda self,index : stub_objref(stub,m1.Name,index)
-                else:
-                    f=lambda self : stub_objref(stub,m1.Name)
-                return f
-            f1=inner_objref(m)
-            mdict['get_%s' % m.Name]=f1
-
+            
             def inner_async_objref(m1):
                 if(m1.ArrayType != RobotRaconteurPython.DataTypes_ArrayTypes_none or m1.ContainerType != RobotRaconteurPython.DataTypes_ContainerTypes_none):
                     f=lambda self,index,handler,timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE : stub_async_objref(stub,m1.Name,index,handler,timeout)
@@ -259,47 +233,6 @@ def InitStub(stub):
             w=inner_wire(m)
             mdict[m.Name]=w
 
-        if (isinstance(m,RobotRaconteurPython.MemoryDefinition)):
-            if (RobotRaconteurPython.IsTypeNumeric(m.Type.Type)):
-                def inner_memory(m1):                
-                    if (m.Type.ArrayType == RobotRaconteurPython.DataTypes_ArrayTypes_array):
-                        outerm=ArrayMemoryClient(stub.GetArrayMemory(m1.Name))
-                    else:
-                        outerm=MultiDimArrayMemoryClient(stub.GetMultiDimArrayMemory(m1.Name))
-                    fget=lambda self: outerm
-                    return property(fget)
-                mem=inner_memory(m)
-                mdict[m.Name]=mem
-            else:
-                memory_rr_type=RobotRaconteurPython._GetNamedTypeEntryType(m.Type,stub,stub.RRGetNode())
-                if (memory_rr_type == RobotRaconteurPython.DataTypes_pod_t):
-                    def inner_memory(m1):                
-                        if (m.Type.ArrayType == RobotRaconteurPython.DataTypes_ArrayTypes_array):
-                            pass
-                            outerm=PodArrayMemoryClient(stub.GetPodArrayMemory(m1.Name),m.Type,stub,stub.RRGetNode())
-                        else:
-                            outerm=PodMultiDimArrayMemoryClient(stub.GetPodMultiDimArrayMemory(m1.Name),m.Type,stub,stub.RRGetNode())
-                            pass
-                        fget=lambda self: outerm
-                        return property(fget)
-                    mem=inner_memory(m)
-                    mdict[m.Name]=mem
-                elif (memory_rr_type == RobotRaconteurPython.DataTypes_namedarray_t):
-                    def inner_memory(m1):                
-                        if (m.Type.ArrayType == RobotRaconteurPython.DataTypes_ArrayTypes_array):
-                            pass
-                            outerm=NamedArrayMemoryClient(stub.GetNamedArrayMemory(m1.Name),m.Type,stub,stub.RRGetNode())
-                        else:
-                            outerm=NamedMultiDimArrayMemoryClient(stub.GetNamedMultiDimArrayMemory(m1.Name),m.Type,stub,stub.RRGetNode())
-                            pass
-                        fget=lambda self: outerm
-                        return property(fget)
-                    mem=inner_memory(m)
-                    mdict[m.Name]=mem
-                else:
-                    assert False
-
-
     outerstub_type=type(str(odef.Name),(ServiceStub,),mdict)
     outerstub=outerstub_type()
 
@@ -323,46 +256,6 @@ def InitStub(stub):
     outerstub.rrinnerstub=stub;
     outerstub.rrlock=threading.RLock()
     return outerstub
-
-
-def stub_getproperty(stub,name,type1):
-    return UnpackMessageElement(stub.PropertyGet(name),type1.Type,stub,stub.RRGetNode())
-
-def stub_setproperty(stub,name,type1,value):
-    pvalue=PackMessageElement(value,type1.Type,stub,stub.RRGetNode())
-    stub.PropertySet(name,pvalue)
-
-def stub_functioncall(stub,name,type1,*args):
-    m=RobotRaconteurPython.vectorptr_messageelement()
-    i=0
-    for p in type1.Parameters:
-        a=PackMessageElement(args[i],p,stub,stub.RRGetNode())
-        m.append(a)
-        i+=1
-    ret=stub.FunctionCall(name,m)
-    return UnpackMessageElement(ret,type1.ReturnType,stub,stub.RRGetNode())
-
-def stub_functioncallvoid(stub,name,type1,*args):
-    m=RobotRaconteurPython.vectorptr_messageelement()
-    i=0
-    for p in type1.Parameters:
-        a=PackMessageElement(args[i],p,stub)
-        m.append(a)
-        i+=1
-    stub.FunctionCall(name,m)
-
-def stub_functioncallgenerator(stub,name,type1,*args):
-    m=RobotRaconteurPython.vectorptr_messageelement()
-    i=0
-    param_type = None
-    for p in type1.Parameters:
-        if (p.ContainerType != RobotRaconteurPython.DataTypes_ContainerTypes_generator):
-            a=PackMessageElement(args[i],p,stub)
-            m.append(a)
-            i+=1
-        else:
-            param_type = p
-    return GeneratorClient(stub.GeneratorFunctionCall(name,m), type1.ReturnType, param_type, stub, stub.RRGetNode())
 
 class AsyncRequestDirectorImpl(RobotRaconteurPython.AsyncRequestDirector):
     def __init__(self,handler,isvoid,Type,stub,node):
@@ -452,24 +345,6 @@ def stub_async_functioncallgenerator(stub,name,type1,*args):
         timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE
     return async_call(stub.async_GeneratorFunctionCall,(name,m,adjust_timeout(timeout)),AsyncGeneratorClientReturnDirectorImpl,handler,directorargs=(type1.ReturnType,param_type,stub,stub.RRGetNode()))
 
-
-_stub_objref_lock=threading.Lock()
-
-def stub_objref(stub,name,index=None):
-    if (index is None):
-        s=stub.FindObjRef(name)
-        with _stub_objref_lock:
-            s2=s.GetPyStub()
-            if (s2 is not None): return s2
-            return InitStub(s)
-
-        return
-    else:
-        s=stub.FindObjRef(name,str(index))
-        with _stub_objref_lock:
-            s2=s.GetPyStub()
-            if (s2 is not None): return s2
-            return InitStub(s)
 
 def stub_async_objref(stub,name,index,handler,timeout=-1):
     if (index is None):
@@ -574,15 +449,8 @@ class PipeEndpoint(object):
     def IgnoreReceived(self,value):
         self.__innerpipe.SetIgnoreReceived(value)
 
-    def Close(self):
-        return self.__innerpipe.Close()
-
     def AsyncClose(self,handler,timeout=2):
         return async_call(self.__innerpipe.AsyncClose,(adjust_timeout(timeout),),AsyncVoidReturnDirectorImpl,handler)
-
-    def SendPacket(self,packet):
-        m=PackMessageElement(packet,self.__type,self.__obj,self.__innerpipe.GetNode())
-        return self.__innerpipe.SendPacket(m)
 
     def AsyncSendPacket(self, packet, handler):
         m=PackMessageElement(packet,self.__type,self.__obj,self.__innerpipe.GetNode())
@@ -596,17 +464,10 @@ class PipeEndpoint(object):
         m=self.__innerpipe.PeekNextPacket()
         return UnpackMessageElement(m,self.__type,self.__obj,self.__innerpipe.GetNode())
 
-    def ReceivePacketWait(self, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
-        m=self.__innerpipe.ReceivePacketWait(timeout)
-        return UnpackMessageElement(m,self.__type,self.__obj,self.__innerpipe.GetNode())
-
-    def PeekNextPacketWait(self, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
-        m=self.__innerpipe.PeekNextPacketWait(timeout)
-        return UnpackMessageElement(m,self.__type,self.__obj,self.__innerpipe.GetNode())
-
     def TryReceivePacketWait(self, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE, peek=False):
+        #TODO: Add timeout back
         m=RobotRaconteurPython.MessageElement()
-        r=self.__innerpipe.TryReceivePacketWait(m, timeout, peek)
+        r=self.__innerpipe.TryReceivePacket(m, peek)
         return (r, UnpackMessageElement(m,self.__type,self.__obj,self.__innerpipe.GetNode()))
     
     @property
@@ -675,14 +536,6 @@ class Pipe(object):
         self._innerpipe=innerpipe        
         self._obj=obj
 
-    def Connect(self,index):
-        innerendpoint=self._innerpipe.Connect(index)
-        outerendpoint=PipeEndpoint(innerendpoint,self._innerpipe.Type,self._obj)
-        director=PipeEndpointDirector(outerendpoint)
-        innerendpoint.SetRRDirector(director,0)
-        director.__disown__()
-        return outerendpoint
-
     def AsyncConnect(self,*args):
         if (isinstance(args[0], numbers.Number)):
             index=args[0]
@@ -709,30 +562,6 @@ class Pipe(object):
     def Direction(self):
         return self._innerpipe.Direction()
     
-    @property
-    def PipeConnectCallback(self):
-        raise Exception("Read only property")
-
-    @PipeConnectCallback.setter
-    def PipeConnectCallback(self, c):
-        wrappedp=WrappedPipeServerConnectDirectorPython(self,self._innerpipe.Type, c)
-        self._innerpipe.SetWrappedPipeConnectCallback(wrappedp,0)
-        wrappedp.__disown__()
-
-class WrappedPipeServerConnectDirectorPython(RobotRaconteurPython.WrappedPipeServerConnectDirector):
-    def __init__(self,pipe,type,callback):
-        self.pipe=pipe
-        self.type=type
-        self.callback=callback
-        super(WrappedPipeServerConnectDirectorPython,self).__init__()
-
-    def PipeConnectCallback(self,innerendpoint):
-                
-        outerendpoint=PipeEndpoint(innerendpoint,self.type)
-        director=PipeEndpointDirector(outerendpoint)
-        innerendpoint.SetRRDirector(director,0)
-        director.__disown__()
-        self.callback(outerendpoint)
 
 class WireConnection(object):
     def __init__(self,innerwire, type, obj=None):
@@ -749,9 +578,6 @@ class WireConnection(object):
     @property
     def Direction(self):
         return self.__innerwire.Direction()
-
-    def Close(self):
-        return self.__innerwire.Close()
 
     def AsyncClose(self,handler,timeout=2):
         return async_call(self.__innerwire.AsyncClose,(adjust_timeout(timeout),),AsyncVoidReturnDirectorImpl,handler)
@@ -810,13 +636,7 @@ class WireConnection(object):
     @IgnoreInValue.setter
     def IgnoreInValue(self,value):
         self.__innerwire.SetIgnoreInValue(value)
-
-    def WaitInValueValid(self,timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
-        return self.__innerwire.WaitInValueValid(timeout)
-
-    def WaitOutValueValid(self,timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
-        return self.__innerwire.WaitOutValueValid(timeout)
-    
+ 
     @property
     def WireValueChanged(self):
         return self._WireValueChanged
@@ -884,29 +704,7 @@ class WireAsyncPeekReturnDirectorImpl(RobotRaconteurPython.AsyncWirePeekReturnDi
         value=UnpackMessageElement(m,self.__innerpipe.Type,self.__obj,self.__innerpipe.GetNode())
         self._handler(value, ts, None)
 
-class WrappedWireServerPeekValueDirectorImpl(RobotRaconteurPython.WrappedWireServerPeekValueDirector):
-    def __init__(self, cb,innerpipe,obj):
-        super(WrappedWireServerPeekValueDirectorImpl,self).__init__()
-        self._cb=cb
-        self.__innerpipe=innerpipe
-        self.__obj=obj
-
-    def PeekValue(self, ep):
-        value = self._cb(ep)
-        m=PackMessageElement(value,self.__innerpipe.Type,self.__obj,self.__innerpipe.GetNode())
-        return m
-
-class WrappedWireServerPokeValueDirectorImpl(RobotRaconteurPython.WrappedWireServerPokeValueDirector):
-    def __init__(self, cb,innerpipe,obj):
-        super(WrappedWireServerPokeValueDirectorImpl,self).__init__()
-        self._cb=cb
-        self.__innerpipe=innerpipe
-        self.__obj=obj
-
-    def PokeValue(self, m, ts, ep):
-        value=UnpackMessageElement(m,self.__innerpipe.Type,self.__obj,self.__innerpipe.GetNode())
-        self._cb(value, ts, ep)
-        
+       
 class Wire(object):
     def __init__(self,innerpipe,obj=None):
         self._innerpipe=innerpipe        
@@ -932,30 +730,6 @@ class Wire(object):
     def Direction(self):
         return self._innerpipe.Direction()
 
-    @property
-    def WireConnectCallback(self):
-        raise Exception("Read only property")
-
-    @WireConnectCallback.setter
-    def WireConnectCallback(self, c):
-        wrappedp=WrappedWireServerConnectDirectorPython(self,self._innerpipe.Type, c)
-        self._innerpipe.SetWrappedWireConnectCallback(wrappedp,0)
-        wrappedp.__disown__()
-
-    def PeekInValue(self):
-        ts=RobotRaconteurPython.TimeSpec()
-        m=self._innerpipe.PeekInValue(ts)
-        return (UnpackMessageElement(m,self._innerpipe.Type,self._obj,self._innerpipe.GetNode()),ts)
-
-    def PeekOutValue(self):
-        ts=RobotRaconteurPython.TimeSpec()
-        m=self._innerpipe.PeekOutValue(ts)
-        return (UnpackMessageElement(m,self._innerpipe.Type,self._obj,self._innerpipe.GetNode()),ts)
-
-    def PokeOutValue(self, value):
-         m=PackMessageElement(value,self._innerpipe.Type,self._obj,self._innerpipe.GetNode())
-         self._innerpipe.PokeOutValue(m)
-
     def AsyncPeekInValue(self, handler, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
         return async_call(self._innerpipe.AsyncPeekInValue, (adjust_timeout(timeout),), WireAsyncPeekReturnDirectorImpl, handler, directorargs=(self._innerpipe,self._obj))
 
@@ -966,331 +740,7 @@ class Wire(object):
          m=PackMessageElement(value,self._innerpipe.Type,self._obj,self._innerpipe.GetNode())
          return async_call(self._innerpipe.AsyncPokeOutValue, (m,adjust_timeout(timeout)), AsyncVoidReturnDirectorImpl, handler)
 
-    @property
-    def PeekInValueCallback(self):
-        raise Exception("Read only property")
-
-    @PeekInValueCallback.setter
-    def PeekInValueCallback(self, c):
-        cb=WrappedWireServerPeekValueDirectorImpl(c,self._innerpipe,self._obj)
-        self._innerpipe.SetPeekInValueCallback(cb,0)
-        cb.__disown__()
-
-    @property
-    def PeekOutValueCallback(self):
-        raise Exception("Read only property")
-
-    @PeekOutValueCallback.setter
-    def PeekOutValueCallback(self, c):
-        cb=WrappedWireServerPeekValueDirectorImpl(c,self._innerpipe,self._obj)
-        self._innerpipe.SetPeekOutValueCallback(cb,0)
-        cb.__disown__()
-
-    @property
-    def PokeOutValueCallback(self):
-        raise Exception("Read only property")
-
-    @PokeOutValueCallback.setter
-    def PokeOutValueCallback(self, c):
-        cb=WrappedWireServerPokeValueDirectorImpl(c,self._innerpipe,self._obj)
-        self._innerpipe.SetPokeOutValueCallback(cb,0)
-        cb.__disown__()
-
-class WrappedWireServerConnectDirectorPython(RobotRaconteurPython.WrappedWireServerConnectDirector):
-    def __init__(self,wire,type,callback):
-        self.wire=wire
-        self.type=type
-        self.callback=callback
-        super(WrappedWireServerConnectDirectorPython,self).__init__()
-
-    def WireConnectCallback(self,innerendpoint):
-                
-        outerendpoint=WireConnection(innerendpoint,self.type)
-        director=WireConnectionDirector(outerendpoint,self.type,innerep=innerendpoint)
-        innerendpoint.SetRRDirector(director,0)
-        director.__disown__()
-        self.callback(outerendpoint)
-
-
-
-class ArrayMemoryClient(object):
-    def __init__(self,innermemory):
-        self.__innermemory=innermemory
-
-    @property
-    def Length(self):
-        return self.__innermemory.Length()
-
-    def Read(self, memorypos, buffer, bufferpos, count):
-        dat=RobotRaconteurPython.WrappedArrayMemoryClientUtil.Read(self.__innermemory, memorypos, count)
-        t=RobotRaconteurPython.TypeDefinition()
-        t.Type=self.__innermemory.ElementTypeID()
-        t.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        t.ArrayVarLength=True
-        t.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        buffer[bufferpos:(bufferpos+count)]=UnpackFromRRArray(dat,t)
-
-    def Write(self,memorypos, buffer, bufferpos, count):
-        t=RobotRaconteurPython.TypeDefinition()
-        t.Type=self.__innermemory.ElementTypeID()
-        t.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        t.ArrayVarLength=True
-        t.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        dat=PackToRRArray(buffer[bufferpos:(bufferpos+count)],t)
-        RobotRaconteurPython.WrappedArrayMemoryClientUtil.Write(self.__innermemory, memorypos,dat,0,count)
-
-class MultiDimArrayMemoryClient(object):
-    def __init__(self,innermemory):
-        self.__innermemory=innermemory
-        import RobotRaconteur        
-
-    @property
-    def DimCount(self):
-        return self.__innermemory.DimCount()
-
-    @property
-    def Dimensions(self):
-        return list(self.__innermemory.Dimensions())
-   
-    def Read(self, memorypos, buffer, bufferpos, count):
-
-        dat=RobotRaconteurPython.WrappedMultiDimArrayMemoryClientUtil.Read(self.__innermemory,memorypos,count)
-        tdims=RobotRaconteurPython.TypeDefinition()
-        tdims.Type=RobotRaconteurPython.DataTypes_uint32_t
-        tdims.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        tdims.ArrayVarLength=True
-        tdims.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        dims=UnpackFromRRArray(dat.Dims,tdims)
-
-        t=RobotRaconteurPython.TypeDefinition()
-        t.Type=self.__innermemory.ElementTypeID()
-        t.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        t.ArrayVarLength=True
-        t.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        array=UnpackFromRRArray(dat.Array,t)        
-        
-        memind=[(slice(memorypos[i],(memorypos[i]+count[i]))) for i in range(len(count))]
-        bufind=[(slice(bufferpos[i], (bufferpos[i]+count[i]))) for i in range(len(count))]
-                
-        buffer2=array.reshape(dims,order="F")
-        buffer[tuple(bufind)]=buffer2
-
-
-    def Write(self, memorypos, buffer, bufferpos, count):
-
-        tdims=RobotRaconteurPython.TypeDefinition()
-        tdims.Type=RobotRaconteurPython.DataTypes_uint32_t
-        tdims.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        tdims.ArrayVarLength=True
-        tdims.ArrayLength=RobotRaconteurPython.vectorint32([0])
-
-        t=RobotRaconteurPython.TypeDefinition()
-        t.Type=self.__innermemory.ElementTypeID()
-        t.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        t.ArrayVarLength=True
-        t.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        elementcount=reduce(operator.mul,count,1)
-        dims=count
-        
-        memind=[slice(memorypos[i],(memorypos[i]+count[i])) for i in range(len(count))]
-        bufind=[slice(bufferpos[i],(bufferpos[i]+count[i])) for i in range(len(count))]
-                    
-        array=buffer[tuple(bufind)].flatten(order="F")
-        
-        dims2=PackToRRArray(count,tdims)
-        array2=PackToRRArray(array,t)
-        
-        writedat2=RobotRaconteurPython.RRMultiDimArrayUntyped()
-        writedat2.Dims=dims2
-        
-        writedat2.Array=array2
-        
-        RobotRaconteurPython.WrappedMultiDimArrayMemoryClientUtil.Write(self.__innermemory,memorypos,writedat2,[0]*len(count),count)
-
-class PodArrayMemoryClient_bufferdirector(RobotRaconteurPython.WrappedPodArrayMemoryClientBuffer):
-    def __init__(self, buf, type1, obj, node):
-        super(PodArrayMemoryClient_bufferdirector,self).__init__()
-        self._buffer=buf
-        self._obj=obj
-        self._node=node
-        self._type=type1
-        
-    def UnpackReadResult(self, res, bufferpos, count):
-        res1=RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodArray(res)
-        m=RobotRaconteurPython.MessageElement()
-        m.SetData(res)
-        m.ElementTypeName=res1.Type
-        m.DataCount=len(res1.Elements)
-        
-        res1=UnpackMessageElement(m, self._type, self._obj, self._node)
-        self._buffer[bufferpos:(bufferpos+count)] = res1
-        
-    def PackWriteRequest(self, bufferpos, count):
-        buf1=self._buffer[bufferpos:(bufferpos+count)]
-        m_data = PackMessageElement(buf1,self._type, self._obj, self._node).GetData()
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodArray(m_data)
-
-class PodArrayMemoryClient(object):
-        
-    def __init__(self,innermemory,type1,obj,node):
-        self.__innermemory=innermemory
-        self._type=type1
-        self._obj=obj
-        self._node=node
-
-    @property
-    def Length(self):
-        return self.__innermemory.Length()
-
-    def Read(self, memorypos, buf, bufferpos, count):
-        b=PodArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Read(memorypos, b, bufferpos, count)
-        
-    def Write(self,memorypos, buf, bufferpos, count):
-        b=PodArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Write(memorypos, b, bufferpos, count)
-
-class PodMultiDimArrayMemoryClient_bufferdirector(RobotRaconteurPython.WrappedPodMultiDimArrayMemoryClientBuffer):
-    def __init__(self, buf, type1, obj, node):
-        super(PodMultiDimArrayMemoryClient_bufferdirector,self).__init__()
-        self._buffer=buf
-        self._obj=obj
-        self._node=node
-        self._type=type1
-        
-    def UnpackReadResult(self, res, bufferpos, count):
-        res1=RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodMultiDimArray(res)
-        m=RobotRaconteurPython.MessageElement()
-        m.SetData(res)
-        m.ElementTypeName=res1.Type
-        m.DataCount=len(res1.Elements)
-        
-        res2=UnpackMessageElement(m, self._type, self._obj, self._node)
-        bufind=[(slice(bufferpos[i], (bufferpos[i]+count[i]))) for i in range(len(count))]
-        self._buffer[tuple(bufind)] = res2
-        
-    def PackWriteRequest(self, bufferpos, count):
-        bufind=[(slice(bufferpos[i], (bufferpos[i]+count[i]))) for i in range(len(count))]
-        buf1=self._buffer[tuple(bufind)]          
-        m_data = PackMessageElement(buf1,self._type, self._obj, self._node).GetData()
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodMultiDimArray(m_data)
-
-class PodMultiDimArrayMemoryClient(object):
-        
-    def __init__(self,innermemory,type1,obj,node):
-        self.__innermemory=innermemory
-        self._type=type1
-        self._obj=obj
-        self._node=node
-
-    @property
-    def DimCount(self):
-        return self.__innermemory.DimCount()
     
-    @property
-    def Dimensions(self):
-        return list(self.__innermemory.Dimensions())
-
-    def Read(self, memorypos, buf, bufferpos, count):
-        b=PodMultiDimArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Read(memorypos, b, bufferpos, count)
-        
-    def Write(self,memorypos, buf, bufferpos, count):
-        b=PodMultiDimArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Write(memorypos, b, bufferpos, count)
-
-class NamedArrayMemoryClient_bufferdirector(RobotRaconteurPython.WrappedNamedArrayMemoryClientBuffer):
-    def __init__(self, buf, type1, obj, node):
-        super(NamedArrayMemoryClient_bufferdirector,self).__init__()
-        self._buffer=buf
-        self._obj=obj
-        self._node=node
-        self._type=type1
-        
-    def UnpackReadResult(self, res, bufferpos, count):
-        res1=RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedArray(res)
-        m=RobotRaconteurPython.MessageElement()
-        m.SetData(res)
-        m.ElementTypeName=res1.Type
-        m.DataCount=len(res1.Elements)
-        
-        res1=UnpackMessageElement(m, self._type, self._obj, self._node)
-        self._buffer[bufferpos:(bufferpos+count)] = res1
-        
-    def PackWriteRequest(self, bufferpos, count):
-        buf1=self._buffer[bufferpos:(bufferpos+count)]
-        m_data = PackMessageElement(buf1,self._type, self._obj, self._node).GetData()
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedArray(m_data)
-
-class NamedArrayMemoryClient(object):
-        
-    def __init__(self,innermemory,type1,obj,node):
-        self.__innermemory=innermemory
-        self._type=type1
-        self._obj=obj
-        self._node=node
-
-    @property
-    def Length(self):
-        return self.__innermemory.Length()
-
-    def Read(self, memorypos, buf, bufferpos, count):
-        b=NamedArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Read(memorypos, b, bufferpos, count)
-        
-    def Write(self,memorypos, buf, bufferpos, count):
-        b=NamedArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Write(memorypos, b, bufferpos, count)
-
-class NamedMultiDimArrayMemoryClient_bufferdirector(RobotRaconteurPython.WrappedNamedMultiDimArrayMemoryClientBuffer):
-    def __init__(self, buf, type1, obj, node):
-        super(NamedMultiDimArrayMemoryClient_bufferdirector,self).__init__()
-        self._buffer=buf
-        self._obj=obj
-        self._node=node
-        self._type=type1
-        
-    def UnpackReadResult(self, res, bufferpos, count):
-        res1=RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedMultiDimArray(res)
-        m=RobotRaconteurPython.MessageElement()
-        m.SetData(res)
-        m.ElementTypeName=res1.Type
-        m.DataCount=len(res1.Elements)
-        
-        res2=UnpackMessageElement(m, self._type, self._obj, self._node)
-        bufind=[(slice(bufferpos[i], (bufferpos[i]+count[i]))) for i in range(len(count))]
-        self._buffer[tuple(bufind)] = res2        
-        
-    def PackWriteRequest(self, bufferpos, count):
-        bufind=[(slice(bufferpos[i], (bufferpos[i]+count[i]))) for i in range(len(count))]
-        buf1=self._buffer[tuple(bufind)]            
-        m_data = PackMessageElement(buf1,self._type, self._obj, self._node).GetData()
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedMultiDimArray(m_data)
-
-class NamedMultiDimArrayMemoryClient(object):
-        
-    def __init__(self,innermemory,type1,obj,node):
-        self.__innermemory=innermemory
-        self._type=type1
-        self._obj=obj
-        self._node=node
-
-    @property
-    def DimCount(self):
-        return self.__innermemory.DimCount()
-    
-    @property
-    def Dimensions(self):
-        return list(self.__innermemory.Dimensions())
-
-    def Read(self, memorypos, buf, bufferpos, count):
-        b=NamedMultiDimArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Read(memorypos, b, bufferpos, count)
-        
-    def Write(self,memorypos, buf, bufferpos, count):
-        b=NamedMultiDimArrayMemoryClient_bufferdirector(buf, self._type, self._obj, self._node)
-        self.__innermemory.Write(memorypos, b, bufferpos, count)
-
 class ServiceInfo2(object):
     def __init__(self,info):
         self.Name=info.Name
@@ -1307,455 +757,6 @@ class NodeInfo2(object):
         self.NodeName=info.NodeName
         self.ConnectionURL=list(info.ConnectionURL)
 
-class WrappedServiceSkelDirectorPython(RobotRaconteurPython.WrappedServiceSkelDirector):
-    def __init__(self,obj):
-        self.obj=obj
-        super(WrappedServiceSkelDirectorPython,self).__init__()
-
-    def Init(self,skel):
-        
-        self.skel=skel
-        odef=skel.Type
-        for i in range(len(odef.Members)):
-            m=odef.Members[i]
-            if (isinstance(m,RobotRaconteurPython.EventDefinition)):
-                def inner_event(m1):
-
-                    f=lambda *args : skel_dispatchevent(skel,m1.Name,m1,*args)
-                    return f
-                f1=inner_event(m)                
-                evt=getattr(self.obj, m.Name)
-                evt+=f1
-            if (isinstance(m,RobotRaconteurPython.CallbackDefinition)):
-                def inner_callback(m1):
-                    if (m1.ReturnType.Type==RobotRaconteurPython.DataTypes_void_t):
-                        f=lambda endpoint, *args : skel_callbackcallvoid(skel,m1.Name,m1,endpoint,*args)
-                    else:
-                        f=lambda endpoint, *args : skel_callbackcall(skel,m1.Name,m1,endpoint,*args)
-                    return f
-                f1=inner_callback(m)
-                cs=CallbackServer(f1)
-                
-                setattr(self.obj,m.Name,cs)
-            if (isinstance(m,RobotRaconteurPython.PipeDefinition)):
-                p=skel.GetPipe(m.Name)
-                outerp=Pipe(p)
-                if (not hasattr(self.obj,m.Name)):
-                    if ("readonly" in m.Modifiers):
-                        setattr(self.obj,m.Name,PipeBroadcaster(outerp))                    
-                    else:
-                        setattr(self.obj,m.Name,outerp)
-                else:             
-                    setattr(self.obj,m.Name,outerp)
-            if (isinstance(m,RobotRaconteurPython.WireDefinition)):
-                w=skel.GetWire(m.Name)
-                outerw=Wire(w)
-                if (not hasattr(self.obj,m.Name)):
-                    if ("readonly" in m.Modifiers):
-                        setattr(self.obj,m.Name,WireBroadcaster(outerw))
-                    elif ("writeonly" in m.Modifiers):
-                        setattr(self.obj,m.Name,WireUnicastReceiver(outerw))
-                    else:
-                        setattr(self.obj,m.Name,outerw)
-                else:                      
-                    setattr(self.obj,m.Name,outerw)
-
-    def _CallGetProperty(self, name):
-
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        #type1=[e for e in self.skel.Type.Members if e.Name == name][0]
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToProperty(type1)
-        ret=getattr(self.obj,name)
-
-        if (ret is None):
-            m=RobotRaconteurPython.MessageElement()
-            m.ElementName="value"
-            m.ElementType=RobotRaconteurPython.DataTypes_void_t
-            return m
-        return PackMessageElement(ret,type2.Type,node=self.skel.RRGetNode())
-
-
-    def _CallSetProperty(self, name, value):
-
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        #type1=[e for e in self.skel.Type.Members if e.Name == name][0]
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToProperty(type1)        
-        a=UnpackMessageElement(value,type2.Type,node=self.skel.RRGetNode())
-        setattr(self.obj,name,a)
-
-
-    def _CallFunction(self, name, args1):
-
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToFunction(type1)
-        args=[]
-        for p in type2.Parameters:
-            if p.ContainerType == RobotRaconteurPython.DataTypes_ContainerTypes_generator:
-                continue
-            m=FindMessageElementByName(args1,p.Name)            
-            a=UnpackMessageElement(m,p,node=self.skel.RRGetNode())
-            args.append(a)
-        ret=getattr(self.obj,name)(*args)
-
-        if type2.IsGenerator():
-            gen_return_type = None
-            if type2.ReturnType.Type != RobotRaconteurPython.DataTypes_void_t:
-                gen_return_type = type2.ReturnType.Clone()
-                gen_return_type.RemoveContainers()
-            gen_param_type = None
-            if len(type2.Parameters) > 0 and type2.Parameters[-1].ContainerType == RobotRaconteurPython.DataTypes_ContainerTypes_generator:
-                gen_param_type = type2.Parameters[-1]
-            gen=WrappedGeneratorServerDirectorPython(ret, gen_return_type, gen_param_type, self.skel.RRGetNode())
-            ind = self.skel.RegisterGeneratorServer(type2.Name, gen)
-            gen.__disown__()
-            return PackMessageElement(ind, "int32 index", node=self.skel.RRGetNode())           
-
-        if (ret is None):
-            m=RobotRaconteurPython.MessageElement()
-            m.ElementName="return"
-            m.ElementType=RobotRaconteurPython.DataTypes_void_t
-            return m
-        return PackMessageElement(ret,type2.ReturnType,node=self.skel.RRGetNode())
-
-
-    def _GetSubObj(self, name, index):
-
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        #type1=[e for e in self.skel.Type.Members if e.Name == name][0]
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToObjRef(type1)
-        if (type2.ArrayType == RobotRaconteurPython.DataTypes_ArrayTypes_array or (type2.ContainerType == RobotRaconteurPython.DataTypes_ContainerTypes_map_int32)):
-            obj,objecttype=getattr(self.obj,'get_' + name)(str(index))
-        elif (type2.ContainerType == RobotRaconteurPython.DataTypes_ContainerTypes_map_string):
-            obj,objecttype=getattr(self.obj, 'get_' + name)(codecs.encode(index,'utf-8'))
-        else:
-            obj,objecttype=getattr(self.obj, 'get_' + name)()
-
-        director=WrappedServiceSkelDirectorPython(obj)
-        rrobj=RobotRaconteurPython.WrappedRRObject(objecttype,director,0)
-        director.__disown__()
-        return rrobj
-
-
-    def _GetArrayMemory(self,name):
-
-        m=getattr(self.obj, name)
-        d=WrappedArrayMemoryDirectorPython(m)
-        d.__disown__()
-        return d
-
-
-    def _GetMultiDimArrayMemory(self,name):
-        m=getattr(self.obj, name)
-        d=WrappedMultiDimArrayMemoryDirectorPython(m)
-        d.__disown__()
-        return d
-
-    def _GetPodArrayMemory(self,name):
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToMemory(type1)
-        m=getattr(self.obj, name)
-        d=WrappedPodArrayMemoryDirectorPython(m, type2.Type, self.skel.RRGetNode())
-        d.__disown__()
-        return d
-
-
-    def _GetPodMultiDimArrayMemory(self,name):        
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToMemory(type1)
-        m=getattr(self.obj, name)
-        d=WrappedPodMultiDimArrayMemoryDirectorPython(m, type2.Type, self.skel.RRGetNode())
-        d.__disown__()
-        return d
-
-    def _GetNamedArrayMemory(self,name):
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToMemory(type1)
-        m=getattr(self.obj, name)
-        d=WrappedNamedArrayMemoryDirectorPython(m, type2.Type, self.skel.RRGetNode())
-        d.__disown__()
-        return d
-    
-    def _GetNamedMultiDimArrayMemory(self,name):        
-        type1=FindMemberByName(self.skel.Type.Members,name)
-        type2=RobotRaconteurPython.MemberDefinitionUtil.ToMemory(type1)
-        m=getattr(self.obj, name)
-        d=WrappedNamedMultiDimArrayMemoryDirectorPython(m, type2.Type, self.skel.RRGetNode())
-        d.__disown__()
-        return d
-
-    def MonitorEnter(self,timeout):
-
-        self.obj.RobotRaconteurMonitorEnter(timeout)
-
-
-    def MonitorExit(self):
-
-        self.obj.RobotRaconteurMonitorExit()
-
-
-
-    def ReleaseCastObj(self):
-        self.obj=None
-        self.skel=None
-
-def skel_dispatchevent(skel,name,type1,*args):
-    m=RobotRaconteurPython.vectorptr_messageelement()
-    i=0
-    node=skel.RRGetNode()
-    for p in type1.Parameters:
-        a=PackMessageElement(args[i],p,node=node)
-        m.append(a)
-        i+=1
-    skel.WrappedDispatchEvent(name,m)
-
-def skel_callbackcall(skel,name,type1,endpoint,*args):
-    m=RobotRaconteurPython.vectorptr_messageelement()
-    i=0
-    node=skel.RRGetNode()
-    for p in type1.Parameters:
-        a=PackMessageElement(args[i],p,node=node)
-        m.append(a)
-        i+=1
-    ret=skel.WrappedCallbackCall(name,endpoint,m)
-    return UnpackMessageElement(ret,type1.ReturnType,node=node)
-
-def skel_callbackcallvoid(skel,name,type1,endpoint,*args):
-    m=RobotRaconteurPython.vectorptr_messageelement()
-    i=0
-    node=skel.RRGetNode()
-    for p in type1.Parameters:
-        a=PackMessageElement(args[i],p,node=node)
-        m.append(a)
-        i+=1
-    skel.WrappedCallbackCall(name,endpoint,m)
-
-class CallbackServer(object):
-    def __init__(self,func):
-
-        self.func=func
-    def GetClientFunction(self,endpoint):
-        func=self.func
-
-        return lambda *args : func(endpoint,*args)
-
-
-
-class WrappedArrayMemoryDirectorPython(RobotRaconteurPython.WrappedArrayMemoryDirector):
-    def __init__(self,memory):
-        self.memory=memory
-        super(WrappedArrayMemoryDirectorPython,self).__init__()
-
-    def Length(self):
-
-        return self.memory.Length
-
-
-    def Read(self,memorypos,buffer,bufferpos,count):
-
-        buffer3=numpy.zeros((count,),dtype=RobotRaconteurPython._RRTypeIdToNumPyDataType(buffer.GetTypeID()))        
-        self.memory.Read(memorypos,buffer3,bufferpos,count)        
-        type1=RobotRaconteurPython.TypeDefinition()        
-        type1.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        type1.ArrayVarLength=True
-        type1.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        type1.Type=buffer.GetTypeID()
-        PackToRRArray(buffer3,type1,buffer)
-
-
-
-    def Write(self,memorypos,buffer,bufferpos,count):
-                
-        buffer3=UnpackFromRRArray(buffer,None)
-        self.memory.Write(memorypos,buffer3,bufferpos,count)
-
-class WrappedMultiDimArrayMemoryDirectorPython(RobotRaconteurPython.WrappedMultiDimArrayMemoryDirector):
-    def __init__(self,memory):
-        self.memory=memory
-        super(WrappedMultiDimArrayMemoryDirectorPython,self).__init__()
-        import RobotRaconteur        
-
-    def Dimensions(self):
-
-        d=self.memory.Dimensions
-        d2=RobotRaconteurPython.vector_uint64_t()
-        for d_i in d: d2.push_back(d_i)
-        return d2
-
-
-    def DimCount(self):
-
-        return self.memory.DimCount
-
-    def Read(self,p):
-
-        rrmultidim=p.buffer
-        rrt=RobotRaconteurPython.TypeDefinition()
-        rrt.Type=rrmultidim.Array.GetTypeID()
-        rrt.ArrayType=RobotRaconteurPython.DataTypes_ArrayTypes_array
-        rrt.ArrayVarLength=True
-        rrt.ArrayLength=RobotRaconteurPython.vectorint32([0])
-        dims=list(p.count)
-        elementcount=reduce(operator.mul,dims,1)
-        
-        readdat1=numpy.zeros(dims,dtype=RobotRaconteurPython._RRTypeIdToNumPyDataType(rrmultidim.Array.GetTypeID()))
-        self.memory.Read(list(p.memorypos),readdat1,list(p.bufferpos),dims)
-
-        PackToRRArray(readdat1.flatten(order="F"),rrt,rrmultidim.Array)
-        
-    def Write(self,p):
-
-        memorypos=list(p.memorypos)
-        bufferpos=list(p.bufferpos)
-        count=list(p.count)
-
-        rrmultidim=p.buffer
-        md_dims=UnpackFromRRArray(rrmultidim.Dims)
-        md_array=UnpackFromRRArray(rrmultidim.Array)        
-        
-        buffer=md_array.reshape(count,order="F")
-        self.memory.Write(memorypos,buffer,bufferpos,count)
-        
-
-class WrappedPodArrayMemoryDirectorPython(RobotRaconteurPython.WrappedPodArrayMemoryDirector):
-    def __init__(self,memory,type1,node):
-        self.memory=memory
-        self.node=node
-        self.type=type1
-        super(WrappedPodArrayMemoryDirectorPython,self).__init__()
-
-    def Length(self):
-
-        return self.memory.Length
-
-    def Read(self,memorypos,bufferpos,count):
-        dt=GetPodDType(self.type)
-        buffer3=numpy.zeros((count,),dtype=dt)
-        self.memory.Read(memorypos,buffer3,bufferpos,count)        
-        m=PackMessageElement(buffer3,self.type,node=self.node)
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodArray(m.GetData())
-    
-    def Write(self,memorypos,buffer_,bufferpos,count):        
-        m=RobotRaconteurPython.MessageElement()
-        m.SetData(buffer_)
-        m.ElementTypeName=buffer_.Type
-        m.DataCount=len(buffer_.Elements)
-        buffer3=UnpackMessageElement(m,self.type, node=self.node)
-        self.memory.Write(memorypos,buffer3,bufferpos,count)
-
-class WrappedPodMultiDimArrayMemoryDirectorPython(RobotRaconteurPython.WrappedPodMultiDimArrayMemoryDirector):
-    def __init__(self,memory,type1,node):
-        super(WrappedPodMultiDimArrayMemoryDirectorPython,self).__init__()
-        self.memory=memory
-        self.type=type1
-        self.node=node
-                
-    def Dimensions(self):
-
-        d=self.memory.Dimensions
-        d2=RobotRaconteurPython.vector_uint64_t()
-        for d_i in d: d2.push_back(d_i)
-        return d2
-
-    def DimCount(self):
-        return self.memory.DimCount
-
-    def Read(self,memorypos,bufferpos,count):
-
-        dims=list(count)        
-        dt=GetPodDType(self.type)
-                
-        readdat1=numpy.zeros(dims,dtype=dt)
-
-        self.memory.Read(list(memorypos),readdat1,list(bufferpos),dims)
-
-        m = PackMessageElement(readdat1, self.type, node=self.node)
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodMultiDimArray(m.GetData())
-        
-    def Write(self,memorypos_,buffer_, bufferpos_, count_):
-        try:
-            memorypos=list(memorypos_)
-            bufferpos=list(bufferpos_)
-            count=list(count_)
-            
-            buffer1=RobotRaconteurPython.MessageElementDataUtil.ToMessageElementPodMultiDimArray(buffer_)
-            m=RobotRaconteurPython.MessageElement()
-            m.SetData(buffer_)
-            m.ElementTypeName=buffer1.Type
-            m.DataCount=len(buffer1.Elements)
-            buffer2=UnpackMessageElement(m,self.type, node=self.node)       
-            self.memory.Write(memorypos,buffer2,bufferpos,count)
-        except:
-            traceback.print_exc()
-            raise
-
-class WrappedNamedArrayMemoryDirectorPython(RobotRaconteurPython.WrappedNamedArrayMemoryDirector):
-    def __init__(self,memory,type1,node):
-        self.memory=memory
-        self.node=node
-        self.type=type1
-        super(WrappedNamedArrayMemoryDirectorPython,self).__init__()
-
-    def Length(self):
-
-        return self.memory.Length
-
-    def Read(self,memorypos,bufferpos,count):
-        dt=GetNamedArrayDType(self.type)
-        buffer3=numpy.zeros((count,),dtype=dt)
-        self.memory.Read(memorypos,buffer3,bufferpos,count)        
-        m=PackMessageElement(buffer3,self.type,node=self.node)
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedArray(m.GetData())
-    
-    def Write(self,memorypos,buffer_,bufferpos,count):        
-        m=RobotRaconteurPython.MessageElement()
-        m.SetData(buffer_)
-        m.ElementTypeName=buffer_.Type
-        m.DataCount=len(buffer_.Elements)
-        buffer3=UnpackMessageElement(m,self.type, node=self.node)
-        self.memory.Write(memorypos,buffer3,bufferpos,count)
-
-class WrappedNamedMultiDimArrayMemoryDirectorPython(RobotRaconteurPython.WrappedNamedMultiDimArrayMemoryDirector):
-    def __init__(self,memory,type1,node):
-        super(WrappedNamedMultiDimArrayMemoryDirectorPython,self).__init__()
-        self.memory=memory
-        self.type=type1
-        self.node=node
-                
-    def Dimensions(self):
-
-        d=self.memory.Dimensions
-        d2=RobotRaconteurPython.vector_uint64_t()
-        for d_i in d: d2.push_back(d_i)
-        return d2
-
-    def DimCount(self):
-        return self.memory.DimCount
-
-    def Read(self,memorypos,bufferpos,count):
-        dims=list(count)
-        dt=GetNamedArrayDType(self.type)
-        readdat1=numpy.zeros(dims,dtype=dt)
-        self.memory.Read(list(memorypos),readdat1,list(bufferpos),dims)
-        m = PackMessageElement(readdat1, self.type, node=self.node)
-        return RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedMultiDimArray(m.GetData())
-        
-    def Write(self,memorypos_,buffer_, bufferpos_, count_):
-        try:
-            memorypos=list(memorypos_)
-            bufferpos=list(bufferpos_)
-            count=list(count_)
-            
-            buffer1=RobotRaconteurPython.MessageElementDataUtil.ToMessageElementNamedMultiDimArray(buffer_)
-            m=RobotRaconteurPython.MessageElement()
-            m.SetData(buffer_)
-            m.ElementTypeName=buffer1.Type
-            m.DataCount=len(buffer1.Elements)
-            buffer2=UnpackMessageElement(m,self.type, node=self.node)       
-            self.memory.Write(memorypos,buffer2,bufferpos,count)
-        except:
-            traceback.print_exc()
-            raise
-
 class WrappedClientServiceListenerDirector(RobotRaconteurPython.ClientServiceListenerDirector):
     def __init__(self,callback):
         self.callback=callback
@@ -1766,17 +767,6 @@ class WrappedClientServiceListenerDirector(RobotRaconteurPython.ClientServiceLis
 
        self.callback(self.stub,code,None)
 
-
-class WrappedServerServiceListenerDirector(RobotRaconteurPython.ServerServiceListenerDirector):
-    def __init__(self,callback,context):
-        self.callback=callback
-        self.context=context
-
-        super(WrappedServerServiceListenerDirector,self).__init__()
-
-    def Callback(self,code,endpoint):
-
-        self.callback(self.context,code,endpoint)
 
 class RRConstants(object):
     pass
@@ -1989,131 +979,6 @@ class ExceptionHandlerDirectorImpl(RobotRaconteurPython.AsyncVoidReturnDirector)
             self._handler(err)
             return
 
-class WrappedPipeBroadcasterPredicateDirectorPython(RobotRaconteurPython.WrappedPipeBroadcasterPredicateDirector):
-    def __init__(self, f):
-        super(WrappedPipeBroadcasterPredicateDirectorPython,self).__init__()
-        self.f=f
-
-    def Predicate(self, client_endpoint, index_):
-        try:
-            return self.f(client_endpoint, index_)
-        except:
-            traceback.print_exc()
-            return True
-
-class PipeBroadcaster(object):
-   
-
-    def __init__(self,pipe,maximum_backlog=-1):
-        self.pipe=pipe
-
-        self._innerpipe=RobotRaconteurPython.WrappedPipeBroadcaster()
-        self._innerpipe.Init(pipe._innerpipe, maximum_backlog)
-        self._obj=pipe._obj
-        self._type=pipe._innerpipe.Type
-    
-    def AsyncSendPacket(self, packet, handler):
-        m=PackMessageElement(packet,self._type,self._obj)
-        return async_call(self._innerpipe.AsyncSendPacket,(m,),AsyncVoidNoErrReturnDirectorImpl,handler)
-
-    def SendPacket(self, packet):
-        m=PackMessageElement(packet,self._type,self._obj)
-        self._innerpipe.SendPacket(m)
-        
-    @property
-    def ActivePipeEndpointCount(self):
-        return self._innerpipe.GetActivePipeEndpointCount()
-
-    def SetPredicate(self, f):
-        p=WrappedPipeBroadcasterPredicateDirectorPython(f)
-        self._innerpipe.SetPredicateDirector(p, 0)
-        p.__disown__()
-        
-    @property
-    def MaximumBacklog(self):
-        return self._innerpipe.GetMaximumBacklog()
-    
-    @MaximumBacklog.setter
-    def MaximumBacklog(self, maximum_backlog):
-        self._innerpipe.SetMaximumBacklog(maximum_backlog)
-
-class WrappedWireBroadcasterPredicateDirectorPython(RobotRaconteurPython.WrappedWireBroadcasterPredicateDirector):
-    def __init__(self, f):
-        super(WrappedWireBroadcasterPredicateDirectorPython,self).__init__()
-        self.f=f
-
-    def Predicate(self, client_endpoint):
-        try:
-            return self.f(client_endpoint)
-        except:
-            traceback.print_exc()
-            return True
-
-class WireBroadcaster(object):
-    def __init__(self, wire):
-        self._wire=wire
-        self._innerpipe=RobotRaconteurPython.WrappedWireBroadcaster()        
-        self._innerpipe.Init(wire._innerpipe)
-        self._obj=wire._obj
-        self._type=wire._innerpipe.Type
-
-    @property
-    def OutValue(self):
-        raise Exception("Write only property")
-
-    @OutValue.setter
-    def OutValue(self, value):
-        m=PackMessageElement(value,self._type,self._obj)
-        self._innerpipe.SetOutValue(m)
-                
-    @property
-    def ActiveWireConnectionCount(self):
-        return self._innerpipe.GetActiveWireConnectionCount()
-
-    def SetPredicate(self, f):
-        p=WrappedWireBroadcasterPredicateDirectorPython(f)
-        self._innerpipe.SetPredicateDirector(p, 0)
-        p.__disown__()
-
-class WrappedWireUnicastReceiverInValueChangedImpl(RobotRaconteurPython.WrappedWireServerPokeValueDirector):
-    def __init__(self, rec):
-        super(WrappedWireUnicastReceiverInValueChangedImpl,self).__init__()
-        self._rec=weakref.ref(rec)      
-
-    def PokeValue(self, m, ts, ep):
-        rec=self._rec()
-        if (rec is None): return
-        value=UnpackMessageElement(m,rec._wire._innerpipe.Type,None,rec._wire._innerpipe.GetNode())
-        rec.InValueChanged.fire(value, ts, ep)
-
-class WireUnicastReceiver(object):
-    def __init__(self, wire):
-        self._wire=wire
-        self._innerpipe=RobotRaconteurPython.WrappedWireUnicastReceiver()        
-        self._innerpipe.Init(wire._innerpipe)
-        self._obj=wire._obj
-        self._type=wire._innerpipe.Type
-        self._InValueChanged=EventHook()
-        cb=WrappedWireUnicastReceiverInValueChangedImpl(self)
-        self._innerpipe.AddInValueChangedListener(cb, 0)
-        cb.__disown__()
-        
-
-    @property
-    def InValue(self):
-        ts=RobotRaconteurPython.TimeSpec()
-        (m,ep)=self._innerpipe.GetInValue(ts)
-        return (UnpackMessageElement(m,self._type,self._obj,self._wire._innerpipe.GetNode()),ts)
-    
-    @property
-    def InValueChanged(self):
-        return self._InValueChanged
-    
-    @InValueChanged.setter
-    def InValueChanged(self, evt):
-        if (evt is not self._InValueChanged):
-            raise RuntimeError("Invalid operation")
-
 class GeneratorClient(object):
     def __init__(self, inner_gen, return_type, param_type, obj, node):
         self._inner_gen=inner_gen
@@ -2135,15 +1000,6 @@ class GeneratorClient(object):
         return_type1.RemoveContainers()
         return UnpackMessageElement(ret,return_type1, self._obj, self._node)  
     
-    def Next(self, param = None):
-        if (self._param_type is not None and self._param_type.ContainerType == DataTypes_ContainerTypes_generator):
-            param1 = self._pack_param(param)
-        else:
-            assert param is None
-            param1 = None    
-        ret1 = self._inner_gen.Next(param1)        
-        return self._unpack_return(ret1)
-            
     def AsyncNext(self, param, handler, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
         if (self._param_type is not None and self._param_type.ContainerType == DataTypes_ContainerTypes_generator):
             param1 = self._pack_param(param)
@@ -2160,41 +1016,18 @@ class GeneratorClient(object):
         else:
             return async_call(self._inner_gen.AsyncNext,(param1,adjust_timeout(timeout)),AsyncRequestDirectorImpl,handler,directorargs=(True,return_type1,self._obj,self._node))
     
-    def Abort(self):
-        self._inner_gen.Abort()
     def AsyncAbort(self, handler, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
         return async_call(self._inner_gen.AsyncAbort,(adjust_timeout(timeout),),AsyncVoidReturnDirectorImpl,handler)
     
-    def Close(self):
-        self._inner_gen.Close()
     def AsyncClose(self, handler, timeout=RobotRaconteurPython.RR_TIMEOUT_INFINITE):
         return async_call(self._inner_gen.AsyncClose,(adjust_timeout(timeout),),AsyncVoidReturnDirectorImpl,handler)           
-
-    def NextAll(self):
-        ret=[]
-        try:
-            while True:
-                ret.append(self.Next())
-        except RobotRaconteurPythonError.StopIterationException: pass
-        return ret
     
     #Add compatibility for iterator protocols
     def __iter__(self):
         if self._return_type is None or self._param_type is not None:
             raise TypeError('Generator must be type 1 for iterable')
         return self
-    
-    def __next__(self):
-        return self.send(None)
-    
-    def next(self):
-        return self.send(None)
-    
-    def send(self, param):
-        try:
-            return self.Next(param)
-        except RobotRaconteurPythonError.StopIterationException:
-            raise StopIteration()
+
 
 class AsyncGeneratorClientReturnDirectorImpl(RobotRaconteurPython.AsyncGeneratorClientReturnDirector):
     def __init__(self, handler, return_type, param_type, obj, node):
@@ -2214,70 +1047,7 @@ class AsyncGeneratorClientReturnDirectorImpl(RobotRaconteurPython.AsyncGenerator
         gen2=GeneratorClient(gen, self._return_type, self._param_type, self._obj, self._node)
         self._handler(gen2, None)
 
-class IteratorGenerator(object):
-    def __init__(self, obj):
-        self._iter=iter(obj)
-        self._lock=threading.Lock()
-        self._closed=False
-        self._aborted=False
-        
-    def Next(self):
-        with self._lock:
-            if self._aborted:
-                raise RobotRaconteurPythonError.OperationAbortedException()
-            if self._closed:
-                raise RobotRaconteurPythonError.StopIterationException()            
-            try:
-                return next(self._iter)
-            except StopIteration:
-                raise RobotRaconteurPythonError.StopIterationException()
-    
-    def Close(self):
-        with self._lock:
-            self._closed=True
-            if hasattr(self._iter, "close"):
-                self._iter.close()
-    
-    def Abort(self):
-        with self._lock:
-            self._aborted=True
-            if hasattr(self._iter, "close"):
-                self._iter.close()
-
-class WrappedGeneratorServerDirectorPython(RobotRaconteurPython.WrappedGeneratorServerDirector):
-    def __init__(self, gen, return_type, param_type, node):
-        super(WrappedGeneratorServerDirectorPython,self).__init__()        
-        self._return_type = return_type
-        self._param_type = param_type
-        self._node = node
-        if hasattr(gen, "Next"):
-            self._gen = gen
-        else:
-            if not hasattr(gen, "__iter__"):
-                raise TypeError("Invalid generator")
-            self._gen = IteratorGenerator(gen)
-        
-    def Next(self, m):
-        if self._param_type is None:
-            ret = self._gen.Next()
-        else:
-            param = UnpackMessageElement(m,self._param_type,node=self._node)
-            ret = self._gen.Next(param)
-        
-        if ret is None:
-            mret=RobotRaconteurPython.MessageElement()
-            mret.ElementName="return"
-            mret.ElementType=RobotRaconteurPython.DataTypes_void_t
-            return mret
-        
-        return PackMessageElement(ret,self._return_type,node=self._node)
-        
-    def Abort(self):
-        self._gen.Abort()
-        
-    def Close(self):
-        self._gen.Close()
-        
+       
 _trace_hook=sys.gettrace()
 
 class ServiceSubscriptionClientID(object):
@@ -2507,9 +1277,6 @@ class WireSubscription(object):
         m=self._subscription.GetInValue(t)
         return (self._UnpackValue(m), t)
 
-    def WaitInValueValid(self, timeout=-1):
-        return self._subscription.WaitInValueValid(adjust_timeout(timeout))
-
     @property
     def ActiveWireConnectionCount(self):
         return self._subscription.GetActiveWireConnectionCount()
@@ -2577,7 +1344,7 @@ class PipeSubscription(object):
 
     def TryReceivePacketWait(self, timeout=-1):
         m=RobotRaconteurPython.MessageElement()
-        res=self._subscription.TryReceivePacketWait(m, adjust_timeout(timeout))
+        res=self._subscription.TryReceivePacket(m)
         if (not res):
             return (False, None)
         else:
@@ -2694,21 +1461,6 @@ def SubscribeService(node, service_types, filter_=None):
     sub1=RobotRaconteurPython.WrappedSubscribeService(node, service_types2, filter2)
     return ServiceSubscription(sub1)   
 
-class WrappedUserAuthenticatorDirectorPython(RobotRaconteurPython.WrappedUserAuthenticatorDirector):
-	def __init__(self,target):
-		super(WrappedUserAuthenticatorDirectorPython,self).__init__();
-		self.target=target
-		
-	def AuthenticateUser(self, username, credentials, context):
-				
-		c2=UnpackMessageElement(credentials,"varvalue{string}")
-		ret=self.target.AuthenticateUser(username,c2,context)
-		return ret
-		
-def _UserAuthenticator_PackCredentials(credentials):
-	return PackMessageElement(credentials,"varvalue{string}")
-		
-
 def ReadServiceDefinitionFile(servicedef_name):
     f_name = None
     if (os.path.isfile(servicedef_name)):
@@ -2743,9 +1495,9 @@ class RobotRaconteurNodeSetup(object):
         if node is None:
             node=RobotRaconteurPython.RobotRaconteurNode.s
         self.__setup=RobotRaconteurPython.WrappedRobotRaconteurNodeSetup(node,node_name,tcp_port,flags)    
-        self.tcp_transport=self.__setup.GetTcpTransport()
-        self.local_transport=self.__setup.GetLocalTransport()
-        self.hardware_transport=self.__setup.GetHardwareTransport()
+        # TODO: Add transport
+        # self.tcp_transport=self.__setup.GetTcpTransport()
+        
         self.__node=node
         
     def __enter__(self):
@@ -2757,15 +1509,6 @@ class RobotRaconteurNodeSetup(object):
 class ClientNodeSetup(RobotRaconteurNodeSetup):
     def __init__(self, node_name=None, flags=RobotRaconteurPython.RobotRaconteurNodeSetupFlags_CLIENT_DEFAULT, node=None):
         super(ClientNodeSetup,self).__init__(node_name,0,flags,node)
-            
-class ServerNodeSetup(RobotRaconteurNodeSetup):
-    def __init__(self, node_name, tcp_port, flags=RobotRaconteurPython.RobotRaconteurNodeSetupFlags_SERVER_DEFAULT, node=None):
-        super(ServerNodeSetup,self).__init__(node_name,tcp_port,flags,node)
-
-class SecureServerNodeSetup(RobotRaconteurNodeSetup):
-    def __init__(self, node_name, tcp_port, flags=RobotRaconteurPython.RobotRaconteurNodeSetupFlags_SECURE_SERVER_DEFAULT, node=None):
-        super(SecureServerNodeSetup,self).__init__(node_name,tcp_port,flags,node)
-
 
 def settrace():
     #This function enables debugging for the threads started by the ThreadPool

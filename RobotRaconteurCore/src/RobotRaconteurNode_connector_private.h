@@ -23,7 +23,6 @@ namespace RobotRaconteur
 		class RobotRaconteurNode_connector : public RR_ENABLE_SHARED_FROM_THIS<RobotRaconteurNode_connector>
 		{
 		protected:
-			boost::mutex active_lock;
 			std::list<int32_t>  active;
 			int32_t active_count;
 			std::map<std::string, RR_WEAK_PTR<Transport> > connectors;
@@ -33,23 +32,18 @@ namespace RobotRaconteur
 			std::string objecttype;
 			boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> handler;
 			int32_t timeout;
-			boost::mutex connecting_lock;
 			bool connecting;
 			bool transport_connected;
 			std::list<RR_SHARED_PTR<RobotRaconteurException> > errors;
 
 			RR_SHARED_PTR<Timer> connect_timer;
-			boost::mutex connect_timer_lock;
 
 
 			RR_SHARED_PTR<RobotRaconteurNode> node;
 
-			boost::mutex handler_lock;
-
 			class endpoint_cleanup
 			{
 			public:
-				boost::mutex eplock;
 				RR_SHARED_PTR<ClientContext> ep;
 				RR_SHARED_PTR<RobotRaconteurNode> node;
 

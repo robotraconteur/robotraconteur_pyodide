@@ -24,7 +24,6 @@
 #define RR_PIPE_ENDPOINT_LISTENER_ITER(command) \
 		try \
 		{ \
-		boost::mutex::scoped_lock listen_lock(listeners_lock); \
 		for (std::list<RR_WEAK_PTR<PipeEndpointBaseListener> >::iterator e = listeners.begin(); e != listeners.end();) \
 		{ \
 			RR_SHARED_PTR<PipeEndpointBaseListener> p1 = e->lock(); \
@@ -83,20 +82,17 @@ uint32_t PipeEndpointBase::GetEndpoint()
 
 size_t PipeEndpointBase::Available()
 {
-	boost::mutex::scoped_lock lock(recvlock);
 	return recv_packets.size();
 }
 
 void PipeEndpointBase::AsyncClose(RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 {
 	{
-		boost::mutex::scoped_lock lock(recvlock);
 		//recv_packets.clear();
 		closed = true;		
 	}
 
 	{
-	boost::mutex::scoped_lock lock (sendlock);
 	GetParent()->AsyncClose(shared_from_this(),false,endpoint,RR_MOVE(handler),timeout);
 	}
 	
@@ -117,7 +113,6 @@ void PipeEndpointBase_RemoteClose_emptyhandler(RR_SHARED_PTR<RobotRaconteurExcep
 void PipeEndpointBase::RemoteClose()
 {
 	{
-		boost::mutex::scoped_lock lock(recvlock);
 		closed = true;		
 	}
 
@@ -130,7 +125,6 @@ void PipeEndpointBase::RemoteClose()
 	catch (std::exception&) {};
 		try
 		{
-			boost::mutex::scoped_lock lock (sendlock);
 			//if (parent.expired()) return;
 			//boost::mutex::scoped_lock lock2 (recvlock);
 			GetParent()->AsyncClose(shared_from_this(),true,endpoint,&PipeEndpointBase_RemoteClose_emptyhandler,1000);
@@ -148,7 +142,6 @@ void PipeEndpointBase::AsyncSendPacketBase(RR_INTRUSIVE_PTR<RRValue> packet, RR_
 	}
 	
 	{
-		boost::mutex::scoped_lock lock(sendlock);
 		send_packet_number = (send_packet_number < UINT_MAX) ? send_packet_number + 1 : 0;
 
 		GetParent()->AsyncSendPipePacket(packet, index, send_packet_number, RequestPacketAck, endpoint,unreliable,message3,RR_MOVE(handler));
@@ -185,8 +178,6 @@ bool PipeEndpointBase::TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet, b
 	{
 		throw WriteOnlyMemberException("Write only pipe");
 	}
-
-	boost::mutex::scoped_lock lock(recvlock);	
 	if (recv_packets.empty())
 	{
 		return false;
@@ -219,7 +210,6 @@ void PipeEndpointBase::PipePacketReceived(RR_INTRUSIVE_PTR<RRValue> packet, uint
 
 	if (unreliable)
 	{
-		boost::mutex::scoped_lock lock (recvlock);
 		if (ignore_incoming_packets) return;
 		recv_packets.push_back(packet);
 						
@@ -231,9 +221,7 @@ void PipeEndpointBase::PipePacketReceived(RR_INTRUSIVE_PTR<RRValue> packet, uint
 			{
 				try
 				{
-					lock.unlock();
-					pipe_packet_received_semaphore.try_fire_next(
-					boost::bind(&PipeEndpointBase::fire_PacketReceivedEvent,this));
+					fire_PacketReceivedEvent();
 
 				}
 				catch (std::exception&)
@@ -247,7 +235,6 @@ void PipeEndpointBase::PipePacketReceived(RR_INTRUSIVE_PTR<RRValue> packet, uint
 	else
 	{
 		{
-			boost::mutex::scoped_lock lock (recvlock);
 			if (ignore_incoming_packets) return;
 			if (packetnum == increment_packet_number(recv_packet_number))
 			{
@@ -273,10 +260,8 @@ void PipeEndpointBase::PipePacketReceived(RR_INTRUSIVE_PTR<RRValue> packet, uint
 					//if (PacketReceivedEvent != 0)
 					{
 						try
-						{
-							lock.unlock();
-							pipe_packet_received_semaphore.try_fire_next(
-							boost::bind(&PipeEndpointBase::fire_PacketReceivedEvent,this));
+						{							
+							fire_PacketReceivedEvent();
 						}
 						catch (std::exception&)
 						{
@@ -315,44 +300,37 @@ RR_SHARED_PTR<PipeBase> PipeEndpointBase::GetParent()
 
 bool PipeEndpointBase::GetRequestPacketAck()
 {
-	boost::mutex::scoped_lock lock (sendlock);
 	return RequestPacketAck;
 }
 
 void PipeEndpointBase::SetRequestPacketAck(bool ack)
 {
-	boost::mutex::scoped_lock lock(sendlock);
 	RequestPacketAck=ack;
 }
 
 bool PipeEndpointBase::GetIgnoreReceived()
 {
-	boost::mutex::scoped_lock lock(recvlock);
 	return ignore_incoming_packets;
 }
 void PipeEndpointBase::SetIgnoreReceived(bool ignore)
 {
-	boost::mutex::scoped_lock lock(recvlock);
 	if (!ignore && ignore_incoming_packets) throw InvalidOperationException("Cannot stop ignoring packets");
 	ignore_incoming_packets = ignore;
 }
 
 void PipeEndpointBase::AddListener(RR_SHARED_PTR<PipeEndpointBaseListener> listener)
 {
-	boost::mutex::scoped_lock lock(listeners_lock);
 	listeners.push_back(listener);
 }
 
 void PipeEndpointBase::Shutdown()
 {
-	boost::mutex::scoped_lock lock(recvlock);
 	closed = true;
 	
 	RobotRaconteurNode::TryPostToThreadPool(node, boost::bind(&PipeEndpointBase::fire_PipeEndpointClosedCallback, shared_from_this()));
 
 	std::list<RR_WEAK_PTR<PipeEndpointBaseListener> > listeners1;
 	{
-		boost::mutex::scoped_lock lock(listeners_lock);
 		listeners.swap(listeners1);
 	}
 
@@ -525,7 +503,6 @@ void PipeClientBase::PipePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32
 			int32_t index = RRArrayToScalar(m->FindElement("index")->CastData<RRArray<int32_t> >());
 			RR_SHARED_PTR<PipeEndpointBase> p;
 			{
-				boost::mutex::scoped_lock lock(pipeendpoints_lock);
 				RR_UNORDERED_MAP<int32_t, RR_SHARED_PTR<PipeEndpointBase> >::iterator e1 = pipeendpoints.find(index);
 				if (e1 == pipeendpoints.end()) return;
 				p = e1->second;
@@ -543,7 +520,6 @@ void PipeClientBase::PipePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32
 	{
 		try
 		{
-			boost::mutex::scoped_lock lock(pipeendpoints_lock);
 			int32_t index = RRArrayToScalar(m->FindElement("index")->CastData<RRArray<int32_t> >());
 			
 			pipeendpoints.erase(index);
@@ -572,7 +548,6 @@ void PipeClientBase::PipePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32
 				uint32_t pnum;
 				RR_SHARED_PTR<PipeEndpointBase> e;
 				{
-					boost::mutex::scoped_lock lock(pipeendpoints_lock);
 					RR_UNORDERED_MAP<int32_t, RR_SHARED_PTR<PipeEndpointBase> >::iterator e1;
 					if ((e1=pipeendpoints.find(index)) != pipeendpoints.end())
 					{
@@ -676,7 +651,6 @@ void PipeClientBase::PipePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32
 
 				RR_SHARED_PTR<PipeEndpointBase> e;
 				{
-					boost::mutex::scoped_lock lock(pipeendpoints_lock);
 					RR_UNORDERED_MAP<int32_t, RR_SHARED_PTR<PipeEndpointBase> >::iterator e1 = pipeendpoints.find(index);
 					if (e1 == pipeendpoints.end()) return;
 					e = e1->second;
@@ -696,7 +670,6 @@ void PipeClientBase::Shutdown()
 {
 	std::vector<RR_SHARED_PTR<PipeEndpointBase> > p;
 	{
-		boost::mutex::scoped_lock lock2(pipeendpoints_lock);
 		boost::copy(pipeendpoints | boost::adaptors::map_values, std::back_inserter(p));
 		pipeendpoints.clear();
 	}
@@ -744,8 +717,6 @@ void PipeClientBase::AsyncClose(RR_SHARED_PTR<PipeEndpointBase> endpoint, bool r
 
 void PipeClientBase::AsyncConnect_internal(int32_t index, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<PipeEndpointBase>,RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 {
-	
-	boost::mutex::scoped_lock lock2(pipeendpoints_lock);
 
 	connecting_key_count = connecting_key_count < std::numeric_limits<int32_t>::max() ? connecting_key_count + 1 : 0;
 	int32_t key = connecting_key_count;
@@ -757,14 +728,12 @@ void PipeClientBase::AsyncConnect_internal(int32_t index, RR_MOVE_ARG(boost::fun
 
 	if (unreliable)
 		m->AddElement("unreliable",ScalarToRRArray(static_cast<int32_t>(1)));
-
-	lock2.unlock();
+	
 	GetStub()->AsyncProcessRequest(m,boost::bind(&PipeClientBase::AsyncConnect_internal1, RR_DYNAMIC_POINTER_CAST<PipeClientBase>(shared_from_this()),_1,_2,index,key,handler),timeout);
 }
 
 void PipeClientBase::AsyncConnect_internal1(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> err, int32_t index, int32_t key, boost::function<void (RR_SHARED_PTR<PipeEndpointBase>,RR_SHARED_PTR<RobotRaconteurException>)>& handler)
 {
-	boost::mutex::scoped_lock lock2(pipeendpoints_lock);
 
 	boost::tuple<int, int> k = boost::make_tuple(key, index);
 
@@ -788,8 +757,7 @@ void PipeClientBase::AsyncConnect_internal1(RR_INTRUSIVE_PTR<MessageEntry> ret, 
 			{
 				early_endpoints.clear();
 			}
-
-			lock2.unlock();
+			
 			detail::InvokeHandlerWithException(node, handler, err);
 			return;
 		}
@@ -848,8 +816,7 @@ void PipeClientBase::AsyncConnect_internal1(RR_INTRUSIVE_PTR<MessageEntry> ret, 
 			{
 				early_endpoints.clear();
 			}
-
-			lock2.unlock();
+			
 			detail::InvokeHandler(node, handler, e);
 		}
 		catch (std::exception& exp) {
@@ -862,10 +829,8 @@ void PipeClientBase::AsyncConnect_internal1(RR_INTRUSIVE_PTR<MessageEntry> ret, 
 		{
 			early_endpoints.clear();
 		}
-
-		lock2.unlock();
-		detail::InvokeHandlerWithException(node, handler, err2);
 		
+		detail::InvokeHandlerWithException(node, handler, err2);		
 	}
 
 	
@@ -890,8 +855,6 @@ RR_SHARED_PTR<ServiceStub> PipeClientBase::GetStub()
 
 void PipeClientBase::DeleteEndpoint(RR_SHARED_PTR<PipeEndpointBase> e)
 {
-	
-	boost::mutex::scoped_lock lock2(pipeendpoints_lock);
 	pipeendpoints.erase(e->GetIndex());
 }
 

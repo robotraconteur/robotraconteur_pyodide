@@ -89,9 +89,6 @@ namespace RobotRaconteur
 		RR_INTRUSIVE_PTR<RRValue> PeekPacketBase();
 
 		bool TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet, bool peek=false);
-		
-		boost::mutex sendlock;
-		boost::mutex recvlock;
 
 		std::deque<RR_INTRUSIVE_PTR<RRValue> > recv_packets;
 		
@@ -128,12 +125,8 @@ namespace RobotRaconteur
 
 		bool ignore_incoming_packets;
 		bool message3;
-
-		boost::mutex listeners_lock;
 		std::list<RR_WEAK_PTR<PipeEndpointBaseListener> > listeners;
-
-		detail::async_signal_semaphore pipe_packet_received_semaphore;
-
+		
 		RR_WEAK_PTR<RobotRaconteurNode> node;
 	};
 
@@ -142,18 +135,15 @@ namespace RobotRaconteur
 	{
 	private:
 		boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >)> PipeEndpointClosedCallback;
-		boost::mutex PipeEndpointClosedCallback_lock;
 	public:
 		
 		boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >)> GetPipeEndpointClosedCallback()
 		{
-			boost::mutex::scoped_lock lock(PipeEndpointClosedCallback_lock);
 			return PipeEndpointClosedCallback;
 		}
 
 		void SetPipeEndpointClosedCallback(boost::function<void (RR_SHARED_PTR<PipeEndpoint<T> >)> callback)
 		{
-			boost::mutex::scoped_lock lock(PipeEndpointClosedCallback_lock);
 			PipeEndpointClosedCallback=callback;
 		}
 				
@@ -218,8 +208,6 @@ namespace RobotRaconteur
 		{
 			PipeEndpointBase::Close();
 			{
-			
-				boost::mutex::scoped_lock lock(PipeEndpointClosedCallback_lock);
 				PipeEndpointClosedCallback.clear();
 
 			}
@@ -234,7 +222,6 @@ namespace RobotRaconteur
 			try
 			{
 				{
-					boost::mutex::scoped_lock lock(PipeEndpointClosedCallback_lock);
 					PipeEndpointClosedCallback.clear();
 				}
 			PacketReceivedEvent.disconnect_all_slots();
@@ -261,7 +248,6 @@ namespace RobotRaconteur
 		{
 			PipeEndpointBase::RemoteClose();
 			{
-			boost::mutex::scoped_lock lock(PipeEndpointClosedCallback_lock);
 			PipeEndpointClosedCallback.clear();
 			}
 			PacketReceivedEvent.disconnect_all_slots();
@@ -409,7 +395,6 @@ namespace RobotRaconteur
 		std::string m_MemberName;
 
 		RR_UNORDERED_MAP<int32_t,RR_SHARED_PTR<PipeEndpointBase> > pipeendpoints;
-		boost::mutex pipeendpoints_lock;
 
 		RR_WEAK_PTR<ServiceStub> stub;
 		

@@ -62,11 +62,9 @@ namespace RobotRaconteur
 		class ServiceSubscription_retrytimer : public RR_ENABLE_SHARED_FROM_THIS<ServiceSubscription_retrytimer>, private boost::noncopyable
 		{
 		public:
-
-			RR_SHARED_PTR<boost::asio::deadline_timer> timer;
+			
 			RR_WEAK_PTR<ServiceSubscription> parent;
 			RR_WEAK_PTR<ServiceSubscription_client> c2;
-			boost::mutex this_lock;
 			boost::initialized<bool> cancelled;
 
 			ServiceSubscription_retrytimer(RR_SHARED_PTR<ServiceSubscription> parent);
@@ -79,6 +77,8 @@ namespace RobotRaconteur
 
 			RR_WEAK_PTR<RobotRaconteurNode> node;
 
+			long timer;
+			boost::posix_time::ptime timer_start_time;
 
 		};
 

@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <boost/date_time.hpp>
+#include <boost/system/error_code.hpp>
 #include "RobotRaconteur/DataTypes.h"
-#include <boost/asio/deadline_timer.hpp>
 
 #pragma once
 
@@ -52,37 +52,6 @@ public:
 
 class ROBOTRACONTEUR_CORE_API RobotRaconteurNode;
 
-class ROBOTRACONTEUR_CORE_API Rate : private boost::noncopyable
-{
-	
-public:
-			
-	virtual void Sleep()=0;
-
-	virtual ~Rate() {};
-};
-
-class ROBOTRACONTEUR_CORE_API WallRate : public Rate
-{
-protected:
-	RR_WEAK_PTR<RobotRaconteurNode> node;
-	boost::posix_time::time_duration period;
-	boost::posix_time::ptime start_time;
-	boost::posix_time::ptime last_time;
-
-	boost::asio::deadline_timer timer;
-
-	
-public:
-	
-	WallRate(double frequency, RR_SHARED_PTR<RobotRaconteurNode> node=RR_SHARED_PTR<RobotRaconteurNode>());
-		
-	virtual void Sleep();
-
-	virtual ~WallRate() {}
-};
-
-
 class ROBOTRACONTEUR_CORE_API WallTimer : public Timer, public RR_ENABLE_SHARED_FROM_THIS<WallTimer>
 {
 protected:
@@ -93,16 +62,14 @@ protected:
 	bool oneshot;
 
 	bool running;
-	boost::mutex running_lock;
 
 	boost::function<void (const TimerEvent&)> handler;
-
-	RR_SHARED_PTR<boost::asio::deadline_timer> timer;
 
 	RR_WEAK_PTR<RobotRaconteurNode> node;
 
 	void timer_handler(const boost::system::error_code& ec);
 	
+	long timer;
 
 public:
 	
@@ -129,7 +96,6 @@ public:
 
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 using TimerPtr = RR_SHARED_PTR<Timer>;
-using RatePtr = RR_SHARED_PTR<Rate>;
 #endif
 
 }

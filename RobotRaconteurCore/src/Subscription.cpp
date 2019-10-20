@@ -18,6 +18,7 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/asio/placeholders.hpp>
 
 namespace RobotRaconteur
 {
@@ -33,11 +34,11 @@ namespace RobotRaconteur
 		{
 			this->parent = parent;
 			this->node = parent->node;
+			this->timer=0;
 		}
 
 		void ServiceSubscription_retrytimer::Start(RR_SHARED_PTR<ServiceSubscription_client> c2, uint32_t timeout)
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 			this->c2 = c2;
 			RR_SHARED_PTR<ServiceSubscription> p = parent.lock();
 			if (!p) return;
@@ -47,24 +48,18 @@ namespace RobotRaconteur
 
 			if (cancelled.data()) return;
 
-			RR_SHARED_PTR<boost::asio::deadline_timer> t(new boost::asio::deadline_timer(n->GetThreadPool()->get_io_context()));
-			t->expires_from_now(boost::posix_time::milliseconds(timeout));
-			RobotRaconteurNode::asio_async_wait(node, t, boost::bind(&ServiceSubscription_retrytimer::timer_handler, shared_from_this(), boost::asio::placeholders::error));
-
-			this->timer = t;
-
+			this->timer = RobotRaconteurNode::SetTimeout(timeout, boost::bind(&ServiceSubscription_retrytimer::timer_handler, shared_from_this(), boost::asio::placeholders::error));
+			timer_start_time = boost::posix_time::microsec_clock::universal_time();
 		}
 		void ServiceSubscription_retrytimer::Cancel()
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 			cancelled.data() = true;
-			timer.reset();
+			timer = 0;
 		}
 		int64_t ServiceSubscription_retrytimer::MillisecondsRemaining()
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 			if (!timer) return 0;
-			return timer->expires_from_now().total_milliseconds();
+			return (boost::posix_time::microsec_clock::universal_time() - timer_start_time).total_milliseconds();
 		}
 
 		void ServiceSubscription_retrytimer::timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const boost::system::error_code& ec)
@@ -75,7 +70,6 @@ namespace RobotRaconteur
 			if (!this1) return;
 
 			{
-				boost::mutex::scoped_lock lock(this1->this_lock);
 				if (this1->cancelled) 
 					return;
 				this1->cancelled.data() = true;
@@ -252,7 +246,6 @@ namespace RobotRaconteur
 	std::map<ServiceSubscriptionClientID, ServiceInfo2 > ServiceInfo2Subscription::GetDetectedServiceInfo2()
 	{
 		std::map<ServiceSubscriptionClientID, ServiceInfo2 > o;
-		boost::mutex::scoped_lock lock(this_lock);
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceInfo2Subscription_client>& c, clients | boost::adaptors::map_values)
 		{			
@@ -274,7 +267,6 @@ namespace RobotRaconteur
 
 	void ServiceInfo2Subscription::Close()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!active) return;
 		active = false;
 
@@ -285,8 +277,6 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<detail::Discovery> d = parent.lock();
 		if (!d) return;
-
-		lock.unlock();
 
 		d->SubscriptionClosed(shared_from_this());
 	}
@@ -307,7 +297,6 @@ namespace RobotRaconteur
 
 	void ServiceInfo2Subscription::NodeUpdated(RR_SHARED_PTR<detail::Discovery_nodestorage> storage)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!active) return;
 		if (!storage) return;
 		if (!storage->services) return;
@@ -406,7 +395,6 @@ namespace RobotRaconteur
 
 	void ServiceInfo2Subscription::NodeLost(RR_SHARED_PTR<detail::Discovery_nodestorage> storage)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 
 		if (!storage) return;
 		if (!storage->info) return;
@@ -449,7 +437,6 @@ namespace RobotRaconteur
 	{
 	
 		std::map<ServiceSubscriptionClientID, RR_SHARED_PTR<RRObject> > o;
-		boost::mutex::scoped_lock lock(this_lock);
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceSubscription_client>& c, clients | boost::adaptors::map_values)
 		{
@@ -472,7 +459,6 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::Close()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!active) return;
 		active = false;
 		
@@ -511,8 +497,6 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<detail::Discovery> d = parent.lock();
 		if (!d) return;
 			
-		lock.unlock();
-
 		d->SubscriptionClosed(shared_from_this());
 	}
 
@@ -550,7 +534,6 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::ClaimClient(RR_SHARED_PTR<RRObject> client)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!active) throw InvalidOperationException("Service closed");
 
 		RR_SHARED_PTR<detail::ServiceSubscription_client> sub =
@@ -563,7 +546,6 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::ReleaseClient(RR_SHARED_PTR<RRObject> client)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!active)
 		{
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
@@ -589,9 +571,7 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<RobotRaconteurNode> n= parent->GetNode();
 		this->retry_delay = 15000;
 
-		this->node = n;
-
-		listener_strand.reset(RR_BOOST_ASIO_NEW_STRAND(n->GetThreadPool()->get_io_context()));
+		this->node = n;	
 	}
 
 	void ServiceSubscription::Init(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter)
@@ -603,7 +583,6 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::NodeUpdated(RR_SHARED_PTR<detail::Discovery_nodestorage> storage)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!active) return;
 		if (!storage) return;
 		if (!storage->services) return;
@@ -704,8 +683,6 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
 		if (!n) return;
 
-		boost::mutex::scoped_lock lock(this_lock);
-
 		if (err)
 		{
 			ConnectRetry(c2);
@@ -720,9 +697,9 @@ namespace RobotRaconteur
 		{
 			try
 			{
-				RobotRaconteurNode::TryPostToThreadPool(n, RR_BOOST_ASIO_STRAND_WRAP(*listener_strand,
+				RobotRaconteurNode::TryPostToThreadPool(n, 
 					boost::bind(&ServiceSubscription::fire_ClientConnectListeners,
-						shared_from_this(), ServiceSubscriptionClientID(c2->nodeid, c2->service_name), c)));
+						shared_from_this(), ServiceSubscriptionClientID(c2->nodeid, c2->service_name), c));
 			}
 			catch (std::exception&) {}
 		}
@@ -761,7 +738,6 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::ConnectRetry2(RR_SHARED_PTR<detail::ServiceSubscription_client> c2)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		
 		c2->retry_timer.reset();
 
@@ -803,8 +779,6 @@ namespace RobotRaconteur
 
 			if (!this1 || !c2_1) return;
 
-			boost::mutex::scoped_lock lock(this1->this_lock);
-
 			if (evt == ClientServiceListenerEventType_ClientClosed
 				|| evt == ClientServiceListenerEventType_ClientConnectionTimeout
 				|| evt == ClientServiceListenerEventType_TransportConnectionClosed)
@@ -837,9 +811,9 @@ namespace RobotRaconteur
 						{
 							try
 							{
-								RobotRaconteurNode::TryPostToThreadPool(n, RR_BOOST_ASIO_STRAND_WRAP(*this1->listener_strand,
+								RobotRaconteurNode::TryPostToThreadPool(n, 
 									boost::bind(&ServiceSubscription::fire_ClientDisconnectListeners,
-										this1, ServiceSubscriptionClientID(c2_1->nodeid, c2_1->service_name), client)));
+										this1, ServiceSubscriptionClientID(c2_1->nodeid, c2_1->service_name), client));
 							}
 							catch (std::exception&) {}
 						}
@@ -858,13 +832,11 @@ namespace RobotRaconteur
 
 	uint32_t ServiceSubscription::GetConnectRetryDelay()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		return retry_delay;
 	}
 
 	void ServiceSubscription::SetConnectRetryDelay(uint32_t delay_milliseconds)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		retry_delay = delay_milliseconds;
 
 	}
@@ -880,7 +852,6 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::SubscribeWire1(RR_SHARED_PTR<WireSubscriptionBase> s)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		wire_subscriptions.insert(s);
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceSubscription_client> client, clients | boost::adaptors::map_values)
@@ -897,14 +868,12 @@ namespace RobotRaconteur
 	void ServiceSubscription::WireSubscriptionClosed(RR_SHARED_PTR<WireSubscriptionBase> s)
 	{
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 			wire_subscriptions.erase(s);
 		}
 	}
 
 	void ServiceSubscription::SubscribePipe1(RR_SHARED_PTR<PipeSubscriptionBase> s)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		pipe_subscriptions.insert(s);
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceSubscription_client> client, clients | boost::adaptors::map_values)
@@ -921,7 +890,6 @@ namespace RobotRaconteur
 	void ServiceSubscription::PipeSubscriptionClosed(RR_SHARED_PTR<PipeSubscriptionBase> s)
 	{
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 			pipe_subscriptions.erase(s);
 		}
 	}
@@ -944,7 +912,6 @@ namespace RobotRaconteur
 	}
 	bool WireSubscriptionBase::TryGetInValueBase(RR_INTRUSIVE_PTR<RRValue>& val, TimeSpec* time, RR_SHARED_PTR<WireConnectionBase>* connection)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (!in_value_valid) return false;
 
 		val = in_value;
@@ -960,33 +927,13 @@ namespace RobotRaconteur
 
 		return true;
 	}
-
-	bool WireSubscriptionBase::WaitInValueValid(int32_t timeout)
-	{
-		boost::mutex::scoped_lock lock(this_lock);
-		if (in_value_valid) return true;
-		if (closed) return false;
-		if (timeout == 0) return in_value_valid;
-		if (timeout < 0)
-		{
-			in_value_wait.wait(lock);
-		}
-		else
-		{
-			in_value_wait.wait_for(lock, boost::chrono::milliseconds(timeout));
-		}
-
-		return in_value_valid;
-	}
-
+	
 	bool WireSubscriptionBase::GetIgnoreInValue()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		return ignore_in_value.data();
 	}
 	void WireSubscriptionBase::SetIgnoreInValue(bool ignore)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		ignore_in_value.data() = ignore;
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::WireSubscription_connection> c, connections)
@@ -1012,7 +959,6 @@ namespace RobotRaconteur
 
 	void WireSubscriptionBase::SetOutValueAllBase(const RR_INTRUSIVE_PTR<RRValue>& val)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		BOOST_FOREACH(RR_SHARED_PTR<detail::WireSubscription_connection> c, connections)
 		{
 			RR_SHARED_PTR<WireConnectionBase> c1 = c->connection.lock();
@@ -1028,7 +974,6 @@ namespace RobotRaconteur
 	}
 
 	size_t WireSubscriptionBase::GetActiveWireConnectionCount()	{
-		boost::mutex::scoped_lock lock(this_lock);
 		return connections.size();
 	}
 
@@ -1037,9 +982,7 @@ namespace RobotRaconteur
 
 		boost::unordered_set<RR_SHARED_PTR<detail::WireSubscription_connection> > connections1;
 		{
-			boost::mutex::scoped_lock lock(this_lock);
-			closed.data() = true;
-			in_value_wait.notify_all();
+			closed.data() = true;			
 			connections.swap(connections1);
 		}
 
@@ -1065,8 +1008,7 @@ namespace RobotRaconteur
 	{
 		this->parent = parent;
 		this->node = parent->node;
-		this->membername = membername;
-		this->wire_value_changed_semaphore = RR_MAKE_SHARED<detail::async_signal_pool_semaphore>(parent->node.lock());
+		this->membername = membername;	
 	}
 
 	void WireSubscriptionBase::ClientConnected(RR_SHARED_PTR<RRObject> client)
@@ -1075,8 +1017,6 @@ namespace RobotRaconteur
 		if (!parent1) return;
 		RR_SHARED_PTR<RobotRaconteurNode> n = parent1->node.lock();
 		if (!n) return;
-
-		boost::mutex::scoped_lock lock(this_lock);
 		if (closed.data()) return;
 
 		try
@@ -1108,7 +1048,6 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<detail::WireSubscription_connection> c;
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 
 			if (closed.data())
 			{
@@ -1131,7 +1070,6 @@ namespace RobotRaconteur
 
 	void WireSubscriptionBase::WireConnectionClosed(RR_SHARED_PTR<detail::WireSubscription_connection> wire)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		connections.erase(wire);		
 	}
 	void WireSubscriptionBase::WireValueChanged(RR_SHARED_PTR<detail::WireSubscription_connection> wire, RR_INTRUSIVE_PTR<RRValue> value, const TimeSpec& time)
@@ -1140,7 +1078,6 @@ namespace RobotRaconteur
 		if (!connection) return;
 						
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 
 			if (ignore_in_value.data())
 				return;
@@ -1149,15 +1086,19 @@ namespace RobotRaconteur
 			in_value_time = time;
 			in_value_connection = connection;
 			in_value_valid.data() = true;
-
-			in_value_wait.notify_all();
 		}
 
 		
 		if (!isempty_WireValueChanged())
 		{
-			wire_value_changed_semaphore->try_fire_next(
-				boost::bind(&WireSubscriptionBase::fire_WireValueChanged, shared_from_this(), value, time, connection));
+			try
+			{
+				fire_WireValueChanged(value, time, connection);
+			}
+			catch (std::exception& exp)
+			{
+				detail::InvokeHandler_HandleException(node, exp);
+			}
 		}
 		
 		
@@ -1209,9 +1150,7 @@ namespace RobotRaconteur
 
 		WireSubscription_send_iterator::WireSubscription_send_iterator(RR_SHARED_PTR<WireSubscriptionBase> subscription)
 		{
-			this->subscription = subscription;
-			boost::mutex::scoped_lock lock1(subscription->this_lock);
-			subscription_lock.swap(lock1);
+			this->subscription = subscription;			
 			connections_iterator = subscription->connections.begin();
 		}
 
@@ -1279,32 +1218,12 @@ namespace RobotRaconteur
 		return o;
 	}
 
-	bool PipeSubscriptionBase::TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet)
+	bool PipeSubscriptionBase::TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet, bool peek, RR_SHARED_PTR<PipeEndpointBase>* ep)
 	{
-		return TryReceivePacketBaseWait(packet, 0, false);
-	}
-
-	bool PipeSubscriptionBase::TryReceivePacketBaseWait(RR_INTRUSIVE_PTR<RRValue>& packet, int32_t timeout, bool peek, RR_SHARED_PTR<PipeEndpointBase>* ep)
-	{
-		boost::mutex::scoped_lock lock(this_lock);
 		if (recv_packets.empty())
 		{
-			if (timeout == 0)
-			{
-				return false;
-			}
-
 			if (closed) return false;
-
-			if (timeout < 0)
-			{
-				recv_packets_wait.wait(lock);
-			}
-			else
-			{
-				recv_packets_wait.wait_for(lock, boost::chrono::milliseconds(timeout));
-			}
-
+			
 			if (recv_packets.empty()) return false;
 		}
 
@@ -1322,20 +1241,17 @@ namespace RobotRaconteur
 
 	size_t PipeSubscriptionBase::Available()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		return recv_packets.size();
 	}
 
 	bool PipeSubscriptionBase::GetIgnoreReceived()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 
 		return ignore_incoming_packets.data();
 	}
 
 	void PipeSubscriptionBase::SetIgnoreReceived(bool ignore)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		ignore_incoming_packets.data() = ignore;
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::PipeSubscription_connection> c, connections)
@@ -1361,7 +1277,6 @@ namespace RobotRaconteur
 
 	void PipeSubscriptionBase::AsyncSendPacketAllBase(const RR_INTRUSIVE_PTR<RRValue>& packet)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		BOOST_FOREACH(RR_SHARED_PTR<detail::PipeSubscription_connection> c, connections)
 		{
 			if (c->DoSendPacket())
@@ -1373,7 +1288,6 @@ namespace RobotRaconteur
 
 	size_t PipeSubscriptionBase::GetActivePipeEndpointCount()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		return connections.size();
 	}
 
@@ -1382,9 +1296,7 @@ namespace RobotRaconteur
 
 		boost::unordered_set<RR_SHARED_PTR<detail::PipeSubscription_connection> > connections1;
 		{
-			boost::mutex::scoped_lock lock(this_lock);
-			closed.data() = true;
-			recv_packets_wait.notify_all();
+			closed.data() = true;			
 			connections.swap(connections1);
 		}
 
@@ -1411,7 +1323,6 @@ namespace RobotRaconteur
 		this->parent = parent;
 		this->membername = membername;
 		this->max_recv_packets.data() = max_recv_packets;
-		this->pipe_packet_received_semaphore = RR_MAKE_SHARED<detail::async_signal_pool_semaphore>(parent->node.lock());
 		this->max_send_backlog.data() = max_send_backlog;
 	}
 
@@ -1421,8 +1332,6 @@ namespace RobotRaconteur
 		if (!parent1) return;
 		RR_SHARED_PTR<RobotRaconteurNode> n = parent1->node.lock();
 		if (!n) return;
-
-		boost::mutex::scoped_lock lock(this_lock);
 		if (closed.data()) return;
 
 		try
@@ -1454,7 +1363,6 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<detail::PipeSubscription_connection> c;
 		{
-			boost::mutex::scoped_lock lock(this_lock);
 
 			if (closed.data())
 			{
@@ -1476,7 +1384,6 @@ namespace RobotRaconteur
 
 	void PipeSubscriptionBase::PipeEndpointClosed(RR_SHARED_PTR<detail::PipeSubscription_connection> pipe)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		connections.erase(pipe);
 				
 	}
@@ -1484,8 +1391,6 @@ namespace RobotRaconteur
 	{
 		//RR_SHARED_PTR<RRObject> client = wire->client.lock();
 		//if (!client) return;
-
-		boost::mutex::scoped_lock lock(this_lock);
 		
 		recv_packets.push_back(boost::make_tuple(value,pipe->connection));
 
@@ -1498,14 +1403,17 @@ namespace RobotRaconteur
 		}
 
 		if (recv_packets.empty()) return;
-
-		recv_packets_wait.notify_all();
-
-		lock.unlock();
+		
 		if (!isempty_PipePacketReceived())
 		{
-			pipe_packet_received_semaphore->try_fire_next(
-				boost::bind(&PipeSubscriptionBase::fire_PipePacketReceived, shared_from_this()));
+			try
+			{
+				fire_PipePacketReceived();
+			}
+			catch (std::exception& exp)
+			{
+				//TODO: handle exception
+			}
 		}
 		
 	}
@@ -1553,8 +1461,6 @@ namespace RobotRaconteur
 		{
 			RR_SHARED_PTR<PipeSubscriptionBase> p = parent.lock();
 			if (!p) return;
-
-			boost::mutex::scoped_lock lock(p->this_lock);
 
 			try
 			{
@@ -1617,17 +1523,13 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<PipeSubscriptionBase> p = connection1->parent.lock();
 			if (!p) return;
 
-			boost::mutex::scoped_lock lock(p->this_lock);
-
 			connection1->active_sends.remove(send_key);
 			
 		}
 
 		PipeSubscription_send_iterator::PipeSubscription_send_iterator(RR_SHARED_PTR<PipeSubscriptionBase> subscription)
 		{
-			this->subscription = subscription;
-			boost::mutex::scoped_lock lock1(subscription->this_lock);
-			subscription_lock.swap(lock1);
+			this->subscription = subscription;			
 			connections_iterator = subscription->connections.begin();
 		}
 
