@@ -63,10 +63,14 @@ endif()
 RRSetTargetDirs(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} "Python/RobotRaconteur" "Python/RobotRaconteur")
 
 if (WIN32)
-set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES SUFFIX ".pyd")
-set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG TRUE)
+#set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES SUFFIX ".pyd")
+#set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD_DEBUG TRUE)
 else()
-set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES SUFFIX ".so")
+#set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES SUFFIX ".so")
+endif()
+
+if(EMSCRIPTEN)
+set_target_properties(${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} PROPERTIES SUFFIX ".wasm")
 endif()
 
 if (NOT DEFINED RobotRaconteur_DIR)

@@ -354,3 +354,4 @@ build/
 generated_src/
 generated_src
 .vscode
+build_boost/
