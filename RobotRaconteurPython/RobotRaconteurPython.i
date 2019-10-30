@@ -1,4 +1,4 @@
-%module(directors="1") RobotRaconteurPython
+%module(directors="1", moduleimport="import _RobotRaconteurPython") RobotRaconteurPython
 
 #pragma SWIG nowarn=473
 
@@ -56,6 +56,7 @@ RobotRaconteur::RobotRaconteurNode::s()->SetDynamicServiceFactory(RR_MAKE_SHARED
 %enddef
 %include "PythonTypemaps.i"
 %include "PythonExceptionTypemaps.i"
+RR_Py_Exception()
 %include "RobotRaconteurConstants.i"
 %include "DataTypes.i"
 

@@ -1,0 +1,159 @@
+diff --git a/Makefile b/Makefile
+index 518f604..d3707dc 100644
+--- a/Makefile
++++ b/Makefile
+@@ -16,7 +16,7 @@ SHELL := /bin/bash
+ CC=emcc
+ CXX=em++
+ OPTFLAGS=-O3
+-CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths
++CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=1 --profiling
+ CXXFLAGS=$(CFLAGS) -std=c++14
+ 
+ 
+@@ -45,7 +45,10 @@ LDFLAGS=\
+   --memory-init-file 0 \
+   -s "BINARYEN_TRAP_MODE='clamp'" \
+   -s TEXTDECODER=0 \
+-  -s LZ4=1
++  -s LZ4=1 \
++  -s DISABLE_EXCEPTION_CATCHING=0 \
++  -s EXCEPTION_DEBUG=1 \
++  --profiling
+ 
+ SIX_ROOT=six/six-1.11.0/build/lib
+ SIX_LIBS=$(SIX_ROOT)/six.py
+@@ -58,6 +61,12 @@ PARSO_LIBS=$(PARSO_ROOT)/__init__.py
+ 
+ SITEPACKAGES=root/lib/python$(PYMINOR)/site-packages
+ 
++BOOST_DIR=$(HOME)/robotraconteur_pyodide/robotraconteur/build_boost/boost_1_71_0
++BOOST_LIB_DIR=$(BOOST_DIR)/stage/lib
++
++RR_PYTHON_DIR=$(HOME)/robotraconteur_pyodide/robotraconteur/build/out/Python
++RR_LIB_DIR=$(HOME)/robotraconteur_pyodide/robotraconteur/build/out/lib
++
+ all: build/pyodide.asm.js \
+ 	build/pyodide.asm.data \
+ 	build/pyodide.js \
+@@ -71,11 +80,21 @@ all: build/pyodide.asm.js \
+   build/webworker_dev.js
+ 
+ 
+-build/pyodide.asm.js: src/main.bc src/jsimport.bc src/jsproxy.bc src/js2python.bc \
++build/pyodide.asm.js: src/main.bc $(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
++		$(RR_LIB_DIR)/libRobotRaconteurCore.a \
++        src/jsimport.bc src/jsproxy.bc src/js2python.bc \
+ 		src/pyimport.bc src/pyproxy.bc src/python2js.bc src/python2js_buffer.bc \
+ 		src/runpython.bc src/hiwire.bc
+ 	[ -d build ] || mkdir build
+ 	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.html $(filter %.bc,$^) \
++	  $(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
++	  $(RR_LIB_DIR)/libRobotRaconteurCore.a \
++	  $(BOOST_LIB_DIR)/libboost_date_time.bc \
++	  $(BOOST_LIB_DIR)/libboost_filesystem.bc \
++	  $(BOOST_LIB_DIR)/libboost_system.bc \
++	  $(BOOST_LIB_DIR)/libboost_regex.bc \
++	  $(BOOST_LIB_DIR)/libboost_chrono.bc \
++	  $(BOOST_LIB_DIR)/libboost_random.bc \
+ 	  $(LDFLAGS) -s FORCE_FILESYSTEM=1
+ 	rm build/pyodide.asm.html
+ 
+@@ -84,7 +103,7 @@ env:
+ 	env
+ 
+ 
+-build/pyodide.asm.data: root/.built
++build/pyodide.asm.data: root/.built root/.rrbuilt
+ 	( \
+ 		cd build; \
+ 		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
+diff --git a/Makefile.envs b/Makefile.envs
+index 6b4820c..b7be45f 100644
+--- a/Makefile.envs
++++ b/Makefile.envs
+@@ -28,4 +28,5 @@ export SIDE_LDFLAGS=\
+   -s "BINARYEN_TRAP_MODE='clamp'" \
+   --memory-init-file 0 \
+   -s LINKABLE=1 \
+-  -s EXPORT_ALL=1
++  -s EXPORT_ALL=1 \
++  -s DISABLE_EXCEPTION_CATCHING=0
+diff --git a/cpython/Makefile b/cpython/Makefile
+index 553a46f..d66deff 100644
+--- a/cpython/Makefile
++++ b/cpython/Makefile
+@@ -124,8 +124,8 @@ $(BUILD)/Makefile: $(BUILD)/.patched $(ZLIBBUILD)/.patched $(SQLITEBUILD)/libsql
+ 		cd $(BUILD); \
+ 		CONFIG_SITE=./config.site READELF=true LD_RUN_PATH="$(SQLITEBUILD):$(BZIP2BUILD)" emconfigure \
+ 		  ./configure \
+-			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD)" \
+-			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD)" \
++			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=1" \
++			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=1" \
+ 			  --without-pymalloc \
+ 			  --disable-shared \
+ 			  --disable-ipv6 \
+diff --git a/emsdk/Makefile b/emsdk/Makefile
+index 60667eb..4d434de 100644
+--- a/emsdk/Makefile
++++ b/emsdk/Makefile
+@@ -9,7 +9,7 @@ all: emsdk/.complete
+ emsdk/.complete:
+ 	if [ -d emsdk ]; then rm -rf emsdk; fi
+ 	git clone https://github.com/juj/emsdk.git
+-	sed -i -e "s#CPU_CORES = max(multiprocessing.cpu_count()-1, 1)#CPU_CORES = 3#g" emsdk/emsdk
++#	sed -i -e "s#CPU_CORES = max(multiprocessing.cpu_count()-1, 1)#CPU_CORES = 3#g" emsdk/emsdk
+ 	( \
+ 		cd emsdk && \
+ 		./emsdk install --build=Release sdk-tag-$(EMSCRIPTEN_VERSION)-64bit binaryen-tag-$(EMSCRIPTEN_VERSION)-64bit && \
+diff --git a/pyodide_build/common.py b/pyodide_build/common.py
+index 52c77f4..87c7f94 100644
+--- a/pyodide_build/common.py
++++ b/pyodide_build/common.py
+@@ -4,7 +4,10 @@ from pathlib import Path
+ ROOTDIR = Path(__file__).parents[1].resolve() / 'tools'
+ HOSTPYTHON = ROOTDIR / '..' / 'cpython' / 'build' / '3.7.0' / 'host'
+ TARGETPYTHON = ROOTDIR / '..' / 'cpython' / 'installs' / 'python-3.7.0'
+-DEFAULTCFLAGS = ''
++DEFAULTCFLAGS = ' '.join([
++    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
++    '-s', 'EXCEPTION_DEBUG=1'
++])
+ DEFAULTLDFLAGS = ' '.join([
+     '-O3',
+     '-s', "BINARYEN_METHOD='native-wasm'",
+@@ -13,7 +16,9 @@ DEFAULTLDFLAGS = ' '.join([
+     '-s', 'EMULATE_FUNCTION_POINTER_CASTS=1',
+     '-s', 'SIDE_MODULE=1',
+     '-s', 'WASM=1',
+-    '--memory-init-file', '0'
++    '--memory-init-file', '0',
++    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
++    '-s', 'EXCEPTION_DEBUG=1'
+     ])
+ 
+ 
+diff --git a/src/main.c b/src/main.c
+index 1861b94..7058489 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -10,6 +10,9 @@
+ #include "python2js.h"
+ #include "runpython.h"
+ 
++PyMODINIT_FUNC
++PyInit__RobotRaconteurPython(void);
++
+ int
+ main(int argc, char** argv)
+ {
+@@ -17,6 +20,8 @@ main(int argc, char** argv)
+ 
+   setenv("PYTHONHOME", "/", 0);
+ 
++  PyImport_AppendInittab("_RobotRaconteurPython",PyInit__RobotRaconteurPython);
++
+   Py_InitializeEx(0);
+ 
+   // This doesn't seem to work anymore, but I'm keeping it for good measure

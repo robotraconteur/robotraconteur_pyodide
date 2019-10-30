@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.3)
 project(RobotRaconteur)
 
+if(EMSCRIPTEN)
+# Workaround for settings in Emscripten.cmake
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY "BOTH")
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE "BOTH")
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE "BOTH")
+endif()
+
 include(cmake/CMakeMacros.cmake)
 
 include(CheckTypeSize)
