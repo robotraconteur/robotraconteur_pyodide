@@ -38,7 +38,7 @@ if [ ! -s $BOOST_BUILD_DIR/b2 ]; then
 fi
 
 if [ ! -s $BOOST_BUILD_DIR/stage/lib/libboost_regex.bc ]; then
-	( cd $BOOST_BUILD_DIR && b2 toolset=emscripten link=static --compileflags="$(SIDE_C_FLAGS)" --linkflags="-fpic $(SIDE_LDFLAGS)" --with-date_time --with-filesystem --with-system --with-regex --with-chrono --with-random --disable-icu )
+	( cd $BOOST_BUILD_DIR && $BOOST_BUILD_DIR/b2 toolset=emscripten link=static --compileflags="$SIDE_C_FLAGS" --linkflags="-fpic $SIDE_LDFLAGS" --with-date_time --with-filesystem --with-system --with-regex --with-chrono --with-random --disable-icu )
 fi
 
 mkdir -p build
