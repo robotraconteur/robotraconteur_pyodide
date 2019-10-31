@@ -81,10 +81,8 @@ void RRExceptionToPythonError(RobotRaconteurException& rrexp)
 
 %define RR_Py_Exception()
 %exception %{	
-    try {		    
-		std::cout << "Begin operation" << std::endl;   
-        $action       
-		std::cout << "End operation" << std::endl;
+    try {		
+        $action		
     }
     
     catch (RobotRaconteurException &e) {	
@@ -110,6 +108,7 @@ RR_Py_Exception()
 %feature("director:except") {
     if ($error != NULL) {
     	
+		PyErr_Print();
     	
     	PyObject* exc;
     	PyObject* val;
