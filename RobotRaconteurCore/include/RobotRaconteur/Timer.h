@@ -16,6 +16,8 @@
 #include <boost/system/error_code.hpp>
 #include "RobotRaconteur/DataTypes.h"
 
+#include <emscripten/html5.h>
+
 #pragma once
 
 namespace RobotRaconteur
@@ -67,12 +69,19 @@ protected:
 
 	RR_WEAK_PTR<RobotRaconteurNode> node;
 
-	void timer_handler(const boost::system::error_code& ec);
+	friend void timer_handler(void* userData);	
+	void timer_handler1();
 	
-	long timer;
+	long timer;	
+
+	static std::map<void*, RR_SHARED_PTR<WallTimer> > timers;
+
+	static void node_shutdown(RobotRaconteurNode* node);
 
 public:
 	
+	friend class RobotRaconteurNode;
+
 	WallTimer(const boost::posix_time::time_duration& period, boost::function<void (const TimerEvent&)> handler, bool oneshot, RR_SHARED_PTR<RobotRaconteurNode> node=RR_SHARED_PTR<RobotRaconteurNode>());
 	
 

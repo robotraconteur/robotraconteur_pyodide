@@ -77,6 +77,7 @@ namespace RobotRaconteur
 
 		friend class detail::Discovery;
 		friend class Transport;
+		friend class WallTimer;
 		
 		void Init();
 
@@ -683,15 +684,13 @@ namespace RobotRaconteur
 		template<typename HandlerType>
 		static bool TryPostToThreadPool(RR_WEAK_PTR<RobotRaconteurNode> node, BOOST_ASIO_MOVE_ARG(HandlerType) h, bool shutdown_op=false)
 		{			
-			Post(h);
+			RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
+			if(!n) return false;
+			n->Post(h);
 			return true;
 		}
-		
-		// Emscripten Functions
-		static void Post(boost::function<void()> f);
-
-		static long SetTimeout(double msecs, boost::function<void(boost::system::error_code)> f);
-		static void ClearTimeout(long timer);
+				
+		void Post(boost::function<void()> f);
 
 	public:
 

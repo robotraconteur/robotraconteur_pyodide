@@ -17,9 +17,59 @@
 
 #include <boost/asio/placeholders.hpp>
 
+#include <emscripten/html5.h>
+
 namespace RobotRaconteur
 {	
-	void WallTimer::timer_handler(const boost::system::error_code& ec)
+
+	std::map<void*,RR_SHARED_PTR<WallTimer> > WallTimer::timers;
+
+	void WallTimer::node_shutdown(RobotRaconteurNode* node)
+	{
+		for(std::map<void*,RR_SHARED_PTR<WallTimer> >::iterator e = timers.begin(); e!=timers.end();)
+		{
+			RR_SHARED_PTR<RobotRaconteurNode> node1=e->second->node.lock();
+			if (!node1)
+			{
+				e = timers.erase(e);
+				continue;
+			}
+			if (e->second->node.lock().get() == node)
+			{
+				emscripten_clear_timeout(e->second->timer);
+				e=timers.erase(e);
+				continue;
+			}
+			++e;
+		}
+	}
+
+	void timer_handler(void* userData)
+	{
+		std::map<void*,RR_SHARED_PTR<WallTimer> >::iterator e=WallTimer::timers.find(userData);
+		if(e==WallTimer::timers.end())
+		{
+			return;
+		}
+
+		const RR_SHARED_PTR<WallTimer> t = e->second;
+		if (!t->running || t->oneshot)
+		{
+			WallTimer::timers.erase(e);
+		}
+
+		RR_WEAK_PTR<RobotRaconteurNode> node=t->node;
+		try
+		{
+			t->timer_handler1();
+		}
+		catch (std::exception& exp)
+		{
+			RobotRaconteurNode::TryHandleException(node, &exp);
+		}
+	}
+
+	void WallTimer::timer_handler1()
 	{
 		TimerEvent ev;
 
@@ -29,11 +79,6 @@ namespace RobotRaconteur
 		boost::function<void (const TimerEvent&)> h;
 
 		{
-		
-			if (ec)
-			{
-				running=false;
-			}
 			ev.stopped=!running;
 			ev.last_expected=last_time;
 			ev.last_real=actual_last_time;
@@ -51,8 +96,6 @@ namespace RobotRaconteur
 				running=false;
 			}
 		}
-
-		
 
 		try
 		{
@@ -72,19 +115,12 @@ namespace RobotRaconteur
 				while (last_time + period < actual_last_time)
 				{
 					last_time += period;
-				}
-				
-				//timer->expires_at(last_time + period);				
-				RobotRaconteurNode::SetTimeout(period.total_milliseconds(), boost::bind(&WallTimer::timer_handler,shared_from_this(),boost::asio::placeholders::error));
+				}				
 			}
-
 		}
 		else
-		{
-			running=false;
-			RobotRaconteurNode::ClearTimeout(timer);
-			timer = 0;
-			
+		{			
+			timer = 0;			
 		}
 
 	}
@@ -110,34 +146,57 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
 		if (!n) throw InvalidOperationException("Node released");
 
+		if (n->is_shutdown) throw InvalidOperationException("Node shutdown");
+
 		start_time=n->NowUTC();
 		last_time=start_time;
 		actual_last_time=last_time;
 
 		timer = 0;
 		
-		
-		timer = RobotRaconteurNode::SetTimeout(period.total_milliseconds(), boost::bind(&WallTimer::timer_handler, shared_from_this(), boost::asio::placeholders::error));
-		
+		if (oneshot)
+		{
+			timer = emscripten_set_timeout(&timer_handler, period.total_milliseconds(), this);
+		}
+		else
+		{
+			timer = emscripten_set_interval(&timer_handler, period.total_milliseconds(), this);
+		}
+		timers.insert(std::make_pair(this,shared_from_this()));
 		running=true;
 	}
 
 	void WallTimer::Stop()
 	{
+		timers.erase(this);
+
 		if (!running) throw InvalidOperationException("Not running");
 
 		try
 		{
 			if (timer != 0)
 			{
-				RobotRaconteurNode::ClearTimeout(timer);
+				if (oneshot)
+				{
+					emscripten_clear_timeout(timer);
+				}
+				else
+				{
+					emscripten_clear_interval(timer);
+				}
 			}
 		}
 		catch (std::exception&) {}		
 		running=false;
 
-		if (oneshot) handler.clear();
-		
+		TimerEvent ev;
+		ev.stopped=true;
+		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
+		if (n)
+		{
+			n->Post(boost::bind(handler,ev));
+		}
+		handler.clear();		
 	}
 
 	boost::posix_time::time_duration WallTimer::GetPeriod()
@@ -147,7 +206,7 @@ namespace RobotRaconteur
 
 	void WallTimer::SetPeriod(const boost::posix_time::time_duration& period)
 	{
-		this->period=period;
+		throw NotImplementedException("Not available on Pyodide");
 	}
 
 	bool WallTimer::IsRunning()

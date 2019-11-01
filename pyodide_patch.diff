@@ -7,7 +7,7 @@ index 518f604..d3707dc 100644
  CXX=em++
  OPTFLAGS=-O3
 -CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths
-+CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=1 --profiling
++CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0 --profiling
  CXXFLAGS=$(CFLAGS) -std=c++14
  
  
@@ -18,7 +18,7 @@ index 518f604..d3707dc 100644
 -  -s LZ4=1
 +  -s LZ4=1 \
 +  -s DISABLE_EXCEPTION_CATCHING=0 \
-+  -s EXCEPTION_DEBUG=1 \
++  -s EXCEPTION_DEBUG=0 \
 +  --profiling
  
  SIX_ROOT=six/six-1.11.0/build/lib
@@ -89,8 +89,8 @@ index 553a46f..d66deff 100644
  		  ./configure \
 -			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD)" \
 -			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD)" \
-+			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=1" \
-+			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=1" \
++			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0" \
++			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0" \
  			  --without-pymalloc \
  			  --disable-shared \
  			  --disable-ipv6 \
@@ -118,7 +118,7 @@ index 52c77f4..87c7f94 100644
 -DEFAULTCFLAGS = ''
 +DEFAULTCFLAGS = ' '.join([
 +    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
-+    '-s', 'EXCEPTION_DEBUG=1'
++    '-s', 'EXCEPTION_DEBUG=0'
 +])
  DEFAULTLDFLAGS = ' '.join([
      '-O3',
@@ -130,7 +130,7 @@ index 52c77f4..87c7f94 100644
 -    '--memory-init-file', '0'
 +    '--memory-init-file', '0',
 +    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
-+    '-s', 'EXCEPTION_DEBUG=1'
++    '-s', 'EXCEPTION_DEBUG=0'
      ])
  
  

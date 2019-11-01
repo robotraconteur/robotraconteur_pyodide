@@ -73,11 +73,11 @@ namespace RobotRaconteur
 			void Cancel();
 			int64_t MillisecondsRemaining();
 
-			static void timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const boost::system::error_code& ec);
+			static void timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const TimerEvent& ec);
 
 			RR_WEAK_PTR<RobotRaconteurNode> node;
 
-			long timer;
+			RR_SHARED_PTR<Timer> timer;
 			boost::posix_time::ptime timer_start_time;
 
 		};

@@ -319,7 +319,7 @@ public:
 	void PostToThreadPool(AsyncVoidNoErrReturnDirector* handler, int32_t id)
 	{
 		boost::shared_ptr<AsyncVoidNoErrReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>,_1,id));
-		RobotRaconteurNode::Post(boost::bind(&AsyncVoidNoErrReturn_handler,sphandler));
+		$self->Post(boost::bind(&AsyncVoidNoErrReturn_handler,sphandler));
 	}
 
 }

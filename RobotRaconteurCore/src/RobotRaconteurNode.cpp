@@ -624,6 +624,10 @@ void RobotRaconteurNode::Shutdown()
 		}
 	}
 
+	{
+		WallTimer::node_shutdown(this);
+	}
+
 	shutdown_listeners();
 
 	{
@@ -1359,7 +1363,7 @@ RR_SHARED_PTR<Timer> RobotRaconteurNode::CreateTimer(const boost::posix_time::ti
 
 void RobotRaconteurNode::AsyncSleep(const boost::posix_time::time_duration& duration, boost::function<void()> handler)
 {
-	RobotRaconteurNode::SetTimeout(((double)duration.total_microseconds())*1e-3, boost::bind(handler));
+	throw NotImplementedException("AsyncSleep not implemented");
 }
 
 void RobotRaconteurNode::DownCastAndThrowException(RobotRaconteurException& exp)
@@ -1452,19 +1456,8 @@ std::string RobotRaconteurNode::GetRandomString(size_t count)
 // Emscripten Functions
 void RobotRaconteurNode::Post(boost::function<void()> f)
 {
-	//TODO: implement this
-	throw NotImplementedException("Post not implemented");
-}
-
-long RobotRaconteurNode::SetTimeout(double msecs, boost::function<void(boost::system::error_code)> f)
-{
-	//TODO: implement this
-	throw NotImplementedException("SetTimeout not implemented");
-}
-void RobotRaconteurNode::ClearTimeout(long timer)
-{
-	//TODO: implement this
-	throw NotImplementedException("ClearTimeout not implemented");
+	RR_SHARED_PTR<Timer> t=CreateTimer(boost::posix_time::milliseconds(0), boost::bind(f), true);
+	t->Start();
 }
 
 }
