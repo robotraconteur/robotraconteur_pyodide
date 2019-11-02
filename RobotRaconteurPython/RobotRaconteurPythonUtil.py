@@ -27,6 +27,7 @@ import weakref;
 import codecs
 import numbers
 import os
+from functools import partial
 from RobotRaconteur.RobotRaconteurPython import DataTypes_ContainerTypes_generator
 
 if (sys.version_info  > (3,0)):
@@ -36,9 +37,6 @@ else:
     from __builtin__ import property
 
 import numpy
-
-if (sys.version_info > (3,5)):
-    import asyncio
 
 def SplitQualifiedName(name):
     pos=name.rfind('.')
@@ -940,23 +938,22 @@ def async_call(func, args, directorclass, handler, noerror=False, directorargs=(
     d=None
     if (handler is None):
         if (sys.version_info > (3,5)):
-            loop = asyncio.get_event_loop()
-            d = asyncio.Future()
+            d = WebFuture()
                                     
             def handler3(*args):
                 if noerror:
                     if len(args) == 0:
-                        loop.call_soon_threadsafe(d.set_result,None)
+                        d.handler(None,None)
                     else:
-                        loop.call_soon_threadsafe(d.set_result,args[0])
+                        d.handler(args[0],None)
                 else:
                     ret = None
                     if len(args) == 2:
                         ret = args[0]
                     if args[-1] is None:
-                        loop.call_soon_threadsafe(d.set_result,ret)
+                        d.handler(ret,None)
                     else:
-                        loop.call_soon_threadsafe(d.set_exception,args[-1])
+                        d.handler(None,args[-1])
             handler = lambda *args1: handler3(*args1)            
         else:
             raise Exception("handler must not be None")
@@ -1516,4 +1513,49 @@ def settrace():
     t=_trace_hook
     if (t is not None):
         sys.settrace(t)
+
+# Based on https://github.com/akloster/aioweb-demo/blob/master/src/main.py
+
+class WebFuture(object):
+    
+    def __init__(self):
+        self.complete_handler=None
+        self.exception_handler=None
+        self.ret=None
+
+    def handler(self, arg, exp):
+        if (exp is not None):
+            if (self.exception_handler is not None):
+                self.exception_handler(exp)
+        else:
+            self.ret=arg
+            if (self.complete_handler is not None):
+                self.complete_handler(arg)
+
+    def __await__(self):
+        yield self
+        return self.ret
+
+    __iter__ = __await__
+
+class WebLoop:
+    def __init__(self):
+        self.coros = []
+    def call_soon(self, coro):
+        self.step(coro)
+    def step(self, coro, arg=None):
+        try:
+            x = coro.send(arg)
+            x.complete_handler = partial(self.step, coro)
+            x.exception_handler = partial(self.fail,coro)
+        except StopIteration:
+            pass
+
+    def fail(self, coro,arg=None):
+        try:
+            x = coro.throw(arg)
+            x.complete_handler = partial(self.step, coro)
+            x.exception_handler = partial(self.fail,coro)
+        except StopIteration:
+            pass
 
