@@ -62,8 +62,6 @@ namespace RobotRaconteur
 
 		virtual ~ITransportConnection() {}
 
-		virtual void SendMessage(RR_INTRUSIVE_PTR<Message> m) = 0;
-
 		virtual void AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void (RR_SHARED_PTR<RobotRaconteurException> )>& handler) = 0;
 
 		virtual void Close() = 0;
@@ -128,28 +126,19 @@ namespace RobotRaconteur
 
 		virtual bool CanConnectService(const std::string& url) = 0;
 
-		virtual RR_SHARED_PTR<ITransportConnection> CreateTransportConnection(const std::string& url, RR_SHARED_PTR<Endpoint> e) = 0;
-
 		virtual void AsyncCreateTransportConnection(const std::string& url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& handler)=0;
 
 		virtual void CloseTransportConnection(RR_SHARED_PTR<Endpoint> e) = 0;
-
-	
-		virtual void SendMessage(RR_INTRUSIVE_PTR<Message> m)=0;
-
+		
 		virtual void AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void (RR_SHARED_PTR<RobotRaconteurException> )>& handler) = 0;
 
 	public:
 		virtual void MessageReceived(RR_INTRUSIVE_PTR<Message> m)=0;
 
-		RR_INTRUSIVE_PTR<Message> SpecialRequest(RR_INTRUSIVE_PTR<Message> m, RR_SHARED_PTR<ITransportConnection> tc);
-
 	public:
 		virtual void Close();
 
-
 		virtual void PeriodicCleanupTask();
-
 
 		virtual uint32_t TransportCapability(const std::string& name);
 
@@ -160,7 +149,6 @@ namespace RobotRaconteur
 		virtual RR_SHARED_PTR<RobotRaconteurNode> GetNode();
 
 		virtual void AsyncGetDetectedNodes(const std::vector<std::string>& schemes, boost::function<void(RR_SHARED_PTR<std::vector<NodeDiscoveryInfo> >)>& handler, int32_t timeout=RR_TIMEOUT_INFINITE);
-
 		
 	protected:
 

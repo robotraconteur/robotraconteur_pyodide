@@ -68,6 +68,7 @@ RR_Py_Exception()
 %include "ServiceDefinitionPython.i"
 
 %include "Transport.i"
+%include "BrowserWebSocketTransportPython.i"
 
 %include "TimerPython.i"
 

@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <script src="https://code.jquery.com/jquery-latest.js"></script>
+        <script src="../build/pyodide_dev.js"></script>        
+    </head>
+    <body>
+        
+        <script>
+        
+            function print_div(message)
+            {
+                $("#print_div").append("<p>" + message)
+            }
+
+            async function run_test(){
+                await languagePluginLoader;
+                await pyodide.loadPackage(["numpy"]);                
+                const response = await fetch("test_transport.py", {cache: "no-store"});
+                const test_transport_py = await response.text();
+                pyodide.runPython(test_transport_py)
+            }
+            run_test();
+        </script>
+        <H2>Transport test</H2>
+        <div id="print_div"></div>  
+    </body>
+</html>

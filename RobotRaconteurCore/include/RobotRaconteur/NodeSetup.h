@@ -1,6 +1,7 @@
 
 #ifndef SWIG
 #include "RobotRaconteur/RobotRaconteurNode.h"
+#include "RobotRaconteur/BrowserWebSocketTransport.h"
 
 #include <boost/assign/list_of.hpp>
 
@@ -77,11 +78,14 @@ namespace RobotRaconteur
 	class ROBOTRACONTEUR_CORE_API RobotRaconteurNodeSetup : boost::noncopyable
 	{		
 		RR_SHARED_PTR<RobotRaconteurNode> node;
+		RR_SHARED_PTR<BrowserWebSocketTransport> browser_websocket_transport;
 
 	public:
 		RobotRaconteurNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
 			const std::string& node_name, uint16_t tcp_port, uint32_t flags);
 		
+		RR_SHARED_PTR<BrowserWebSocketTransport> GetBrowserWebSocketTransport();
+
 		virtual ~RobotRaconteurNodeSetup();
 	};
 

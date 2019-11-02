@@ -42,6 +42,8 @@ set(RobotRaconteurCore_src
 	src/Subscription_private.h
 	src/Generator.cpp
 	src/NodeSetup.cpp
+	src/BrowserWebSocketTransport.cpp
+	src/BrowserWebSocketTransport_private.h 
 )
 
 set(RobotRaconteurCore_header
@@ -73,6 +75,7 @@ set(RobotRaconteurCore_header
 	include/RobotRaconteur/Subscription.h
 	include/RobotRaconteur/Generator.h
 	include/RobotRaconteur/NodeSetup.h
+	include/RobotRaconteur/BrowserWebSocketTransport.h
 )
 
 link_directories("${Boost_LIBRARY_DIRS}")

@@ -503,8 +503,6 @@ namespace RobotRaconteur
 
 		void AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void (RR_SHARED_PTR<RobotRaconteurException> )>& callback);
 
-		void SendMessage(RR_INTRUSIVE_PTR<Message> m);
-
 		void MessageReceived(RR_INTRUSIVE_PTR<Message> m);
 	protected:
 

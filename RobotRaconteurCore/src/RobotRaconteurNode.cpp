@@ -660,33 +660,6 @@ RobotRaconteurNode::~RobotRaconteurNode()
 	
 }
 
-
-void RobotRaconteurNode::SendMessage(RR_INTRUSIVE_PTR<Message> m)
-{
-
-	if (m->header->SenderNodeID != NodeID())
-	{	
-			throw ConnectionException("Could not route message");		
-	}
-		
-	RR_SHARED_PTR<Endpoint> e;		
-	{
-		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(m->header->SenderEndpoint);
-		if (e1==endpoints.end()) throw InvalidEndpointException("Could not find endpoint");
-		e = e1->second;
-	}
-
-	RR_SHARED_PTR<Transport> c;			
-	{
-		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Transport> >::iterator e1 = transports.find(e->GetTransport());
-		if (e1==transports.end()) throw ConnectionException("Could not find transport");
-		c = e1->second;
-	}	
-
-	c->SendMessage(m);
-
-}
-
 void RobotRaconteurNode::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void (RR_SHARED_PTR<RobotRaconteurException> )>& callback)
 {
 	if (m->header->SenderNodeID != NodeID())
@@ -715,6 +688,8 @@ void RobotRaconteurNode::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::fu
 
 }
 
+static void empty_end_send_message(RR_SHARED_PTR<RobotRaconteurException>) {}
+
 void RobotRaconteurNode::MessageReceived(RR_INTRUSIVE_PTR<Message> m)
 {
 	try
@@ -724,7 +699,10 @@ void RobotRaconteurNode::MessageReceived(RR_INTRUSIVE_PTR<Message> m)
 
 				RR_INTRUSIVE_PTR<Message> eret = GenerateErrorReturnMessage(m, MessageErrorType_NodeNotFound, "RobotRaconteur.NodeNotFound", "Could not find route to remote node");
 				if (eret->entries.size() > 0)
-					SendMessage(eret);
+				{
+					boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> cb = boost::bind(&empty_end_send_message,_1);
+					AsyncSendMessage(eret, cb);
+				}
 		}
 
 		else
@@ -749,7 +727,10 @@ void RobotRaconteurNode::MessageReceived(RR_INTRUSIVE_PTR<Message> m)
 				
 			RR_INTRUSIVE_PTR<Message> eret = GenerateErrorReturnMessage(m, MessageErrorType_InvalidEndpoint, "RobotRaconteur.InvalidEndpoint", "Invalid destination endpoint");
 			if (eret->entries.size() > 0)
-				SendMessage(eret);				
+			{
+				boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> cb = boost::bind(&empty_end_send_message,_1);
+				AsyncSendMessage(eret,cb);
+			}
 			}
 		}
 	}

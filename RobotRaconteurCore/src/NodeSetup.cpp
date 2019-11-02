@@ -10,7 +10,8 @@ namespace RobotRaconteur
 		
 		if (flags & RobotRaconteurNodeSetupFlags_ENABLE_TCP_TRANSPORT)
 		{
-			
+			browser_websocket_transport = RR_MAKE_SHARED<BrowserWebSocketTransport>(node);
+			node->RegisterTransport(browser_websocket_transport);
 		}
 		
 		BOOST_FOREACH(RR_SHARED_PTR<ServiceFactory> f, service_types)
@@ -25,6 +26,11 @@ namespace RobotRaconteur
 			node->SetEndpointInactivityTimeout(std::numeric_limits<uint32_t>::max());			
 		}
 
+	}
+
+	RR_SHARED_PTR<BrowserWebSocketTransport> RobotRaconteurNodeSetup::GetBrowserWebSocketTransport()
+	{
+		return browser_websocket_transport;
 	}
 	
 	RobotRaconteurNodeSetup::~RobotRaconteurNodeSetup()
