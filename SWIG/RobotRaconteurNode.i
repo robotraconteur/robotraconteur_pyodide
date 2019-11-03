@@ -324,6 +324,17 @@ public:
 
 }
 
+RR_MAKE_METHOD_PRIVATE(AsyncSleep)
+
+%extend {	
+	void AsyncSleep(const boost::posix_time::time_duration& d, AsyncVoidNoErrReturnDirector* handler, int32_t id)
+	{		
+		boost::shared_ptr<AsyncVoidNoErrReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>,_1,id));
+		return $self->AsyncSleep(d,boost::bind(&AsyncVoidNoErrReturn_handler,sphandler));
+	}
+}
+
+
 	RR_MAKE_METHOD_PRIVATE(GetRobotRaconteurVersion)
 	std::string GetRobotRaconteurVersion();
 

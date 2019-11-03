@@ -1342,11 +1342,6 @@ RR_SHARED_PTR<Timer> RobotRaconteurNode::CreateTimer(const boost::posix_time::ti
 	}
 }
 
-void RobotRaconteurNode::AsyncSleep(const boost::posix_time::time_duration& duration, boost::function<void()> handler)
-{
-	throw NotImplementedException("AsyncSleep not implemented");
-}
-
 void RobotRaconteurNode::DownCastAndThrowException(RobotRaconteurException& exp)
 {
 	std::string type=exp.Error;
@@ -1438,6 +1433,12 @@ std::string RobotRaconteurNode::GetRandomString(size_t count)
 void RobotRaconteurNode::Post(boost::function<void()> f)
 {
 	RR_SHARED_PTR<Timer> t=CreateTimer(boost::posix_time::milliseconds(0), boost::bind(f), true);
+	t->Start();
+}
+
+void RobotRaconteurNode::AsyncSleep(const boost::posix_time::time_duration& d, boost::function<void()> handler)
+{
+	RR_SHARED_PTR<Timer> t=CreateTimer(d, boost::bind(handler), true);
 	t->Start();
 }
 

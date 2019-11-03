@@ -152,7 +152,11 @@ def CreateTimer(self,period,handler,oneshot=False):
 def PostToThreadPool(self, handler):
 	from .RobotRaconteurPythonUtil import async_call, AsyncVoidNoErrReturnDirectorImpl
 	return async_call(self._PostToThreadPool,(), AsyncVoidNoErrReturnDirectorImpl,handler,noerror=True)
-	
+
+def AsyncSleep(self, d, handler):
+	from .RobotRaconteurPythonUtil import async_call, AsyncVoidNoErrReturnDirectorImpl
+	return async_call(self._AsyncSleep,(d,), AsyncVoidNoErrReturnDirectorImpl,handler,noerror=True)
+
 RobotRaconteurVersion = property(lambda self: self._GetRobotRaconteurVersion())
 
 def NowUTC(self):
