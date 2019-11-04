@@ -17,9 +17,6 @@ async def test_plot():
         a+=0.1
         plt.clf()
         plt.plot([a,2,3])
-        await RRN.AsyncSleep(0.5,None)        
+        await RRN.AsyncSleep(0.1,None)        
 
-loop=RR.WebLoop()
-loop.call_soon(test_plot())
-
-
+RR.WebLoop.run(test_plot())

@@ -1559,3 +1559,8 @@ class WebLoop:
         except StopIteration:
             pass
 
+    @staticmethod
+    def run(coro):
+        loop=WebLoop()
+        loop.call_soon(coro)
+
