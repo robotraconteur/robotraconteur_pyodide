@@ -697,10 +697,10 @@ class WireAsyncPeekReturnDirectorImpl(RobotRaconteurPython.AsyncWirePeekReturnDi
     def handler(self,m,ts,error_code,errorname,errormessage):
         if (error_code!=0):
             err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
-            self._handler(None, None, err)
+            self._handler((None, None), err)
             return
         value=UnpackMessageElement(m,self.__innerpipe.Type,self.__obj,self.__innerpipe.GetNode())
-        self._handler(value, ts, None)
+        self._handler((value, ts), None)
 
        
 class Wire(object):
