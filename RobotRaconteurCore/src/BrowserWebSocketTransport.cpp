@@ -31,7 +31,7 @@ BrowserWebSocketTransport::BrowserWebSocketTransport(RR_SHARED_PTR<RobotRaconteu
 #else
 	disable_string_table = true;
 #endif
-	disable_async_message_io = false;
+	disable_async_message_io = true;
 	closed = false;
 
 }
@@ -271,6 +271,12 @@ BrowserWebSocketTransportConnection::BrowserWebSocketTransportConnection(RR_SHAR
     this->parent=parent;
     this->url=url;
     this->m_LocalEndpoint=local_endpoint;
+
+    this->disable_message3 = parent->GetDisableMessage3();
+	this->disable_async_io = parent->GetDisableAsyncMessageIO();
+
+    this->ReceiveTimeout=parent->GetDefaultReceiveTimeout();
+	this->HeartbeatPeriod=parent->GetDefaultHeartbeatPeriod();
 }
 
 EM_BOOL websocket_open_callback_func(int eventType, const EmscriptenWebSocketOpenEvent *websocketEvent, void *userData)
@@ -297,8 +303,6 @@ EM_BOOL websocket_open_callback_func(int eventType, const EmscriptenWebSocketOpe
 
 EM_BOOL websocket_message_callback_func(int eventType, const EmscriptenWebSocketMessageEvent *websocketEvent, void *userData)
 {
-    std::cout << "Got a message " << websocketEvent->numBytes << " isText: " << websocketEvent->isText << std::endl;
-
     std::map<void*,RR_SHARED_PTR<BrowserWebSocketTransportConnection> >::iterator e = BrowserWebSocketTransportConnection::active_transports.find(userData);
     if (e == BrowserWebSocketTransportConnection::active_transports.end())
     {
@@ -410,8 +414,6 @@ void BrowserWebSocketTransportConnection::AsyncConnect(boost::function<void (RR_
 
     active_transports.insert(std::make_pair((void*)this,RR_STATIC_POINTER_CAST<BrowserWebSocketTransportConnection>(shared_from_this())));    
 
-    std::cout << "Websocket connection started" << socket << std::endl;
-
     active_connect_handler = handler;
 }
 
@@ -424,8 +426,6 @@ void BrowserWebSocketTransportConnection::AsyncConnect1()
         Close();
         return;
     }
-
-    std::cout << "Websocket connected! " << socket << std::endl;
 
     boost::function<void (RR_SHARED_PTR<RobotRaconteurException>)> active_connect_handler1 = active_connect_handler;
     active_connect_handler.clear();
@@ -450,8 +450,6 @@ void BrowserWebSocketTransportConnection::AsyncConnect1()
 
         parent1->register_transport(shared_from_this());
 
-        std::cout << "AsyncAttachStream" << socket << std::endl;
-
         ASIOStreamBaseTransport::AsyncAttachStream(server,target_nodeid, target_nodename, active_connect_handler1);
     }
     catch (std::exception& exp)
@@ -462,10 +460,8 @@ void BrowserWebSocketTransportConnection::AsyncConnect1()
 
 void BrowserWebSocketTransportConnection::Close()
 {
-    std::cout << "BrowserWebSocketTransportConnection::Close" << std::endl;
     if (active_connect_handler)
     {
-        std::cout << "Websocket connection failed" << socket << std::endl;
         boost::function<void (RR_SHARED_PTR<RobotRaconteurException>)> active_connect_handler1 = active_connect_handler;
         active_connect_handler.clear();
         try
