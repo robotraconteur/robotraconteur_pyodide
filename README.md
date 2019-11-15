@@ -13,6 +13,19 @@ Several changes are necessary to build with Emscripten and run in a browser envi
 * Implement a transport that uses Emscripten WebSockets
 * Use Emscripten functions for timers, post, and communication
 
+## Usage
+
+Robot Raconteur for Pyodide can be included with the following script tag:
+
+    <script src="https://robotraconteur.github.io/robotraconteur_pyodide/pyodide.js"></script> 
+
+and then in a script
+
+    languagePluginLoader.then(() => {
+        // pyodide and Robot Raconteur now ready to use...
+       console.log(pyodide.runPython('import sys\nsys.version'));
+    });
+
 ## License
 
 The Robot Raconteur core library is Apache 2.0 licensed.
