@@ -2,9 +2,7 @@
 
 # Robot Raconteur for Pyodide
 
-**WARNING: This does not work yet!**
-
-Robot Raconteur for Pyodide is a heavily modified fork of the Robot Raconteur core libraries intended to run on Pyodide within a browser.
+Robot Raconteur for Pyodide is a heavily modified fork of the Robot Raconteur core libraries intended to run on Pyodide within a browser. Pyodide provides a full scientific Python stack within a web browser using Web Assembly.
 
 https://github.com/iodide-project/pyodide
 

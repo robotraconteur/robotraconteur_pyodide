@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index 518f604..2566cc4 100644
+index 518f604..29653c8 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -16,7 +16,7 @@ SHELL := /bin/bash
@@ -80,7 +80,7 @@ index 518f604..2566cc4 100644
  	( \
  		cd build; \
  		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
-@@ -94,7 +116,7 @@ build/pyodide.asm.data: root/.built
+@@ -94,13 +116,13 @@ build/pyodide.asm.data: root/.built
  
  build/pyodide_dev.js: src/pyodide.js
  	cp $< $@
@@ -88,6 +88,13 @@ index 518f604..2566cc4 100644
 +	sed -i -e "s#{{DEPLOY}}#/build/#g" $@
  	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
  
+ 
+ build/pyodide.js: src/pyodide.js
+ 	cp $< $@
+-	sed -i -e 's#{{DEPLOY}}#https://pyodide.cdn.iodide.io/#g' $@
++	sed -i -e 's#{{DEPLOY}}#https://robotraconteur.github.io/robotraconteur_pyodide/#g' $@
+ 
+ 	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
  
 diff --git a/Makefile.envs b/Makefile.envs
 index 6b4820c..b7be45f 100644
