@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index 518f604..d3707dc 100644
+index 518f604..2566cc4 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -16,7 +16,7 @@ SHELL := /bin/bash
@@ -11,7 +11,16 @@ index 518f604..d3707dc 100644
  CXXFLAGS=$(CFLAGS) -std=c++14
  
  
-@@ -45,7 +45,10 @@ LDFLAGS=\
+@@ -26,7 +26,7 @@ LDFLAGS=\
+ 	$(CPYTHONROOT)/installs/python-$(PYVERSION)/lib/libpython$(PYMINOR).a \
+   $(LZ4LIB) \
+   -s "BINARYEN_METHOD='native-wasm'" \
+-  -s TOTAL_MEMORY=1073741824 \
++  -s TOTAL_MEMORY=512MB \
+   -s ALLOW_MEMORY_GROWTH=1 \
+ 	-s MAIN_MODULE=1 \
+ 	-s EMULATED_FUNCTION_POINTERS=1 \
+@@ -45,7 +45,13 @@ LDFLAGS=\
    --memory-init-file 0 \
    -s "BINARYEN_TRAP_MODE='clamp'" \
    -s TEXTDECODER=0 \
@@ -19,11 +28,14 @@ index 518f604..d3707dc 100644
 +  -s LZ4=1 \
 +  -s DISABLE_EXCEPTION_CATCHING=0 \
 +  -s EXCEPTION_DEBUG=0 \
-+  --profiling
++  -s WEBSOCKET_DEBUG=0 \
++  -s ASSERTIONS=0 \
++  --profiling \
++  -lwebsocket.js
  
  SIX_ROOT=six/six-1.11.0/build/lib
  SIX_LIBS=$(SIX_ROOT)/six.py
-@@ -58,6 +61,12 @@ PARSO_LIBS=$(PARSO_ROOT)/__init__.py
+@@ -58,6 +64,12 @@ PARSO_LIBS=$(PARSO_ROOT)/__init__.py
  
  SITEPACKAGES=root/lib/python$(PYMINOR)/site-packages
  
@@ -36,7 +48,7 @@ index 518f604..d3707dc 100644
  all: build/pyodide.asm.js \
  	build/pyodide.asm.data \
  	build/pyodide.js \
-@@ -71,11 +80,21 @@ all: build/pyodide.asm.js \
+@@ -71,11 +83,21 @@ all: build/pyodide.asm.js \
    build/webworker_dev.js
  
  
@@ -59,7 +71,7 @@ index 518f604..d3707dc 100644
  	  $(LDFLAGS) -s FORCE_FILESYSTEM=1
  	rm build/pyodide.asm.html
  
-@@ -84,7 +103,7 @@ env:
+@@ -84,7 +106,7 @@ env:
  	env
  
  
@@ -68,6 +80,15 @@ index 518f604..d3707dc 100644
  	( \
  		cd build; \
  		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
+@@ -94,7 +116,7 @@ build/pyodide.asm.data: root/.built
+ 
+ build/pyodide_dev.js: src/pyodide.js
+ 	cp $< $@
+-	sed -i -e "s#{{DEPLOY}}##g" $@
++	sed -i -e "s#{{DEPLOY}}#/build/#g" $@
+ 	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
+ 
+ 
 diff --git a/Makefile.envs b/Makefile.envs
 index 6b4820c..b7be45f 100644
 --- a/Makefile.envs
@@ -80,7 +101,7 @@ index 6b4820c..b7be45f 100644
 +  -s EXPORT_ALL=1 \
 +  -s DISABLE_EXCEPTION_CATCHING=0
 diff --git a/cpython/Makefile b/cpython/Makefile
-index 553a46f..d66deff 100644
+index 553a46f..cfeebe9 100644
 --- a/cpython/Makefile
 +++ b/cpython/Makefile
 @@ -124,8 +124,8 @@ $(BUILD)/Makefile: $(BUILD)/.patched $(ZLIBBUILD)/.patched $(SQLITEBUILD)/libsql
@@ -107,8 +128,58 @@ index 60667eb..4d434de 100644
  	( \
  		cd emsdk && \
  		./emsdk install --build=Release sdk-tag-$(EMSCRIPTEN_VERSION)-64bit binaryen-tag-$(EMSCRIPTEN_VERSION)-64bit && \
+diff --git a/emsdk/patches/robotraconteur_websocket_protocol.patch b/emsdk/patches/robotraconteur_websocket_protocol.patch
+new file mode 100644
+index 0000000..9751bdd
+--- /dev/null
++++ b/emsdk/patches/robotraconteur_websocket_protocol.patch
+@@ -0,0 +1,12 @@
++--- a/emsdk/emscripten/tag-1.38.30/src/library_websocket.js
+++++ b/emsdk/emscripten/tag-1.38.30/src/library_websocket.js
++@@ -272,7 +272,7 @@
++ 
++     // TODO: protocols
++     // TODO: createOnMainThread
++-    var socket = new WebSocket(url);
+++    var socket = new WebSocket(url,"robotraconteur.robotraconteur.com");
++     socket.binaryType = 'arraybuffer';
++     // TODO: While strictly not necessary, this ID would be good to be unique across all threads to avoid confusion.
++     var socketId = WS.sockets.length;
++     
+\ No newline at end of file
+diff --git a/emsdk/patches/websocket_h_extern_c_fix.patch b/emsdk/patches/websocket_h_extern_c_fix.patch
+new file mode 100644
+index 0000000..02c0919
+--- /dev/null
++++ b/emsdk/patches/websocket_h_extern_c_fix.patch
+@@ -0,0 +1,10 @@
++--- a/emsdk/emscripten/tag-1.38.30/system/include/emscripten/websocket.h
+++++ b/emsdk/emscripten/tag-1.38.30/system/include/emscripten/websocket.h
++@@ -113,3 +113,7 @@
++ // even after the pthread quits, although be warned that if the target thread that was registered to handle events for a given WebSocket quits, then those
++ // events will stop from being delivered altogether.
++ void emscripten_websocket_deinitialize(void);
+++
+++#ifdef __cplusplus
+++} // ~extern "C"
+++#endif
+diff --git a/packages/matplotlib/src/wasm_backend.py b/packages/matplotlib/src/wasm_backend.py
+index f60ffe7..f2ea807 100644
+--- a/packages/matplotlib/src/wasm_backend.py
++++ b/packages/matplotlib/src/wasm_backend.py
+@@ -107,7 +107,9 @@ class FigureCanvasWasm(backend_agg.FigureCanvasAgg):
+             from js import iodide
+             return iodide.output.element('div')
+         except ImportError:
+-            return document.createElement('div')
++            div = document.createElement('div')
++            document.body.appendChild(div)
++            return div
+ 
+     def show(self):
+         # If we've already shown this canvas elsewhere, don't create a new one,
 diff --git a/pyodide_build/common.py b/pyodide_build/common.py
-index 52c77f4..87c7f94 100644
+index 52c77f4..970927c 100644
 --- a/pyodide_build/common.py
 +++ b/pyodide_build/common.py
 @@ -4,7 +4,10 @@ from pathlib import Path
