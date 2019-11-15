@@ -6,6 +6,10 @@ namespace RobotRaconteur
 %rename (_NewStructure) NewStructure;
 PyObject* NewStructure(const std::string& type, boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> node);
 
+%rename (_GetStructureType) GetStructureType;
+PyObject* GetStructureType(const std::string& type, boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> node);
+
+
 %rename (_GetNumPyDescrForType) GetNumPyDescrForType;
 PyObject* GetNumPyDescrForType(boost::shared_ptr<RobotRaconteur::ServiceEntryDefinition> e, boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> node);
 PyObject* GetNumPyDescrForType(const std::string& type, boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> node);
@@ -17,10 +21,8 @@ DataTypes GetNamedTypeEntryType(boost::shared_ptr<RobotRaconteur::TypeDefinition
 %rename(_PackMessageElement) PackMessageElement;
 boost::intrusive_ptr<MessageElement>  PackMessageElement(PyObject* data, boost::shared_ptr<TypeDefinition> type1, boost::shared_ptr<WrappedServiceStub> obj, boost::shared_ptr<RobotRaconteurNode> node);
 
-
 %rename(_UnpackMessageElement) UnpackMessageElement;
 PyObject* UnpackMessageElement(boost::intrusive_ptr<MessageElement> element, boost::shared_ptr<TypeDefinition> type1, boost::shared_ptr<WrappedServiceStub> stub, boost::shared_ptr<RobotRaconteurNode> node);
-
 
 %rename(_PackToRRArray) PackToRRArray;
 boost::intrusive_ptr<RRBaseArray> PackToRRArray(PyObject* array_, boost::shared_ptr<TypeDefinition> type1, boost::intrusive_ptr<RRBaseArray> destrrarray);

@@ -11,6 +11,10 @@ async def test_await_func():
 
     c = await RRN.AsyncConnectService("rr+ws://localhost:2222?service=RobotRaconteurTestService", None, None, None, None)
     
+    f1 = RRN.NewStructure("com.robotraconteur.testing.TestService1.teststruct1",c)
+    struct1_type = RRN.GetStructureType("com.robotraconteur.testing.TestService1.teststruct1",c)
+    f2 = struct1_type()
+
     t = time.time()
     for _ in range(1000):        
         f = await c.async_get_struct1(None)
