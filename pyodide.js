@@ -6,7 +6,7 @@ var languagePluginLoader = new Promise((resolve, reject) => {
   // This is filled in by the Makefile to be either a local file or the
   // deployed location. TODO: This should be done in a less hacky
   // way.
-  var baseURL = self.languagePluginUrl || 'https://robotraconteur.github.io/robotraconteur_pyodide/';
+  var baseURL = self.languagePluginUrl || 'https://johnwason.github.io/robotraconteur_pyodide/';
   baseURL = baseURL.substr(0, baseURL.lastIndexOf('/')) + '/';
 
   ////////////////////////////////////////////////////////////
