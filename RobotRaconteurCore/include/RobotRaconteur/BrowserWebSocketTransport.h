@@ -46,11 +46,11 @@ namespace RobotRaconteur
 
             virtual void AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<void (RR_SHARED_PTR<RobotRaconteurException> )>& callback);
 
-            virtual void AsyncCreateTransportConnection(const std::string& url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& callback);
+            virtual void AsyncCreateTransportConnection(boost::string_ref url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& callback);
 
             virtual void CloseTransportConnection(RR_SHARED_PTR<Endpoint> e);
 
-            virtual bool CanConnectService(const std::string& url);
+            virtual bool CanConnectService(boost::string_ref url);
 		
             virtual void Close();
 
@@ -58,7 +58,7 @@ namespace RobotRaconteur
 
             virtual void PeriodicCleanupTask();
 
-            uint32_t TransportCapability(const std::string& name);
+            uint32_t TransportCapability(boost::string_ref name);
 
             virtual void MessageReceived(RR_INTRUSIVE_PTR<Message> m);
 

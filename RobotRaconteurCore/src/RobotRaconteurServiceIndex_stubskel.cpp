@@ -49,7 +49,7 @@ std::string out(
 );
 return out;
 }
-RR_SHARED_PTR<RobotRaconteur::StructureStub> RobotRaconteurServiceIndexFactory::FindStructureStub(const std::string& s)
+RR_SHARED_PTR<RobotRaconteur::StructureStub> RobotRaconteurServiceIndexFactory::FindStructureStub(boost::string_ref s)
 {
 std::vector<std::string> res;
 boost::split(res,s,boost::is_from_range('.','.'));
@@ -59,7 +59,7 @@ if (objecttype=="NodeInfo") return RobotRaconteur::rr_cast<RobotRaconteur::Struc
 if (objecttype=="ServiceInfo") return RobotRaconteur::rr_cast<RobotRaconteur::StructureStub>(RR_MAKE_SHARED<ServiceInfo_stub>(GetNode()));
 throw RobotRaconteur::ServiceException("Invalid structure stub type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> RobotRaconteurServiceIndexFactory::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> structin)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> RobotRaconteurServiceIndexFactory::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> structin)
 {
 std::string type=structin->RRType();std::vector<std::string> res;
 boost::split(res,type,boost::is_from_range('.','.'));
@@ -70,9 +70,9 @@ RR_SHARED_PTR<RobotRaconteur::StructureStub> stub=FindStructureStub(type);
 return stub->PackStructure(structin);
 throw RobotRaconteur::ServiceException("Invalid structure stub type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> RobotRaconteurServiceIndexFactory::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> mstructin)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> RobotRaconteurServiceIndexFactory::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> mstructin)
 {
-std::string type=mstructin->GetTypeString();std::vector<std::string> res;
+boost::string_ref type=mstructin->GetTypeString().str();std::vector<std::string> res;
 boost::split(res,type,boost::is_from_range('.','.'));
 std::string servicetype=res.at(0);
 std::string objecttype=res.at(1);
@@ -81,39 +81,39 @@ RR_SHARED_PTR<RobotRaconteur::StructureStub> stub=FindStructureStub(type);
 return stub->UnpackStructure(mstructin);
 throw RobotRaconteur::ServiceException("Invalid structure stub type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodArray> RobotRaconteurServiceIndexFactory::PackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> RobotRaconteurServiceIndexFactory::PackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> structure)
 {
 throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> RobotRaconteurServiceIndexFactory::UnpackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> RobotRaconteurServiceIndexFactory::UnpackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 {
 throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodMultiDimArray> RobotRaconteurServiceIndexFactory::PackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> RobotRaconteurServiceIndexFactory::PackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> structure)
 {
 throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> RobotRaconteurServiceIndexFactory::UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodMultiDimArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> RobotRaconteurServiceIndexFactory::UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 {
 throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedArray> RobotRaconteurServiceIndexFactory::PackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> RobotRaconteurServiceIndexFactory::PackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> structure)
 {
 	throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> RobotRaconteurServiceIndexFactory::UnpackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> RobotRaconteurServiceIndexFactory::UnpackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 {
 	throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedMultiDimArray> RobotRaconteurServiceIndexFactory::PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> RobotRaconteurServiceIndexFactory::PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> structure)
 {
 	throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> RobotRaconteurServiceIndexFactory::UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedMultiDimArray> structure)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> RobotRaconteurServiceIndexFactory::UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 {
 	throw RobotRaconteur::ServiceException("Invalid pod type.");
 }
-RR_SHARED_PTR<RobotRaconteur::ServiceStub> RobotRaconteurServiceIndexFactory::CreateStub(const std::string& type, const std::string& path, RR_SHARED_PTR<RobotRaconteur::ClientContext> context)
+RR_SHARED_PTR<RobotRaconteur::ServiceStub> RobotRaconteurServiceIndexFactory::CreateStub(boost::string_ref type, boost::string_ref path, RR_SHARED_PTR<RobotRaconteur::ClientContext> context)
 {
 std::vector<std::string> res;
 boost::split(res,type,boost::is_from_range('.','.'));
@@ -124,25 +124,25 @@ if (objecttype=="ServiceIndex") { RR_SHARED_PTR<ServiceIndex_stub> o=(RR_MAKE_SH
 throw RobotRaconteur::ServiceException("Invalid structure stub type.");
 }
 
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> NodeInfo_stub::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> s)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> NodeInfo_stub::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> s)
 {
 RR_INTRUSIVE_PTR<NodeInfo > s2=RobotRaconteur::rr_cast<NodeInfo >(s);
 std::vector<RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> > vret;
 vret.push_back(RobotRaconteur::CreateMessageElement("NodeName",RobotRaconteur::rr_cast<RobotRaconteur::MessageElementData>(RobotRaconteur::stringToRRArray(s2->NodeName))));
 vret.push_back(RobotRaconteur::CreateMessageElement("NodeID",RobotRaconteur::rr_cast<RobotRaconteur::MessageElementData>(s2->NodeID)));
 vret.push_back(RobotRaconteur::CreateMessageElement("ServiceIndexConnectionURL",RobotRaconteur::rr_cast<RobotRaconteur::MessageElementData>(RRGetNode()->PackMapType<int32_t,RobotRaconteur::RRArray<char>  >(s2->ServiceIndexConnectionURL))));
-return RobotRaconteur::CreateMessageElementStructure("RobotRaconteurServiceIndex.NodeInfo",vret);
+return RobotRaconteur::CreateMessageElementNestedElementList(RobotRaconteur::DataTypes_structure_t,"RobotRaconteurServiceIndex.NodeInfo",RR_MOVE(vret));
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> NodeInfo_stub::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> m)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> NodeInfo_stub::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> m)
 {
 RR_INTRUSIVE_PTR<NodeInfo > ret( new NodeInfo());
 ret->NodeName=RobotRaconteur::RRArrayToString(RobotRaconteur::MessageElement::FindElement(m->Elements,"NodeName")->CastData<RobotRaconteur::RRArray<char> >());
 ret->NodeID=RobotRaconteur::MessageElement::FindElement(m->Elements,"NodeID")->CastData<RobotRaconteur::RRArray<uint8_t > >();
-ret->ServiceIndexConnectionURL=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,RobotRaconteur::RRArray<char>  > >((RRGetNode()->UnpackMapType<int32_t,RobotRaconteur::RRArray<char>  >(RobotRaconteur::MessageElement::FindElement(m->Elements,"ServiceIndexConnectionURL")->CastData<RobotRaconteur::MessageElementMap<int32_t> >())));
+ret->ServiceIndexConnectionURL=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,RobotRaconteur::RRArray<char>  > >((RRGetNode()->UnpackMapType<int32_t,RobotRaconteur::RRArray<char>  >(RobotRaconteur::MessageElement::FindElement(m->Elements,"ServiceIndexConnectionURL")->CastDataToNestedList(RobotRaconteur::DataTypes_vector_t))));
 return ret;
 }
 
-RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> ServiceInfo_stub::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> s)
+RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> ServiceInfo_stub::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> s)
 {
 RR_INTRUSIVE_PTR<ServiceInfo > s2=RobotRaconteur::rr_cast<ServiceInfo >(s);
 std::vector<RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> > vret;
@@ -151,20 +151,20 @@ vret.push_back(RobotRaconteur::CreateMessageElement("RootObjectType",RobotRacont
 vret.push_back(RobotRaconteur::CreateMessageElement("RootObjectImplements",RobotRaconteur::rr_cast<RobotRaconteur::MessageElementData>(RRGetNode()->PackMapType<int32_t,RobotRaconteur::RRArray<char>  >(s2->RootObjectImplements))));
 vret.push_back(RobotRaconteur::CreateMessageElement("ConnectionURL",RobotRaconteur::rr_cast<RobotRaconteur::MessageElementData>(RRGetNode()->PackMapType<int32_t,RobotRaconteur::RRArray<char>  >(s2->ConnectionURL))));
 vret.push_back(RobotRaconteur::CreateMessageElement("Attributes",RobotRaconteur::rr_cast<RobotRaconteur::MessageElementData>(RRGetNode()->PackMapType<std::string,RobotRaconteur::RRValue >(s2->Attributes))));
-return RobotRaconteur::CreateMessageElementStructure("RobotRaconteurServiceIndex.ServiceInfo",vret);
+return RobotRaconteur::CreateMessageElementNestedElementList(RobotRaconteur::DataTypes_structure_t,"RobotRaconteurServiceIndex.ServiceInfo",RR_MOVE(vret));
 }
-RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> ServiceInfo_stub::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> m)
+RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> ServiceInfo_stub::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> m)
 {
 RR_INTRUSIVE_PTR<ServiceInfo > ret( new ServiceInfo());
 ret->Name=RobotRaconteur::RRArrayToString(RobotRaconteur::MessageElement::FindElement(m->Elements,"Name")->CastData<RobotRaconteur::RRArray<char> >());
 ret->RootObjectType=RobotRaconteur::RRArrayToString(RobotRaconteur::MessageElement::FindElement(m->Elements,"RootObjectType")->CastData<RobotRaconteur::RRArray<char> >());
-ret->RootObjectImplements=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,RobotRaconteur::RRArray<char>  > >((RRGetNode()->UnpackMapType<int32_t,RobotRaconteur::RRArray<char>  >(RobotRaconteur::MessageElement::FindElement(m->Elements,"RootObjectImplements")->CastData<RobotRaconteur::MessageElementMap<int32_t> >())));
-ret->ConnectionURL=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,RobotRaconteur::RRArray<char>  > >((RRGetNode()->UnpackMapType<int32_t,RobotRaconteur::RRArray<char>  >(RobotRaconteur::MessageElement::FindElement(m->Elements,"ConnectionURL")->CastData<RobotRaconteur::MessageElementMap<int32_t> >())));
-ret->Attributes=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<std::string,RobotRaconteur::RRValue > >((RRGetNode()->UnpackMapType<std::string,RobotRaconteur::RRValue >(RobotRaconteur::MessageElement::FindElement(m->Elements,"Attributes")->CastData<RobotRaconteur::MessageElementMap<std::string> >())));
+ret->RootObjectImplements=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,RobotRaconteur::RRArray<char>  > >((RRGetNode()->UnpackMapType<int32_t,RobotRaconteur::RRArray<char>  >(RobotRaconteur::MessageElement::FindElement(m->Elements,"RootObjectImplements")->CastDataToNestedList(RobotRaconteur::DataTypes_vector_t))));
+ret->ConnectionURL=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,RobotRaconteur::RRArray<char>  > >((RRGetNode()->UnpackMapType<int32_t,RobotRaconteur::RRArray<char>  >(RobotRaconteur::MessageElement::FindElement(m->Elements,"ConnectionURL")->CastDataToNestedList(RobotRaconteur::DataTypes_vector_t))));
+ret->Attributes=RobotRaconteur::rr_cast<RobotRaconteur::RRMap<std::string,RobotRaconteur::RRValue > >((RRGetNode()->UnpackMapType<std::string,RobotRaconteur::RRValue >(RobotRaconteur::MessageElement::FindElement(m->Elements,"Attributes")->CastDataToNestedList(RobotRaconteur::DataTypes_dictionary_t))));
 return ret;
 }
 
-ServiceIndex_stub::ServiceIndex_stub(const std::string &path, RR_SHARED_PTR<RobotRaconteur::ClientContext> c) : RobotRaconteur::ServiceStub(path,c){ }
+ServiceIndex_stub::ServiceIndex_stub(boost::string_ref path, RR_SHARED_PTR<RobotRaconteur::ClientContext> c) : RobotRaconteur::ServiceStub(path,c){ }
 void ServiceIndex_stub::RRInitStub()
 {
 }
@@ -208,7 +208,7 @@ throw RobotRaconteur::MemberNotFoundException("Member not found");
 }
 RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry>ServiceIndex_stub::CallbackCall(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> rr_m)
 {
-std::string ename=rr_m->MemberName;
+RobotRaconteur::MessageStringRef ename=rr_m->MemberName;
 RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> rr_mr=RobotRaconteur::CreateMessageEntry(RobotRaconteur::MessageEntryType_CallbackCallRet, ename);
 rr_mr->ServicePath=rr_m->ServicePath;
 rr_mr->RequestID=rr_m->RequestID;
@@ -244,7 +244,7 @@ handler(RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t,ServiceInfo  > >(),RobotR
 return;
 }
 RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> me=m->FindElement("return");
-handler(RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,ServiceInfo  > >((RRGetNode()->UnpackMapType<int32_t,ServiceInfo  >(me->CastData<RobotRaconteur::MessageElementMap<int32_t> >()))), RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>());
+handler(RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,ServiceInfo  > >((RRGetNode()->UnpackMapType<int32_t,ServiceInfo  >(me->CastDataToNestedList(RobotRaconteur::DataTypes_vector_t)))), RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>());
 }
 void ServiceIndex_stub::async_GetRoutedNodes(boost::function<void (RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t,NodeInfo  > >, RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>) > rr_handler, int32_t rr_timeout)
 {
@@ -265,7 +265,7 @@ handler(RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t,NodeInfo  > >(),RobotRaco
 return;
 }
 RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> me=m->FindElement("return");
-handler(RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,NodeInfo  > >((RRGetNode()->UnpackMapType<int32_t,NodeInfo  >(me->CastData<RobotRaconteur::MessageElementMap<int32_t> >()))), RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>());
+handler(RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,NodeInfo  > >((RRGetNode()->UnpackMapType<int32_t,NodeInfo  >(me->CastDataToNestedList(RobotRaconteur::DataTypes_vector_t)))), RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>());
 }
 void ServiceIndex_stub::async_GetDetectedNodes(boost::function<void (RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t,NodeInfo  > >, RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>) > rr_handler, int32_t rr_timeout)
 {
@@ -286,7 +286,7 @@ handler(RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t,NodeInfo  > >(),RobotRaco
 return;
 }
 RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> me=m->FindElement("return");
-handler(RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,NodeInfo  > >((RRGetNode()->UnpackMapType<int32_t,NodeInfo  >(me->CastData<RobotRaconteur::MessageElementMap<int32_t> >()))), RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>());
+handler(RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t,NodeInfo  > >((RRGetNode()->UnpackMapType<int32_t,NodeInfo  >(me->CastDataToNestedList(RobotRaconteur::DataTypes_vector_t)))), RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>());
 }
 
 }

@@ -75,7 +75,7 @@ namespace RobotRaconteur
 		::RobotRaconteur::NodeID NodeID;
 		std::string ServiceName;
 
-		ServiceSubscriptionClientID(const ::RobotRaconteur::NodeID& nodeid, const std::string& service_name);
+		ServiceSubscriptionClientID(const ::RobotRaconteur::NodeID& nodeid, boost::string_ref service_name);
 
 		ServiceSubscriptionClientID();
 
@@ -175,7 +175,7 @@ namespace RobotRaconteur
 		void SetConnectRetryDelay(uint32_t delay_milliseconds);
 
 		template <typename T>
-		RR_SHARED_PTR<WireSubscription<T> > SubscribeWire(const std::string& membername)
+		RR_SHARED_PTR<WireSubscription<T> > SubscribeWire(boost::string_ref membername)
 		{
 			RR_SHARED_PTR<WireSubscription<T> > o = RR_MAKE_SHARED<WireSubscription<T> >(shared_from_this(), membername);
 			SubscribeWire1(o);
@@ -183,7 +183,7 @@ namespace RobotRaconteur
 		}
 
 		template <typename T>
-		RR_SHARED_PTR<PipeSubscription<T> > SubscribePipe(const std::string& membername, uint32_t max_recv_packets=std::numeric_limits<uint32_t>::max())
+		RR_SHARED_PTR<PipeSubscription<T> > SubscribePipe(boost::string_ref membername, uint32_t max_recv_packets=std::numeric_limits<uint32_t>::max())
 		{
 			RR_SHARED_PTR<PipeSubscription<T> > o = RR_MAKE_SHARED<PipeSubscription<T> >(shared_from_this(), membername, max_recv_packets);
 			SubscribePipe1(o);
@@ -258,7 +258,7 @@ namespace RobotRaconteur
 
 		void Close();
 
-		WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername);
+		WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername);
 
 	protected:
 
@@ -292,7 +292,7 @@ namespace RobotRaconteur
 	{
 	public:
 
-		WireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername)
+		WireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername)
 			: WireSubscriptionBase(parent, membername)
 		{
 
@@ -372,7 +372,7 @@ namespace RobotRaconteur
 
 		void Close();
 
-		PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
+		PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
 
 	protected:
 
@@ -403,7 +403,7 @@ namespace RobotRaconteur
 	{
 	public:
 
-		PipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5)
+		PipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5)
 			: PipeSubscriptionBase(parent, membername, max_recv_packets)
 		{
 

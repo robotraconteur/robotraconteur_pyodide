@@ -56,61 +56,61 @@ namespace RobotRaconteur
 		return servicedef;
 	}
 
-	RR_SHARED_PTR<RobotRaconteur::StructureStub> WrappedServiceFactory::FindStructureStub(const std::string& s)
+	RR_SHARED_PTR<RobotRaconteur::StructureStub> WrappedServiceFactory::FindStructureStub(boost::string_ref s)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
 
-	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> WrappedServiceFactory::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> structin)
+	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> WrappedServiceFactory::PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> structin)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
 
-	RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> WrappedServiceFactory::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> mstructin)
+	RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> WrappedServiceFactory::UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> mstructin)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
 
-	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodArray> WrappedServiceFactory::PackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> WrappedServiceFactory::PackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
-	RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> WrappedServiceFactory::UnpackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> WrappedServiceFactory::UnpackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
-	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodMultiDimArray> WrappedServiceFactory::PackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> WrappedServiceFactory::PackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
-	RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> WrappedServiceFactory::UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodMultiDimArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> WrappedServiceFactory::UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
 	
-	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedArray> WrappedServiceFactory::PackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> WrappedServiceFactory::PackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
-	RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> WrappedServiceFactory::UnpackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> WrappedServiceFactory::UnpackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
-	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedMultiDimArray> WrappedServiceFactory::PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> WrappedServiceFactory::PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
-	RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> WrappedServiceFactory::UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedMultiDimArray> structure)
+	RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> WrappedServiceFactory::UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure)
 	{
 		throw ServiceException("Invalid for wrapped service type");
 	}
 	
-	RR_SHARED_PTR<RobotRaconteur::ServiceStub> WrappedServiceFactory::CreateStub(const std::string& type, const std::string& path, RR_SHARED_PTR<RobotRaconteur::ClientContext> context)
+	RR_SHARED_PTR<RobotRaconteur::ServiceStub> WrappedServiceFactory::CreateStub(boost::string_ref type, boost::string_ref path, RR_SHARED_PTR<RobotRaconteur::ClientContext> context)
 	{
-		boost::tuple<std::string,std::string> res=SplitQualifiedName(type);
+		boost::tuple<boost::string_ref,boost::string_ref> res=SplitQualifiedName(type);
 		
-		std::string servicetype=res.get<0>();
-		std::string objecttype=res.get<1>();
+		boost::string_ref servicetype=res.get<0>();
+		boost::string_ref objecttype=res.get<1>();
 		if (servicetype != GetServiceName()) return RobotRaconteur::RobotRaconteurNode::s()->GetServiceType(servicetype)->CreateStub(type,path,context);
 		for (std::vector<RR_SHARED_PTR<ServiceEntryDefinition> >::iterator ee=servicedef->Objects.begin(); ee!=servicedef->Objects.end(); ++ee)
 		{
@@ -125,9 +125,9 @@ namespace RobotRaconteur
 	}
 
 	//Wrapped Dynamic Service Factory
-	RR_SHARED_PTR<ServiceFactory> WrappedDynamicServiceFactory::CreateServiceFactory(const std::string& def)
+	RR_SHARED_PTR<ServiceFactory> WrappedDynamicServiceFactory::CreateServiceFactory(boost::string_ref def)
 	{
-		return RR_MAKE_SHARED<WrappedServiceFactory>(def);
+		return RR_MAKE_SHARED<WrappedServiceFactory>(def.to_string());
 	}
 	std::vector<RR_SHARED_PTR<ServiceFactory> > WrappedDynamicServiceFactory::CreateServiceFactories(const std::vector<std::string>& def)
 	{
@@ -141,7 +141,7 @@ namespace RobotRaconteur
 
 
 	//Wrapped Service Stub
-	WrappedServiceStub::WrappedServiceStub(const std::string& path, RR_SHARED_PTR<ServiceEntryDefinition> type, RR_SHARED_PTR<RobotRaconteur::ClientContext> c)
+	WrappedServiceStub::WrappedServiceStub(boost::string_ref path, RR_SHARED_PTR<ServiceEntryDefinition> type, RR_SHARED_PTR<RobotRaconteur::ClientContext> c)
 		: RobotRaconteur::ServiceStub(path,c)
 	{
 		RR_objecttype=type;
@@ -215,18 +215,20 @@ namespace RobotRaconteur
 		
 		if (err)
 		{
-
-		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err2));
 		
 		return;
 		}
 		if (m->Error != RobotRaconteur::MessageErrorType_None)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),m->Error,m->FindElement("errorname")->CastDataToString(),m->FindElement("errorstring")->CastDataToString()));
+			HandlerErrorInfo err2(m);
+			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err2));
 			return;
 		}
 		RR_INTRUSIVE_PTR<MessageElement> ret=m->FindElement("value");
-		DIRECTOR_CALL2(handler->handler(ret,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(ret,err3));
 	}
 
 	void WrappedServiceStub::async_PropertySet_handler(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncRequestDirector> handler)
@@ -234,18 +236,19 @@ namespace RobotRaconteur
 		
 		if (err)
 		{
-
-		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err2));
 		
 		return;
 		}
 		if (m->Error != RobotRaconteur::MessageErrorType_None)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),m->Error,m->FindElement("errorname")->CastDataToString(),m->FindElement("errorstring")->CastDataToString()));
+			HandlerErrorInfo err2(m);
+			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err2));
 			return;
 		}
-
-		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err3));
 	}
 
 	void WrappedServiceStub::async_FunctionCall_handler(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncRequestDirector> handler)
@@ -253,14 +256,15 @@ namespace RobotRaconteur
 		
 		if (err)
 		{
-
-		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+		DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err2));
 		
 		return;
 		}
 		if (m->Error != RobotRaconteur::MessageErrorType_None)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),m->Error,m->FindElement("errorname")->CastDataToString(),m->FindElement("errorstring")->CastDataToString()));
+			HandlerErrorInfo err2(m);
+			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(),err2));
 			return;
 		}
 
@@ -272,19 +276,22 @@ namespace RobotRaconteur
 		}
 		catch (std::exception&) {}
 
-		DIRECTOR_CALL2(handler->handler(ret,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(ret,err3));
 	}
 
 	void WrappedServiceStub::async_GeneratorFunctionCall_handler(const std::string& FunctionName, RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncGeneratorClientReturnDirector> handler)
 	{
 		if (err)
-		{
-			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedGeneratorClient>(), err->ErrorCode, err->Error, err->Message));
+		{ 
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedGeneratorClient>(), err2));
 			return;
 		}
 		if (m->Error != RobotRaconteur::MessageErrorType_None)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedGeneratorClient>(), m->Error, m->FindElement("errorname")->CastDataToString(), m->FindElement("errorstring")->CastDataToString()));
+			HandlerErrorInfo err2(m);
+			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedGeneratorClient>(), err2));
 			return;
 		}
 
@@ -298,7 +305,8 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<WrappedGeneratorClient> gen_ret = RR_MAKE_SHARED<WrappedGeneratorClient>(FunctionName, RRArrayToScalar(m->FindElement("index")->CastData<RRArray<int32_t> >()), shared_from_this());
 
-		DIRECTOR_CALL2(handler->handler(gen_ret, 0, "", ""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(gen_ret, err3));
 	}
 
 	void WrappedServiceStub::async_FindObjRef(const std::string& path, int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
@@ -329,34 +337,35 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedServiceStub>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedServiceStub>(),err2));
 			return;
 		}
 
 		RR_SHARED_PTR<WrappedServiceStub> stub2=rr_cast<WrappedServiceStub>(stub);
 
-
-		DIRECTOR_CALL2(handler->handler(stub2,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(stub2,err3));
 	}
 		
 
 
 	void WrappedServiceStub::DispatchEvent(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m)
 	{
-		DIRECTOR_CALL3(WrappedServiceStubDirector,RR_Director2->DispatchEvent(m->MemberName,m->elements));			
+		DIRECTOR_CALL3(WrappedServiceStubDirector,RR_Director2->DispatchEvent(m->MemberName.str().to_string(),m->elements));			
 		
 	}
 
 	void WrappedServiceStub::DispatchPipeMessage(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m)
 	{
-		std::map<std::string, RR_SHARED_PTR<WrappedPipeClient> >::iterator e = pipes.find(m->MemberName);
+		std::map<std::string, RR_SHARED_PTR<WrappedPipeClient> >::iterator e = pipes.find(m->MemberName.str().to_string());
 		if (e == pipes.end()) throw MemberNotFoundException("Pipe Member Not Found");
 		e->second->PipePacketReceived(m);		
 	}
 	
 	void WrappedServiceStub::DispatchWireMessage(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m)
 	{
-		std::map<std::string, RR_SHARED_PTR<WrappedWireClient> >::iterator e = wires.find(m->MemberName);
+		std::map<std::string, RR_SHARED_PTR<WrappedWireClient> >::iterator e = wires.find(m->MemberName.str().to_string());
 		if (e == wires.end()) throw MemberNotFoundException("Pipe Member Not Found");
 		e->second->WirePacketReceived(m);
 	}
@@ -367,7 +376,7 @@ namespace RobotRaconteur
 
 		for (std::vector<RR_SHARED_PTR<MemberDefinition> >::iterator e=RR_objecttype->Members.begin(); e!=RR_objecttype->Members.end(); ++e)
 		{
-			if ((*e)->Name==m->MemberName)
+			if ((*e)->Name==m->MemberName.str())
 				d=boost::dynamic_pointer_cast<CallbackDefinition>(*e);
 
 		}
@@ -378,7 +387,7 @@ namespace RobotRaconteur
 		RR_INTRUSIVE_PTR<MessageElement> mres;
 		try
 		{
-			DIRECTOR_CALL(WrappedServiceStubDirector,mres=RR_Director2->CallbackCall(m->MemberName,m->elements));
+			DIRECTOR_CALL(WrappedServiceStubDirector,mres=RR_Director2->CallbackCall(m->MemberName.str().to_string(),m->elements));
 		}
 		catch (std::exception&)
 		{
@@ -426,14 +435,14 @@ namespace RobotRaconteur
 		return e->second;
 	}
 
-	RR_SHARED_PTR<PipeClientBase> WrappedServiceStub::RRGetPipeClient(const std::string& membername)
+	RR_SHARED_PTR<PipeClientBase> WrappedServiceStub::RRGetPipeClient(boost::string_ref membername)
 	{
-		return GetPipe(membername);
+		return GetPipe(membername.to_string());
 	}
 
-	RR_SHARED_PTR<WireClientBase> WrappedServiceStub::RRGetWireClient(const std::string& membername)
+	RR_SHARED_PTR<WireClientBase> WrappedServiceStub::RRGetWireClient(boost::string_ref membername)
 	{
-		return GetWire(membername);
+		return GetWire(membername.to_string());
 	}
 
 	void WrappedServiceStub::RRClose()
@@ -511,11 +520,13 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(0,err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(0,err2));
 			return;
 		}
 
-		DIRECTOR_CALL2(handler->handler(id,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(id,err3));
 	}
 	
 
@@ -528,17 +539,21 @@ namespace RobotRaconteur
 	{
 		return rr_cast<MessageElement>(PeekPacketBase());
 	}
-	
-	bool WrappedPipeEndpoint::TryReceivePacket(RR_INTRUSIVE_PTR<MessageElement>& packet, bool peek)
+
+	WrappedTryReceivePacketWaitResult WrappedPipeEndpoint::TryReceivePacketWait(int32_t timeout, bool peek)
 	{
-		RR_INTRUSIVE_PTR<RRValue> o;
-		if (!TryReceivePacketBase(o, peek))
+		throw new NotImplementedException("");
+
+		/*RR_INTRUSIVE_PTR<RRValue> o;
+		WrappedTryReceivePacketWaitResult res;
+		res.res = TryReceivePacketBaseWait(o, timeout, peek);
+		if (!res.res)
 		{
-			return false;
+			return res;
 		}
 
-		packet = rr_cast<MessageElement>(o);
-		return true;
+		res.packet = rr_cast<MessageElement>(o);
+		return res;*/
 	}
 
 
@@ -619,11 +634,13 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(err2));
 			return;
 		}
 
-		DIRECTOR_CALL2(handler->handler(0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(err3));
 	}
 
 
@@ -643,13 +660,15 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedPipeEndpoint>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedPipeEndpoint>(),err2));
 			return;
 		}
 
 		RR_SHARED_PTR<WrappedPipeEndpoint> ep2=boost::dynamic_pointer_cast<WrappedPipeEndpoint>(ep);
 
-		DIRECTOR_CALL2(handler->handler(ep2,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(ep2,err3));
 
 	}
 
@@ -746,35 +765,43 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(err2));
 			return;
 		}
 
-		DIRECTOR_CALL2(handler->handler(0,"",""));
-	}
-	
-	bool WrappedWireConnection::TryGetInValue(RR_INTRUSIVE_PTR<MessageElement>& value, TimeSpec& ts)
-	{
-		RR_INTRUSIVE_PTR<RRValue> value1;
-		if (!TryGetInValueBase(value1, ts))
-		{
-			return false;
-		}
-
-		value = RR_DYNAMIC_POINTER_CAST<MessageElement>(value1);
-		return true;
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(err3));
 	}
 
-	bool WrappedWireConnection::TryGetOutValue(RR_INTRUSIVE_PTR<MessageElement>& value, TimeSpec& ts)
+	TryGetValueResult WrappedWireConnection::TryGetInValue()
 	{
 		RR_INTRUSIVE_PTR<RRValue> value1;
-		if (!TryGetOutValueBase(value1, ts))
+		TryGetValueResult res;
+		res.res = TryGetInValueBase(value1, res.ts);
+		if (!res.res)
 		{
-			return false;
+			return res;
 		}
 
-		value = RR_DYNAMIC_POINTER_CAST<MessageElement>(value1);
-		return true;
+		res.value = RR_DYNAMIC_POINTER_CAST<MessageElement>(value1);
+		res.res = true;
+		return res;
+	}
+
+	TryGetValueResult WrappedWireConnection::TryGetOutValue()
+	{
+		RR_INTRUSIVE_PTR<RRValue> value1;
+		TryGetValueResult res;
+		res.res = TryGetOutValueBase(value1, res.ts);
+		if (!res.res)
+		{
+			return res;
+		}
+
+		res.value = RR_DYNAMIC_POINTER_CAST<MessageElement>(value1);
+		res.res = true;
+		return res;
 	}
 
 	//WrappedWireClient
@@ -789,13 +816,15 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedWireConnection>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedWireConnection>(),err2));
 			return;
 		}
 
 		RR_SHARED_PTR<WrappedWireConnection> ep2=boost::dynamic_pointer_cast<WrappedWireConnection>(ep);
 
-		DIRECTOR_CALL2(handler->handler(ep2,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(ep2,err3));
 
 	}
 
@@ -832,24 +861,31 @@ namespace RobotRaconteur
 		{
 			RR_INTRUSIVE_PTR<MessageElement> el;
 			TimeSpec ts;
-			DIRECTOR_CALL2(handler->handler(el, ts, err->ErrorCode, err->Error, err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(el, ts, err2));
 			return;
 		}
 		
+		HandlerErrorInfo err3;
 		RR_INTRUSIVE_PTR<MessageElement> value2 = RR_DYNAMIC_POINTER_CAST<MessageElement>(value);
-		DIRECTOR_CALL2(handler->handler(value2, ts, 0, "", ""));
+		DIRECTOR_CALL2(handler->handler(value2, ts, err3));
 	}
 	void WrappedWireClient::AsyncPokeValue_handler(RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncVoidReturnDirector> handler)
 	{
 		if (err)
-		{			
-			DIRECTOR_CALL2(handler->handler(err->ErrorCode, err->Error, err->Message));
+		{	
+			HandlerErrorInfo err2(err);		
+			DIRECTOR_CALL2(handler->handler(err2));
 			return;
 		}
 				
-		DIRECTOR_CALL2(handler->handler(0, "", ""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(err3));
 	}
 
+	//Generator Function
+
+	
 	//Generator Function
 
 	WrappedGeneratorClient::WrappedGeneratorClient(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
@@ -868,12 +904,13 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-
-			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(), err->ErrorCode, err->Error, err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(RR_INTRUSIVE_PTR<MessageElement>(), err2));
 
 			return;
-		}		
-		DIRECTOR_CALL2(handler->handler(m, 0, "", ""));
+		}
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(m, err3));
 	}
 		
 	void WrappedGeneratorClient::AsyncAbort(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id)
@@ -892,15 +929,15 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(err->ErrorCode, err->Error, err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(err2));
 			return;
 		}
 
-		DIRECTOR_CALL2(handler->handler(0, "", ""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(err3));
 	}
-
 	
-
 	// Service Discovery
 	ServiceInfo2Wrapped::ServiceInfo2Wrapped(const ServiceInfo2& value)
 	{
@@ -913,7 +950,7 @@ namespace RobotRaconteur
 
 		RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > map=AllocateEmptyRRMap<std::string,RRValue>();
 		map->GetStorageContainer()=value.Attributes;
-		RR_INTRUSIVE_PTR<MessageElementMap<std::string> > mmap=RobotRaconteurNode::s()->PackMapType<std::string,RRValue>(map);
+		RR_INTRUSIVE_PTR<MessageElementNestedElementList > mmap=RobotRaconteurNode::s()->PackMapType<std::string,RRValue>(map);
 		Attributes= CreateMessageElement("value",mmap);
 
 	}
@@ -960,17 +997,6 @@ namespace RobotRaconteur
 		node->AsyncFindNodeByName(name,transportschemes,boost::bind(&AsyncNodeInfo2VectorReturn_handler,_1,sphandler),timeout);
 	}
 	
-	void AsyncVoidNoErrReturn_handler(RR_SHARED_PTR<AsyncVoidNoErrReturnDirector> handler)
-	{
-		DIRECTOR_CALL2(handler->handler());
-	}
-
-	void AsyncWrappedUpdateDetectedNodes(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& schemes, int32_t timeout, AsyncVoidNoErrReturnDirector* handler, int32_t id1)
-	{
-		RR_SHARED_PTR<AsyncVoidNoErrReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>, _1, id1));
-		node->AsyncUpdateDetectedNodes(schemes, boost::bind(&AsyncVoidNoErrReturn_handler, sphandler), timeout);
-	}
-
 	std::vector<std::string> WrappedGetDetectedNodes(RR_SHARED_PTR<RobotRaconteurNode> node)
 	{
 		std::vector<std::string> o;
@@ -982,9 +1008,8 @@ namespace RobotRaconteur
 		return o;
 	}
 
-	
-
-	RR_INTRUSIVE_PTR<MessageEntry> RRDirectorExceptionHelper::last_err;
+				
+	RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> RRDirectorExceptionHelper::last_err;
 
 	void RRDirectorExceptionHelper::Reset()
 	{
@@ -1010,13 +1035,15 @@ namespace RobotRaconteur
 	{
 		if (err)
 		{
-			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedServiceStub>(),err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(RR_SHARED_PTR<WrappedServiceStub>(),err2));
 			return;
 		}
 
 		RR_SHARED_PTR<WrappedServiceStub> stub=boost::dynamic_pointer_cast<WrappedServiceStub>(obj);
 
-		DIRECTOR_CALL2(handler->handler(stub,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(stub,err3));
 	}
 
 	
@@ -1026,13 +1053,15 @@ namespace RobotRaconteur
 		if (err)
 		{
 			std::string ret = "";
-			DIRECTOR_CALL2(handler->handler(ret,err->ErrorCode,err->Error,err->Message));
+			HandlerErrorInfo err2(err);
+			DIRECTOR_CALL2(handler->handler(ret,err2));
 			return;
 		}
 
 		std::string* str2=str.get();
 
-		DIRECTOR_CALL2(handler->handler(*str2,0,"",""));
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(handler->handler(*str2,err3));
 	}
 
 	void WrappedExceptionHandler(const std::exception* err, RR_SHARED_PTR<AsyncVoidReturnDirector> handler)
@@ -1043,11 +1072,16 @@ namespace RobotRaconteur
 			const RobotRaconteurException* rrerr=dynamic_cast<const RobotRaconteurException*>(err);
 			if (rrerr)
 			{
-				DIRECTOR_CALL2(handler->handler(rrerr->ErrorCode,rrerr->Error,rrerr->Message));
+				HandlerErrorInfo err2(*rrerr);
+				DIRECTOR_CALL2(handler->handler(err2));
 			}
 			else
 			{
-				DIRECTOR_CALL2(handler->handler(MessageErrorType_UnknownError,std::string(typeid(*err).name()),err->what()));
+				HandlerErrorInfo err2;
+				err2.error_code = MessageErrorType_UnknownError;
+				err2.errorname = std::string(typeid(*err).name());
+				err2.errormessage = err->what();
+				DIRECTOR_CALL2(handler->handler(err2));
 			}
 		}
 		catch (std::exception&) {}
@@ -1057,7 +1091,8 @@ namespace RobotRaconteur
 	void TimerHandlerFunc(const TimerEvent& ev, RR_SHARED_PTR<AsyncTimerEventReturnDirector> d)
 	{
 		TimerEvent ev2=ev;
-		DIRECTOR_CALL2(d->handler(ev2,0,"","");)
+		HandlerErrorInfo err3;
+		DIRECTOR_CALL2(d->handler(ev2,err3);)
 	}
 
 	// Subscriptions
@@ -1463,7 +1498,7 @@ namespace RobotRaconteur
 				n2->NodeID = n->NodeID;
 				n2->NodeName = n->NodeName;
 				n2->Username = n->Username;
-				n2->Credentials = node->UnpackMapType<std::string, RRValue>(RR_DYNAMIC_POINTER_CAST<MessageElementMap<std::string> >(n->Credentials));
+				n2->Credentials = node->UnpackMapType<std::string, RRValue>(RR_DYNAMIC_POINTER_CAST<MessageElementNestedElementList>(n->Credentials));
 				filter2->Nodes.push_back(n2);
 			}
 
@@ -1493,6 +1528,72 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<ServiceSubscription> sub = node->SubscribeService(service_types, filter2);
 
 		return RR_MAKE_SHARED<WrappedServiceSubscription>(sub);
+	}
+
+	HandlerErrorInfo::HandlerErrorInfo()
+	{
+		this->error_code=0;
+	}
+	HandlerErrorInfo::HandlerErrorInfo(const RobotRaconteurException& exp)
+	{
+		this->error_code = exp.ErrorCode;
+		this->errormessage = exp.Message;
+		this->errorname = exp.Error;
+		this->errorsubname = exp.ErrorSubName;
+		try
+		{
+			this->param_ = CreateMessageElement("errorparam",detail::packing::PackVarType(exp.ErrorParam,NULL));
+		}
+		catch (std::exception&)
+		{
+			//TODO: log error
+		}
+	}
+	HandlerErrorInfo::HandlerErrorInfo(boost::shared_ptr<RobotRaconteurException> exp)
+	{
+		if (!exp)
+		{
+			this->error_code = 0;
+		}
+		else
+		{
+			this->error_code = exp->ErrorCode;
+			this->errormessage = exp->Message;
+			this->errorname = exp->Error;
+			this->errorsubname = exp->ErrorSubName;
+			try
+			{
+				this->param_ = CreateMessageElement("errorparam",detail::packing::PackVarType(exp->ErrorParam,NULL));
+			}
+			catch (std::exception&)
+			{
+				//TODO: log error
+			}
+		}
+	}
+
+	HandlerErrorInfo::HandlerErrorInfo(boost::intrusive_ptr<MessageEntry> m)
+	{
+		if (!m)
+		{
+			error_code = 0;
+		}
+		else
+		{
+			this->error_code = m->Error;
+			this->errorname = m->FindElement("errorname")->CastDataToString();
+			this->errormessage = m->FindElement("errorstring")->CastDataToString();
+			RR_INTRUSIVE_PTR<MessageElement> errorsubname;
+			if(m->TryFindElement("errorsubname",errorsubname))
+			{
+				this->errorsubname = errorsubname->CastDataToString();
+			}
+			RR_INTRUSIVE_PTR<MessageElement> param_;
+			if(m->TryFindElement("errorparam",param_))
+			{
+				this->param_ = param_;
+			}
+		}
 	}
 
 }

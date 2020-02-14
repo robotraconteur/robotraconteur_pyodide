@@ -68,7 +68,7 @@ namespace RobotRaconteur
 		int32_t id;
 		RR_WEAK_PTR<ServiceStub> stub;
 
-		GeneratorClientBase(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub);
+		GeneratorClientBase(boost::string_ref name, int32_t id, RR_SHARED_PTR<ServiceStub> stub);
 
 		virtual void AsyncNextBase(RR_INTRUSIVE_PTR<MessageElement> v, boost::function<void(RR_INTRUSIVE_PTR<MessageElement>, RR_SHARED_PTR<RobotRaconteurException>, RR_SHARED_PTR<RobotRaconteurNode>)> handler, int32_t timeout);
 		
@@ -114,7 +114,7 @@ namespace RobotRaconteur
 	class GeneratorClient : public Generator<Return,Param>, public GeneratorClientBase
 	{
 	public:
-		GeneratorClient(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
+		GeneratorClient(boost::string_ref name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
 			: GeneratorClientBase(name, id, stub)
 		{
 		}
@@ -140,7 +140,7 @@ namespace RobotRaconteur
 	class GeneratorClient<Return,void> : public Generator<Return, void>, public GeneratorClientBase
 	{
 	public:
-		GeneratorClient(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
+		GeneratorClient(boost::string_ref name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
 			: GeneratorClientBase(name, id, stub)
 		{
 		}
@@ -165,7 +165,7 @@ namespace RobotRaconteur
 	class GeneratorClient<void,Param> : public Generator<void, Param>, public GeneratorClientBase
 	{
 	public:
-		GeneratorClient(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
+		GeneratorClient(boost::string_ref name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
 			: GeneratorClientBase(name, id, stub)
 		{
 		}

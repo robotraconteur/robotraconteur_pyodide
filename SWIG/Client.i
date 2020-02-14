@@ -39,7 +39,7 @@ class AsyncStubReturnDirector
 {
 public:
 	virtual ~AsyncStubReturnDirector() {}
-	virtual void handler(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> stub, uint32_t error_code, const std::string& errorname, const std::string& errormessage);
+	virtual void handler(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> stub, HandlerErrorInfo& error);
 };
 
 %nodefaultctor WrappedServiceStub;
@@ -64,7 +64,7 @@ public:
 	virtual void RRClose();
 	
 	boost::shared_ptr<RobotRaconteur::ServiceEntryDefinition> RR_objecttype;
-	virtual std::string RRType();
+	virtual boost::string_ref RRType();
 	//WrappedServiceStubDirector* RR_Director;
 		
 	void SetRRDirector(WrappedServiceStubDirector* director, int32_t id);

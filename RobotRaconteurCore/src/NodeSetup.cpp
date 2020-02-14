@@ -3,7 +3,7 @@
 namespace RobotRaconteur
 {
 	RobotRaconteurNodeSetup::RobotRaconteurNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
-		const std::string& node_name, uint16_t tcp_port, uint32_t flags)
+		boost::string_ref node_name, uint16_t tcp_port, uint32_t flags)
 	{
 		this->node = node;
 
@@ -42,13 +42,13 @@ namespace RobotRaconteur
 	}
 
 	ClientNodeSetup::ClientNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
-		const std::string& node_name, uint32_t flags)
+		boost::string_ref node_name, uint32_t flags)
 		: RobotRaconteurNodeSetup(node, service_types, node_name, 0, flags)
 	{
 
 	}
 
-	ClientNodeSetup::ClientNodeSetup(const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, const std::string& node_name, uint32_t flags)
+	ClientNodeSetup::ClientNodeSetup(const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, boost::string_ref node_name, uint32_t flags)
 		: RobotRaconteurNodeSetup(RobotRaconteurNode::sp(), service_types, node_name, 0, flags)
 	{
 

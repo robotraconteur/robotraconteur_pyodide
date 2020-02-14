@@ -51,10 +51,19 @@ NodeID::NodeID(const NodeID& id)
 	this->id=id.id;
 }
 
-
-
-
 NodeID::NodeID(const std::string& id)
+{
+	boost::string_ref id2(id);
+	init_from_string(id2);
+}
+
+
+NodeID::NodeID(boost::string_ref id)
+{
+	init_from_string(id);
+}
+
+void NodeID::init_from_string(const boost::string_ref& id)
 {
 	if (id.find(":")!=id.npos)
 	{
@@ -62,17 +71,15 @@ NodeID::NodeID(const std::string& id)
 	}
 	else
 	{
-
-		if (boost::trim_copy(id)=="{0}")
+		if (boost::trim_copy(to_range(id)) == boost::string_ref("{0}"))
 		{
 			this->id=boost::uuids::nil_uuid();
 			return;
 		}
 
-		boost::smatch what;
-		std::string id1 = id;
+		boost::match_results<boost::string_ref::const_iterator> what;		
 		boost::regex r("\\{?([a-fA-F0-9]{8})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{4})-?([a-fA-F0-9]{12})\\}?");
-		if (!boost::regex_match(id1, what, r))
+		if (!boost::regex_match(id.begin(),id.end(), what, r))
 			throw InvalidArgumentException("Invalid NodeID");
 		size_t len = what.size();
 		if (what.size() != 6) throw InvalidArgumentException("Invalid NodeID");
@@ -88,6 +95,10 @@ NodeID::NodeID(const std::string& id)
 			ss << std::hex << id3;
 			uint32_t id4;
 			ss >> id4;
+			if (ss.fail() || !ss.eof())
+			{
+				throw InvalidArgumentException("Invalid NodeID");
+			}
 			u1.data[i] = static_cast<uint8_t>((id4 & 0xFF));
 		}
 		this->id = u1;
@@ -117,7 +128,7 @@ std::string NodeID::ToString() const
 
 }
 
-std::string NodeID::ToString(const std::string& format) const
+std::string NodeID::ToString(boost::string_ref format) const
 {
 	if (format == "B")
 	{

@@ -286,18 +286,18 @@ class AsyncRequestDirectorImpl(RobotRaconteurPython.AsyncRequestDirector):
         self._node=node
         self._stub=stub
 
-    def handler(self,m,error_code,errorname,errormessage):
+    def handler(self,m,error_info):
 
         if (self._isvoid):
-            if (error_code!=0):
-                err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+            if (error_info.error_code!=0):
+                err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
                 self._handler(err)
                 return
             else:
                 self._handler(None)
         else:
-            if (error_code!=0):
-                err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+            if (error_info.error_code!=0):
+                err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
                 self._handler(None,err)
                 return
             else: 
@@ -536,9 +536,9 @@ class PipeAsyncConnectHandlerImpl(RobotRaconteurPython.AsyncPipeEndpointReturnDi
         self.__innerpipe=innerpipe
         self.__obj=obj
 
-    def handler(self, innerendpoint, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, innerendpoint, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(None,err)
             return
         try:            
@@ -638,20 +638,16 @@ class WireConnection(object):
         return self.__innerwire.GetIgnoreInValue()
 
     def TryGetInValue(self):
-        ts=RobotRaconteurPython.TimeSpec()
-        m=RobotRaconteurPython.MessageElement()
-        res=self.__innerwire.TryGetInValue(m,ts)
-        if not res:
+        res=self.__innerwire.TryGetInValue()
+        if not res.res:
             return (False,None, None)
-        return (True, UnpackMessageElement(m,self.__type,self.__obj,self.__innerwire.GetNode()), ts)
+        return (True, UnpackMessageElement(res.value,self.__type,self.__obj,self.__innerwire.GetNode()), res.ts)
 
-    def TryGetOutValue(self):
-        ts=RobotRaconteurPython.TimeSpec()
-        m=RobotRaconteurPython.MessageElement()
-        res=self.__innerwire.TryGetOutValue(m,ts)
-        if not res:
+    def TryGetOutValue(self):        
+        res=self.__innerwire.TryGetOutValue()
+        if not res.res:
             return (False,None, None)
-        return (True, UnpackMessageElement(m,self.__type,self.__obj,self.__innerwire.GetNode()), ts)
+        return (True, UnpackMessageElement(res.value,self.__type,self.__obj,self.__innerwire.GetNode()), res.ts)
 
     @IgnoreInValue.setter
     def IgnoreInValue(self,value):
@@ -694,9 +690,9 @@ class WireAsyncConnectHandlerImpl(RobotRaconteurPython.AsyncWireConnectionReturn
         self.__innerpipe=innerpipe
         self.__obj=obj
 
-    def handler(self, innerendpoint, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, innerendpoint, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(None,err)
             return
         try:            
@@ -716,10 +712,10 @@ class WireAsyncPeekReturnDirectorImpl(RobotRaconteurPython.AsyncWirePeekReturnDi
         self.__innerpipe=innerpipe
         self.__obj=obj
 
-    def handler(self,m,ts,error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
-            self._handler((None, None), err)
+    def handler(self,m,ts,error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
+            self._handler(None, None, err)
             return
         value=UnpackMessageElement(m,self.__innerpipe.Type,self.__obj,self.__innerpipe.GetNode())
         self._handler((value, ts), None)
@@ -811,7 +807,7 @@ def convert_constant(const):
         else:
             if (t.ArrayType == RobotRaconteurPython.DataTypes_ArrayTypes_array):
                 s3=const.Value.strip().lstrip('{').rstrip('}')
-                return const.Name, [int(i) for i in s3.split(',')]
+                return const.Name, [int(i,0) for i in s3.split(',')]
             else:
                 return const.Name, const.Value
     
@@ -865,7 +861,7 @@ def ServiceDefinitionConstants(servicedef, node, obj):
                 c_value[f_name]=o[f_value]
                 
                 
-    for n,v in elem_o.values():
+    for n,v in elem_o.items():
         o[n]=v
     
     for e in servicedef.Enums:
@@ -888,9 +884,9 @@ class AsyncStubReturnDirectorImpl(RobotRaconteurPython.AsyncStubReturnDirector):
         super(AsyncStubReturnDirectorImpl,self).__init__()
         self._handler=handler
 
-    def handler(self, innerstub2, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, innerstub2, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(None,err)
             return
         try:            
@@ -909,9 +905,9 @@ class AsyncVoidReturnDirectorImpl(RobotRaconteurPython.AsyncVoidReturnDirector):
         super(AsyncVoidReturnDirectorImpl,self).__init__()
         self._handler=handler
 
-    def handler(self, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(err)
             return        
         self._handler(None)
@@ -929,9 +925,9 @@ class AsyncStringReturnDirectorImpl(RobotRaconteurPython.AsyncStringReturnDirect
         super(AsyncStringReturnDirectorImpl,self).__init__()
         self._handler=handler
 
-    def handler(self, istr, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, istr, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(None,err)
             return       
         self._handler(istr, None)
@@ -941,9 +937,9 @@ class AsyncUInt32ReturnDirectorImpl(RobotRaconteurPython.AsyncUInt32ReturnDirect
         super(AsyncUInt32ReturnDirectorImpl,self).__init__()
         self._handler=handler
 
-    def handler(self, e, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, e, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(None,err)
             return       
         self._handler(e, None)
@@ -953,7 +949,7 @@ class AsyncTimerEventReturnDirectorImpl(RobotRaconteurPython.AsyncTimerEventRetu
         super(AsyncTimerEventReturnDirectorImpl,self).__init__()
         self._handler=handler
 
-    def handler(self, ev, error_code, errorname, errormessage):        
+    def handler(self, ev, error_info):        
         self._handler(ev)
 
 def async_call(func, args, directorclass, handler, noerror=False, directorargs=()):
@@ -992,9 +988,9 @@ class ExceptionHandlerDirectorImpl(RobotRaconteurPython.AsyncVoidReturnDirector)
         super(ExceptionHandlerDirectorImpl,self).__init__()
         self._handler=handler
 
-    def handler(self, error_code,errorname,errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(err)
             return
 
@@ -1057,9 +1053,9 @@ class AsyncGeneratorClientReturnDirectorImpl(RobotRaconteurPython.AsyncGenerator
         self._obj=obj
         self._node=node
         
-    def handler(self, gen, error_code, errorname, errormessage):
-        if (error_code!=0):
-            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorCodeToException(error_code,errorname,errormessage)
+    def handler(self, gen, error_info):
+        if (error_info.error_code!=0):
+            err=RobotRaconteurPythonError.RobotRaconteurExceptionUtil.ErrorInfoToException(error_info)
             self._handler(None,err)
             return
         
@@ -1361,13 +1357,12 @@ class PipeSubscription(object):
     def TryReceivePacket(self):
         return self.TryReceivePacketWait(0)
 
-    def TryReceivePacketWait(self, timeout=-1):
-        m=RobotRaconteurPython.MessageElement()
-        res=self._subscription.TryReceivePacket(m)
-        if (not res):
+    def TryReceivePacketWait(self, timeout=-1,peek=False):  
+        res=self._subscription.TryReceivePacketWait(adjust_timeout(timeout),peek)
+        if (not res.res):
             return (False, None)
         else:
-            return (True, self._UnpackValue(m))
+            return (True, self._UnpackValue(res.packet))
 
     @property
     def Available(self):
@@ -1530,11 +1525,13 @@ class ClientNodeSetup(RobotRaconteurNodeSetup):
         super(ClientNodeSetup,self).__init__(node_name,0,flags,node)
 
 def settrace():
-    #This function enables debugging for the threads started by the ThreadPool
-    #You may see a warning in Eclipse; it can safely be ignored.
-    t=_trace_hook
-    if (t is not None):
-        sys.settrace(t)
+    # Enable debugging in vscode if ptvsd has been loaded
+    # This may potentially activate debugging when not expected if ptvsd has been imported
+    # for some reason
+
+    if 'ptvsd' in sys.modules:
+        import ptvsd
+        ptvsd.debug_this_thread()
 
 # Based on https://github.com/akloster/aioweb-demo/blob/master/src/main.py
 

@@ -43,14 +43,22 @@ class AsyncWireConnectionReturnDirector
 {
 public:
 	virtual ~AsyncWireConnectionReturnDirector();
-	virtual void handler(boost::shared_ptr<RobotRaconteur::WrappedWireConnection> ep, uint32_t error_code, const std::string& errorname, const std::string& errormessage);
+	virtual void handler(boost::shared_ptr<RobotRaconteur::WrappedWireConnection> ep, HandlerErrorInfo& error);
 };
 
 class AsyncWirePeekReturnDirector
 {
 public:
 	virtual ~AsyncWirePeekReturnDirector() {}
-	virtual void handler(boost::intrusive_ptr<RobotRaconteur::MessageElement> value, const TimeSpec& ts, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+	virtual void handler(boost::intrusive_ptr<RobotRaconteur::MessageElement> value, const TimeSpec& ts, HandlerErrorInfo& error) {};
+};
+
+class TryGetValueResult
+{
+public:
+	bool res;
+	boost::intrusive_ptr<RobotRaconteur::MessageElement> value;
+	TimeSpec ts;
 };
 
 %nodefaultctor WrappedWireConnection;
@@ -80,8 +88,8 @@ public:
 
 	bool GetOutValueValid();
 	
-	bool TryGetInValue(boost::intrusive_ptr<MessageElement>& value, TimeSpec& ts);
-	bool TryGetOutValue(boost::intrusive_ptr<MessageElement>& value, TimeSpec& ts);
+	TryGetValueResult TryGetInValue();
+	TryGetValueResult TryGetOutValue();
 
 	void AsyncClose(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id);
 	

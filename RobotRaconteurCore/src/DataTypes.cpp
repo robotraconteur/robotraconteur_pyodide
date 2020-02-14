@@ -25,11 +25,11 @@ namespace RobotRaconteur
 
 
 
-ROBOTRACONTEUR_CORE_API RR_INTRUSIVE_PTR<RRArray<char> > stringToRRArray(const std::string& str)
+ROBOTRACONTEUR_CORE_API RR_INTRUSIVE_PTR<RRArray<char> > stringToRRArray(boost::string_ref str)
 {
 	size_t s=str.size();
 	RR_INTRUSIVE_PTR<RRArray<char> > ret=AllocateRRArray<char>(s);
-	memcpy(ret->data(),str.c_str(),s);
+	memcpy(ret->data(),str.data(),s);
 	return ret;
 
 
@@ -60,11 +60,43 @@ RRValue::RRValue()
 
 std::string RRBaseArray::RRType()
 {
-		std::string type=GetTypeString();
-		boost::replace_all(type,"[]","");
-
-		return "RobotRaconteur.RRArray<" + type + ">";
+	switch (GetTypeID())
+	{	
+	case DataTypes_double_t:
+		return "RobotRaconteur.RRArray<double>";
+	case DataTypes_single_t:
+		return "RobotRaconteur.RRArray<single>";
+	case DataTypes_int8_t:
+		return "RobotRaconteur.RRArray<int8>";
+	case DataTypes_uint8_t:
+		return "RobotRaconteur.RRArray<uint8>";
+	case DataTypes_int16_t:
+		return "RobotRaconteur.RRArray<int16>";
+	case DataTypes_uint16_t:
+		return "RobotRaconteur.RRArray<uint16>";
+	case DataTypes_int32_t:
+		return "RobotRaconteur.RRArray<int32>";
+	case DataTypes_uint32_t:
+		return "RobotRaconteur.RRArray<uint32>";
+	case DataTypes_int64_t:
+		return "RobotRaconteur.RRArray<int64>";
+	case DataTypes_uint64_t:
+		return "RobotRaconteur.RRArray<uint64>";
+	case DataTypes_string_t:
+		return "RobotRaconteur.RRArray<char>";
+	case DataTypes_cdouble_t:
+		return "RobotRaconteur.RRArray<cdouble>";
+	case DataTypes_csingle_t:
+		return "RobotRaconteur.RRArray<csingle>";
+	case DataTypes_bool_t:
+		return "RobotRaconteur.RRArray<bool>";
+	default:
+		throw DataTypeException("Invalid data type");
 	}
+
+	throw DataTypeException("Invalid data type");
+
+}
 
 #ifdef ROBOTRACONTEUR_USE_WSTRING
 
@@ -79,7 +111,7 @@ ROBOTRACONTEUR_CORE_API std::string utf8_encode(const std::wstring &wstr)
 }
 
 // Convert an UTF8 string to a wide Unicode String
-ROBOTRACONTEUR_CORE_API std::wstring utf8_decode(const std::string &str)
+ROBOTRACONTEUR_CORE_API std::wstring utf8_decode(boost::string_ref str)
 {
 	if (str.size()==0) return L"";
 
@@ -542,7 +574,7 @@ namespace detail
 
 namespace detail
 {
-	ROBOTRACONTEUR_CORE_API std::string encode_index(const std::string& index)
+	ROBOTRACONTEUR_CORE_API std::string encode_index(boost::string_ref index)
 	{
 		std::stringstream out;
 
@@ -562,9 +594,9 @@ namespace detail
 		return out.str();
 	}
 
-	ROBOTRACONTEUR_CORE_API std::string decode_index(const std::string& index)
+	ROBOTRACONTEUR_CORE_API std::string decode_index(boost::string_ref index)
 	{
-		std::stringstream in(index);
+		std::stringstream in(index.to_string());
 		std::stringstream out;
 
 		while (in.tellg()<boost::numeric_cast<int>(index.length()) && (static_cast<int>(in.tellg())) != -1)
@@ -579,12 +611,19 @@ namespace detail
 			{
 				char in2_c[3];
 				in.read(in2_c, 2);
+				if (in.fail())
+				{
+					throw InvalidArgumentException("Invalid encoded index");
+				}
 				in2_c[2] = 0;
 				std::stringstream in2(in2_c);
-
-
+				
 				int v;
 				in2 >> std::hex >> v;
+				if (in2.fail() || !in2.eof())
+				{
+					throw InvalidArgumentException("Invalid encoded index");
+				}
 				out.put(v);
 			}
 
@@ -613,5 +652,209 @@ bool operator== (const rr_bool &c1, const rr_bool &c2)
 	return (c1.value == c2.value);
 }
 bool operator!= (const rr_bool &c1, const rr_bool &c2) { return !(c1 == c2); }
+
+
+RR_INTRUSIVE_PTR<RRList<RRArray<char> > > stringVectorToRRList(const std::vector<std::string>& string_vector)
+{
+	RR_INTRUSIVE_PTR<RRList<RRArray<char> > > o = AllocateEmptyRRList<RRArray<char> >();
+	BOOST_FOREACH(const std::string& s, string_vector)
+	{
+		o->push_back(stringToRRArray(s));
+	}
+	return o;
+}
+
+std::vector<std::string> RRListToStringVector(RR_INTRUSIVE_PTR<RRList<RRArray<char> > > list)
+{
+	rr_null_check(list, "Unexected null string list");
+	std::vector<std::string> o;
+	BOOST_FOREACH(RR_INTRUSIVE_PTR<RRArray<char> > e, *list)
+	{
+		o.push_back(RRArrayToString(e));
+	}
+	return o;
+}
+
+namespace detail
+{
+
+class MessageStringRef_ptr_to_str : public boost::static_visitor<boost::string_ref>
+{
+public:
+	boost::string_ref operator()(const detail::MessageStringData_string_ref& str) const {return str.ref;}
+	boost::string_ref operator()(const detail::MessageStringData_static_string& str) const {return str.ref;}
+	boost::string_ref operator()(const detail::MessageStringData* str_ptr) const
+	{
+		if (!str_ptr)
+		{
+			return "";
+		}
+		return str_ptr->str;
+	}
+	boost::string_ref operator()(const detail::MessageStringData& str_ptr) const
+	{
+		return str_ptr.str;
+	}
+};
+
+class MessageStringRef_from_ptr : public boost::static_visitor<boost::variant<const detail::MessageStringData*,
+		    detail::MessageStringData_static_string,
+			detail::MessageStringData_string_ref> >
+{
+public:
+
+	boost::variant<const detail::MessageStringData*,
+		    detail::MessageStringData_static_string,
+			detail::MessageStringData_string_ref> operator()(const detail::MessageStringData_static_string& str) const
+	{
+		return str;
+	}
+	boost::variant<const detail::MessageStringData*,
+		    detail::MessageStringData_static_string,
+			detail::MessageStringData_string_ref> operator()(const detail::MessageStringData& str_ptr) const {return &str_ptr;}
+};
+
+class MessageStringPtr_from_ref : public boost::static_visitor<boost::variant<detail::MessageStringData, 
+		    detail::MessageStringData_static_string> >
+{
+public:
+
+	boost::variant<detail::MessageStringData, 
+		    detail::MessageStringData_static_string> operator()(const detail::MessageStringData_string_ref& str) const
+	{
+		detail::MessageStringData dat;
+		dat.str = str.ref.to_string();
+		return dat;
+	}
+	boost::variant<detail::MessageStringData, 
+		    detail::MessageStringData_static_string> operator()(const detail::MessageStringData_static_string& str) const
+	{
+		return str;
+	}
+	boost::variant<detail::MessageStringData, 
+		    detail::MessageStringData_static_string> operator()(const detail::MessageStringData* str_ptr) const {return *str_ptr;}
+};
+
+}
+
+MessageStringPtr::MessageStringPtr() 
+{
+	_str_ptr = detail::MessageStringData_static_string("");	
+}
+MessageStringPtr::MessageStringPtr(const std::string& str)
+{
+	detail::MessageStringData dat;
+	dat.str = str;
+	this->_str_ptr = RR_MOVE(dat);
+}
+MessageStringPtr::MessageStringPtr(boost::string_ref str, bool is_static)
+{
+	if (is_static)
+	{
+		_str_ptr = detail::MessageStringData_static_string(str);
+	}
+	else
+	{
+		detail::MessageStringData dat;
+		dat.str = str.to_string();
+		this->_str_ptr = RR_MOVE(dat);
+	}
+}
+
+MessageStringPtr::MessageStringPtr(const MessageStringPtr& str_ptr)
+{
+	this->_str_ptr = str_ptr._str_ptr;
+}
+MessageStringPtr::MessageStringPtr(const MessageStringRef& str_ref)
+{
+	this->_str_ptr = boost::apply_visitor(detail::MessageStringPtr_from_ref(), str_ref._str);
+}
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+MessageStringPtr::MessageStringPtr(std::string&& str)
+{
+	detail::MessageStringData dat;
+	dat.str = RR_MOVE(str);
+	this->_str_ptr = RR_MOVE(dat);
+}
+#endif
+
+void MessageStringPtr::init_literal(const char* str, size_t len)
+{
+	_str_ptr = detail::MessageStringData_static_string(boost::string_ref(str,len));
+}
+
+boost::string_ref MessageStringPtr::str() const
+{	
+	return boost::apply_visitor(detail::MessageStringRef_ptr_to_str(), _str_ptr);
+}
+
+void MessageStringPtr::reset()
+{	
+	_str_ptr = detail::MessageStringData_static_string("");	
+}
+
+bool MessageStringPtr::operator ==(MessageStringRef b) const
+{
+	return this->str() == b.str();
+}
+bool MessageStringPtr::operator !=(MessageStringRef b) const
+{
+	return this->str() != b.str();
+}
+bool MessageStringPtr::operator <(MessageStringRef b) const
+{
+	return this->str() <= b.str();
+}
+
+MessageStringRef::MessageStringRef(const std::string& str)
+{
+	boost::string_ref str1(str);
+	_str = detail::MessageStringData_string_ref(str1);
+}
+
+MessageStringRef::MessageStringRef(boost::string_ref str, bool is_static)
+{
+	if (is_static)
+	{
+		_str = detail::MessageStringData_static_string(str);
+	}
+	else
+	{
+		_str = detail::MessageStringData_string_ref(str);
+	}
+}
+MessageStringRef::MessageStringRef(const MessageStringPtr& str_ptr)
+{
+	_str = boost::apply_visitor(detail::MessageStringRef_from_ptr(),str_ptr._str_ptr);
+}
+MessageStringRef::MessageStringRef(const MessageStringRef& str_ref)
+{
+	_str = str_ref._str;
+}
+
+void MessageStringRef::init_literal(const char* str, size_t len)
+{
+	_str = detail::MessageStringData_static_string(boost::string_ref(str,len));
+}
+
+bool MessageStringRef::operator ==(MessageStringRef b) const
+{
+	return this->str() == b.str();
+}
+bool MessageStringRef::operator !=(MessageStringRef b) const
+{
+	return this->str() != b.str();
+}
+
+boost::string_ref MessageStringRef::str() const
+{
+	return boost::apply_visitor(detail::MessageStringRef_ptr_to_str(), _str);
+}
+
+std::size_t hash_value(const RobotRaconteur::MessageStringPtr& k)
+{
+	boost::string_ref k1 = k.str();
+	return boost::hash_range(k1.begin(), k1.end());
+}
 
 }

@@ -302,7 +302,7 @@ namespace RobotRaconteur
 		}
 		else
 		{
-			RR_INTRUSIVE_PTR<MessageElementStructure> s = MessageElement::FindElement(me->elements, "packettime")->CastData<MessageElementStructure>();
+			RR_INTRUSIVE_PTR<MessageElementNestedElementList> s = MessageElement::FindElement(me->elements, "packettime")->CastDataToNestedList(DataTypes_structure_t);
 			int64_t seconds = RRArrayToScalar(MessageElement::FindElement(s->Elements, "seconds")->CastData<RRArray<int64_t> >());
 			int32_t nanoseconds = RRArrayToScalar(MessageElement::FindElement(s->Elements, "nanoseconds")->CastData<RRArray<int32_t> >());
 			ts = TimeSpec(seconds, nanoseconds);
@@ -354,7 +354,7 @@ namespace RobotRaconteur
 			std::vector<RR_INTRUSIVE_PTR<MessageElement> > timespec1;
 			timespec1.push_back(CreateMessageElement("seconds", ScalarToRRArray(time.seconds)));
 			timespec1.push_back(CreateMessageElement("nanoseconds", ScalarToRRArray(time.nanoseconds)));
-			RR_INTRUSIVE_PTR<MessageElementStructure> s = CreateMessageElementStructure("RobotRaconteur.TimeSpec", timespec1);
+			RR_INTRUSIVE_PTR<MessageElementNestedElementList> s = CreateMessageElementNestedElementList(DataTypes_structure_t, "RobotRaconteur.TimeSpec", RR_MOVE(timespec1));
 
 
 			std::vector<RR_INTRUSIVE_PTR<MessageElement> > elems;
@@ -546,11 +546,10 @@ namespace RobotRaconteur
 		}
 	}
 
-	
-	WireClientBase::WireClientBase(const std::string& name, RR_SHARED_PTR<ServiceStub> stub, MemberDefinition_Direction direction)
+	WireClientBase::WireClientBase(boost::string_ref name, RR_SHARED_PTR<ServiceStub> stub, MemberDefinition_Direction direction)
 	{
 		this->stub=stub;
-		this->m_MemberName=name;
+		this->m_MemberName = RR_MOVE(name.to_string());
 		this->node=stub->RRGetNode();
 		this->direction = direction;
 	}
@@ -620,7 +619,7 @@ namespace RobotRaconteur
 	{
 		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(value, TimeSpec::Now(), GetStub()->GetContext()->UseMessage3());
 		m->EntryType = MessageEntryType_WirePokeOutValueReq;
-		m->MetaData = "";
+		m->MetaData.reset();
 		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase_AsyncPokeValueBaseEnd, _1, _2, handler), timeout);
 	}
 

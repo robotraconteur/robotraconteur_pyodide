@@ -43,33 +43,33 @@ namespace RobotRaconteur
 
 		virtual std::string DefString()=0;
 
-		virtual RR_SHARED_PTR<StructureStub> FindStructureStub(const std::string& s)=0;
+		virtual RR_SHARED_PTR<StructureStub> FindStructureStub(boost::string_ref s)=0;
 		
-		virtual RR_INTRUSIVE_PTR<MessageElementStructure> PackStructure(RR_INTRUSIVE_PTR<RRStructure> structin)=0;
+		virtual RR_INTRUSIVE_PTR<MessageElementNestedElementList> PackStructure(RR_INTRUSIVE_PTR<RRStructure> structin)=0;
 				
-		virtual RR_INTRUSIVE_PTR<RRValue> UnpackStructure(RR_INTRUSIVE_PTR<MessageElementStructure> mstructin)=0; 
+		virtual RR_INTRUSIVE_PTR<RRValue> UnpackStructure(RR_INTRUSIVE_PTR<MessageElementNestedElementList> mstructin)=0; 
 
-		virtual RR_INTRUSIVE_PTR<MessageElementPodArray> PackPodArray(RR_INTRUSIVE_PTR<RRPodBaseArray> structure)=0;
+		virtual RR_INTRUSIVE_PTR<MessageElementNestedElementList> PackPodArray(RR_INTRUSIVE_PTR<RRPodBaseArray> structure)=0;
 
-		virtual RR_INTRUSIVE_PTR<RRPodBaseArray> UnpackPodArray(RR_INTRUSIVE_PTR<MessageElementPodArray> structure)=0;
+		virtual RR_INTRUSIVE_PTR<RRPodBaseArray> UnpackPodArray(RR_INTRUSIVE_PTR<MessageElementNestedElementList> structure)=0;
 
-		virtual RR_INTRUSIVE_PTR<MessageElementPodMultiDimArray> PackPodMultiDimArray(RR_INTRUSIVE_PTR<RRPodBaseMultiDimArray> structure)=0;
+		virtual RR_INTRUSIVE_PTR<MessageElementNestedElementList> PackPodMultiDimArray(RR_INTRUSIVE_PTR<RRPodBaseMultiDimArray> structure)=0;
 
-		virtual RR_INTRUSIVE_PTR<RRPodBaseMultiDimArray> UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<MessageElementPodMultiDimArray> structure)=0;
+		virtual RR_INTRUSIVE_PTR<RRPodBaseMultiDimArray> UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<MessageElementNestedElementList> structure)=0;
 
-		virtual RR_INTRUSIVE_PTR<MessageElementNamedArray> PackNamedArray(RR_INTRUSIVE_PTR<RRNamedBaseArray> structure) = 0;
+		virtual RR_INTRUSIVE_PTR<MessageElementNestedElementList> PackNamedArray(RR_INTRUSIVE_PTR<RRNamedBaseArray> structure) = 0;
 
-		virtual RR_INTRUSIVE_PTR<RRNamedBaseArray> UnpackNamedArray(RR_INTRUSIVE_PTR<MessageElementNamedArray> structure) = 0;
+		virtual RR_INTRUSIVE_PTR<RRNamedBaseArray> UnpackNamedArray(RR_INTRUSIVE_PTR<MessageElementNestedElementList> structure) = 0;
 
-		virtual RR_INTRUSIVE_PTR<MessageElementNamedMultiDimArray> PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RRNamedBaseMultiDimArray> structure) = 0;
+		virtual RR_INTRUSIVE_PTR<MessageElementNestedElementList> PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RRNamedBaseMultiDimArray> structure) = 0;
 
-		virtual RR_INTRUSIVE_PTR<RRNamedBaseMultiDimArray> UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<MessageElementNamedMultiDimArray> structure) = 0;
+		virtual RR_INTRUSIVE_PTR<RRNamedBaseMultiDimArray> UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<MessageElementNestedElementList> structure) = 0;
 
-		virtual RR_SHARED_PTR<ServiceStub> CreateStub(const std::string& objecttype, const std::string& path, RR_SHARED_PTR<ClientContext> context)=0;
+		virtual RR_SHARED_PTR<ServiceStub> CreateStub(boost::string_ref objecttype, boost::string_ref path, RR_SHARED_PTR<ClientContext> context)=0;
 
 		virtual RR_SHARED_PTR<ServiceDefinition> ServiceDef();
 		
-		virtual std::string RemovePath(const std::string &path);
+		virtual std::string RemovePath(boost::string_ref path);
 
 		virtual void DownCastAndThrowException(RobotRaconteurException& exp)=0;
 
@@ -86,7 +86,7 @@ namespace RobotRaconteur
 
 		virtual ~DynamicServiceFactory() {}
 
-		virtual RR_SHARED_PTR<ServiceFactory> CreateServiceFactory(const std::string& def) = 0;
+		virtual RR_SHARED_PTR<ServiceFactory> CreateServiceFactory(boost::string_ref def) = 0;
 
 		virtual std::vector<RR_SHARED_PTR<ServiceFactory> > CreateServiceFactories(const std::vector<std::string>& def) = 0;
 	};

@@ -114,9 +114,9 @@ void BrowserWebSocketTransport::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, bo
 	t->AsyncSendMessage(m,handler);
 }
 
-void BrowserWebSocketTransport::AsyncCreateTransportConnection(const std::string& url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& handler)
+void BrowserWebSocketTransport::AsyncCreateTransportConnection(boost::string_ref url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& handler)
 {
-    RR_SHARED_PTR<BrowserWebSocketTransportConnection> t=RR_MAKE_SHARED<BrowserWebSocketTransportConnection>(shared_from_this(), url, e->GetLocalEndpoint());
+    RR_SHARED_PTR<BrowserWebSocketTransportConnection> t=RR_MAKE_SHARED<BrowserWebSocketTransportConnection>(shared_from_this(), url.to_string(), e->GetLocalEndpoint());
     t->AsyncConnect(boost::bind(handler,t,_1));
 }
 
@@ -140,9 +140,10 @@ void BrowserWebSocketTransport::CloseTransportConnection(RR_SHARED_PTR<Endpoint>
     }
 }
 
-bool BrowserWebSocketTransport::CanConnectService(const std::string& url)
+bool BrowserWebSocketTransport::CanConnectService(boost::string_ref url1)
 {
-		
+	
+    std::string url = url1.to_string();
 	if (url.size() < 6) return false;
 
 	if (boost::starts_with(url,"tcp://"))
@@ -191,7 +192,7 @@ void BrowserWebSocketTransport::PeriodicCleanupTask()
 	}
 }
 
-uint32_t BrowserWebSocketTransport::TransportCapability(const std::string& name)
+uint32_t BrowserWebSocketTransport::TransportCapability(boost::string_ref name)
 {
     return 0;
 }

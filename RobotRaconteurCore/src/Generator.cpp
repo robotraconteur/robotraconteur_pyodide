@@ -24,9 +24,9 @@
 
 namespace RobotRaconteur
 {
-	GeneratorClientBase::GeneratorClientBase(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
+	GeneratorClientBase::GeneratorClientBase(boost::string_ref name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
 	{
-		this->name = name;
+		this->name = RR_MOVE(name.to_string());
 		this->id = id;
 		this->stub = stub;
 	}

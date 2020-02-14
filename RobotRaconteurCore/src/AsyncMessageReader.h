@@ -100,36 +100,9 @@ namespace RobotRaconteur
 			//Read Data
 			MessageElement_readarray1,
 			MessageElement_readarray2,
-			MessageElement_readstruct1,
-			MessageElement_readstruct2,
-			MessageElement_readstruct3,
-			MessageElement_readvector1,
-			MessageElement_readvector2,
-			MessageElement_readvector3,
-			MessageElement_readdictionary1,
-			MessageElement_readdictionary2,
-			MessageElement_readdictionary3,
-			MessageElement_readmultiarray1,
-			MessageElement_readmultiarray2,
-			MessageElement_readmultiarray3,
-			MessageElement_readlist1,
-			MessageElement_readlist2,
-			MessageElement_readlist3,
-			MessageElement_readpod1,
-			MessageElement_readpod2,
-			MessageElement_readpod3,
-			MessageElement_readpodarray1,
-			MessageElement_readpodarray2,
-			MessageElement_readpodarray3,
-			MessageElement_readpodmultidimarray1,
-			MessageElement_readpodmultidimarray2,
-			MessageElement_readpodmultidimarray3,
-			MessageElement_readnamedarrayarray1,
-			MessageElement_readnamedarrayarray2,
-			MessageElement_readnamedarrayarray3,
-			MessageElement_readnamedarraymultidimarray1,
-			MessageElement_readnamedarraymultidimarray2,
-			MessageElement_readnamedarraymultidimarray3,
+			MessageElement_readnested1,
+			MessageElement_readnested2,
+			MessageElement_readnested3,			
 			//Read header string
 			Header_readstring,
 
@@ -148,6 +121,7 @@ namespace RobotRaconteur
 			void* ptrdata;
 			size_t param1;
 			size_t param2;
+			std::string param3;
 
 			state_data();			
 		};
@@ -190,13 +164,14 @@ namespace RobotRaconteur
 
 		size_t& param1();
 		size_t& param2();
+		std::string& param3();
 
 		size_t& limit();
 		size_t distance_from_limit();
 
 		void pop_state();
 		void push_state(state_type new_state, state_type pop_state, size_t relative_limit, RR_INTRUSIVE_PTR<RRValue> data, size_t param1 = 0, size_t param2 = 0);
-		void push_state(state_type new_state, state_type pop_state, size_t relative_limit, void *ptrdata, size_t param1 = 0, size_t param2 = 0);
+		void push_state(state_type new_state, state_type pop_state, size_t relative_limit, void *ptrdata, size_t param1, size_t param2, std::string& param3);
 				
 		void prepare_continue(const const_buffers& other_buf, size_t& other_bufs_used);
 
@@ -209,10 +184,10 @@ namespace RobotRaconteur
 		bool read_uint_x2(uint64_t& number);
 		bool read_int_x(int32_t& number);
 		bool read_int_x2(int64_t& number);
-		bool read_string(std::string& str, state_type next_state);
-		bool read_string(std::string& str); //next_state=state()++
-		bool read_string3(std::string& str, state_type next_state);
-		bool read_string3(std::string& str); //next_state=state()++
+		bool read_string(MessageStringPtr& str, state_type next_state);
+		bool read_string(MessageStringPtr& str); //next_state=state()++
+		bool read_string3(MessageStringPtr& str, state_type next_state);
+		bool read_string3(MessageStringPtr& str); //next_state=state()++
 		
 		virtual void Reset();
 		virtual return_type Read(const const_buffers& other_bufs, size_t& other_bufs_used, size_t continue_read_len, mutable_buffers& next_continue_read_bufs);

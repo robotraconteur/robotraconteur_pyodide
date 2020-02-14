@@ -47,9 +47,9 @@ std::string Endpoint::GetRemoteNodeName()
 	return ret;
 }
 
-void Endpoint::SetRemoteNodeName(std::string name)
+void Endpoint::SetRemoteNodeName(boost::string_ref name)
 {
-	m_RemoteNodeName=name;
+	m_RemoteNodeName = RR_MOVE(name.to_string());
 }
 
 NodeID Endpoint::GetRemoteNodeID()
@@ -137,8 +137,8 @@ void Endpoint::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::function<voi
 	{
 
 	}
-	
-	uint32_t Endpoint::EndpointCapability(const std::string &name)
+
+	uint32_t Endpoint::EndpointCapability(boost::string_ref name)
 	{
 		return static_cast<uint32_t>(0);
 	}

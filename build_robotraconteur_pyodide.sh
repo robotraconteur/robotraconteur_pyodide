@@ -66,7 +66,7 @@ fi
 -DCMAKE_C_FLAGS="$SIDE_C_FLAGS" \
 )
 
-( cd $CURRENT_DIR/build && make VERBOSE=1 -j8 )
+( cd $CURRENT_DIR/build && make VERBOSE=1 -j1 )
 
 PYODIDE_RR_DIR=$PYODIDE_ROOT/root/lib/python3.7/site-packages/RobotRaconteur
 

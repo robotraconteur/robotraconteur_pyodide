@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ASIOStreamBaseTransport.h"
+#include "RobotRaconteur/ASIOStreamBaseTransport.h"
 #include "RobotRaconteur/Message.h"
 #include "RobotRaconteur/IOUtils.h"
 
@@ -103,7 +103,7 @@ namespace RobotRaconteur
 
 
 
-void ASIOStreamBaseTransport::AsyncAttachStream(bool server, const NodeID& target_nodeid, const std::string& target_nodename, boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>& callback)
+void ASIOStreamBaseTransport::AsyncAttachStream(bool server, const NodeID& target_nodeid, boost::string_ref target_nodename, boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>& callback)
 {
 	
 	try
@@ -1538,7 +1538,7 @@ bool ASIOStreamBaseTransport::IsConnected()
 }
 
 
-uint32_t ASIOStreamBaseTransport::StreamCapabilities(const std::string &name)
+uint32_t ASIOStreamBaseTransport::StreamCapabilities(boost::string_ref name)
 {
 	if (name == "com.robotraconteur.message.v_max")
 	{
@@ -1599,7 +1599,7 @@ uint32_t ASIOStreamBaseTransport::StreamCapabilities(const std::string &name)
 }
 
 
-void ASIOStreamBaseTransport::AsyncCheckStreamCapability(const std::string &name, boost::function<void (uint32_t, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
+void ASIOStreamBaseTransport::AsyncCheckStreamCapability(boost::string_ref name, boost::function<void (uint32_t, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
 {
 	if (CheckStreamCapability_closed)
 	{
@@ -1612,11 +1612,11 @@ void ASIOStreamBaseTransport::AsyncCheckStreamCapability(const std::string &name
 	}
 	else
 	{
-		CheckStreamCapability_queue.push(boost::make_tuple(name,callback));
+		CheckStreamCapability_queue.push(boost::make_tuple(name.to_string(),callback));
 	}
 }
 
-void ASIOStreamBaseTransport::BeginCheckStreamCapability(const std::string &name, boost::function<void (uint32_t, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
+void ASIOStreamBaseTransport::BeginCheckStreamCapability(boost::string_ref name, boost::function<void (uint32_t, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
 {
 		
 	{
@@ -1740,7 +1740,7 @@ void ASIOStreamBaseTransport::CheckStreamCapability_MessageReceived( RR_INTRUSIV
 			ret->header->ReceiverNodeID = m->header->SenderNodeID;
 			RR_INTRUSIVE_PTR<MessageEntry> mret = CreateMessageEntry(MessageEntryType_StreamCheckCapabilityRet, m->entries.at(0)->MemberName);
 			mret->ServicePath = m->entries.at(0)->ServicePath;
-			mret->AddElement("return", ScalarToRRArray(StreamCapabilities(m->entries.at(0)->MemberName)));
+			mret->AddElement("return", ScalarToRRArray(StreamCapabilities(m->entries.at(0)->MemberName.str())));
 			ret->entries.push_back(mret);
 
 			
@@ -1788,7 +1788,7 @@ void ASIOStreamBaseTransport::CheckStreamCapability_MessageReceived( RR_INTRUSIV
 }
 
 
-void ASIOStreamBaseTransport::AsyncStreamOp(const std::string &command, RR_SHARED_PTR<RRObject> args,  boost::function<void (RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
+void ASIOStreamBaseTransport::AsyncStreamOp(boost::string_ref command, RR_SHARED_PTR<RRObject> args,  boost::function<void (RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
 {
 
 	if (streamop_closed)
@@ -1803,17 +1803,17 @@ void ASIOStreamBaseTransport::AsyncStreamOp(const std::string &command, RR_SHARE
 	}
 	else
 	{
-		streamop_queue.push(boost::make_tuple(command,args,callback));
+		streamop_queue.push(boost::make_tuple(command.to_string(),args,callback));
 	}
 }
 
-void ASIOStreamBaseTransport::BeginStreamOp(const std::string &command, RR_SHARED_PTR<RRObject> args,  boost::function<void (RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
+void ASIOStreamBaseTransport::BeginStreamOp(boost::string_ref command, RR_SHARED_PTR<RRObject> args,  boost::function<void (RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)>& callback)
 {
 	{		
 		
 		RR_INTRUSIVE_PTR<Message> m = CreateMessage();
 		m->header = CreateMessageHeader();
-		m->header->ReceiverNodeName = "";
+		m->header->ReceiverNodeName.reset();
 		m->header->SenderNodeName = GetNode()->NodeName();
 		m->header->SenderNodeID = GetNode()->NodeID();
 		{
@@ -1878,7 +1878,7 @@ void ASIOStreamBaseTransport::BeginStreamOp(const std::string &command, RR_SHARE
 }
 
 
-RR_INTRUSIVE_PTR<MessageEntry> ASIOStreamBaseTransport::PackStreamOpRequest(const std::string &command, RR_SHARED_PTR<RRObject> args)
+RR_INTRUSIVE_PTR<MessageEntry> ASIOStreamBaseTransport::PackStreamOpRequest(boost::string_ref command, RR_SHARED_PTR<RRObject> args)
 {
 	RR_INTRUSIVE_PTR<MessageEntry> mm = CreateMessageEntry(MessageEntryType_StreamOp, command);
 
@@ -1965,7 +1965,7 @@ void ASIOStreamBaseTransport::StreamOp_timercallback(RR_WEAK_PTR<ASIOStreamBaseT
 
 RR_INTRUSIVE_PTR<MessageEntry> ASIOStreamBaseTransport::ProcessStreamOpRequest(RR_INTRUSIVE_PTR<MessageEntry> request, RR_INTRUSIVE_PTR<MessageHeader> header)
 {
-	std::string command=request->MemberName;
+	const MessageStringPtr& command=request->MemberName;
 	RR_INTRUSIVE_PTR<MessageEntry> mmret = CreateMessageEntry(MessageEntryType_StreamOpRet, command);
 
 	try
@@ -2083,7 +2083,7 @@ void ASIOStreamBaseTransport::StreamOpMessageReceived(RR_INTRUSIVE_PTR<Message> 
 	}
 	if (mm->EntryType == MessageEntryType_StreamOp)
 	{
-		std::string command = mm->MemberName;
+		const MessageStringPtr& command = mm->MemberName;
 		RR_INTRUSIVE_PTR<Message> mret = CreateMessage();
 		mret->header = CreateMessageHeader();
 		mret->header->SenderNodeName = GetNode()->NodeName();
@@ -2105,7 +2105,7 @@ void ASIOStreamBaseTransport::StreamOpMessageReceived(RR_INTRUSIVE_PTR<Message> 
 		{
 			streamop_waiting = false;
 
-			string command=mm->MemberName;
+			const MessageStringPtr& command=mm->MemberName;
 
 			RR_SHARED_PTR<RobotRaconteurException> rrexp;
 			RR_SHARED_PTR<RRObject> ret;
@@ -2164,7 +2164,7 @@ void ASIOStreamBaseTransport::StreamOpMessageReceived(RR_INTRUSIVE_PTR<Message> 
 
 RR_SHARED_PTR<RRObject> ASIOStreamBaseTransport::UnpackStreamOpResponse(RR_INTRUSIVE_PTR<MessageEntry> response, RR_INTRUSIVE_PTR<MessageHeader> header)
 {
-	std::string command=response->MemberName;
+	const MessageStringPtr& command=response->MemberName;
 	if (command == "GetRemoteNodeID")
 	{
 		//std::cout << "Got node id" << std::endl;
@@ -2188,7 +2188,7 @@ RR_SHARED_PTR<RRObject> ASIOStreamBaseTransport::UnpackStreamOpResponse(RR_INTRU
 		{
 			if (target_nodename!="")
 			{
-				if (target_nodename!=header->SenderNodeName)
+				if (header->SenderNodeName != target_nodename)
 					throw ConnectionException("Invalid node connection");
 			}
 

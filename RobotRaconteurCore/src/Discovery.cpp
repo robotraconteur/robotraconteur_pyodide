@@ -321,7 +321,7 @@ namespace RobotRaconteur
 					if (ret1->Error == RobotRaconteur::MessageErrorType_None)
 					{
 						RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> me = ret1->FindElement("return");
-						RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> > ret = RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo  > >((node->UnpackMapType<int32_t, RobotRaconteurServiceIndex::ServiceInfo  >(me->CastData<RobotRaconteur::MessageElementMap<int32_t> >())));
+						RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> > ret = RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo  > >((node->UnpackMapType<int32_t, RobotRaconteurServiceIndex::ServiceInfo  >(me->CastData<RobotRaconteur::MessageElementNestedElementList >())));
 
 						if (ret)
 						{
@@ -542,13 +542,13 @@ namespace RobotRaconteur
 			}
 		}
 
-		void Discovery_findservicebytype::AsyncFindServiceByType(const std::string& servicetype, const std::vector<std::string>& schemes, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<std::vector<ServiceInfo2> >)>) handler, int32_t timeout)
+		void Discovery_findservicebytype::AsyncFindServiceByType(boost::string_ref servicetype, const std::vector<std::string>& schemes, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<std::vector<ServiceInfo2> >)>) handler, int32_t timeout)
 		{
 			this->handler = handler;
 			this->schemes = schemes;
 			this->timeout = timeout;
 
-			this->servicetype = servicetype;
+			this->servicetype = RR_MOVE(servicetype.to_string());
 			if (timeout != RR_TIMEOUT_INFINITE)
 			{
 				timeout_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&Discovery_findservicebytype::timeout_timer_callback, shared_from_this(), _1), true);
@@ -602,7 +602,7 @@ namespace RobotRaconteur
 				return;
 			}
 
-			boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, const std::string&, RR_SHARED_PTR<RobotRaconteurException>)> handler2 = handler;
+			boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, boost::string_ref, RR_SHARED_PTR<RobotRaconteurException>)> handler2 = handler;
 			handler.clear();
 
 			{
@@ -676,7 +676,7 @@ namespace RobotRaconteur
 			try
 			{
 				RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> me = ret1->FindElement("return");
-				RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> > ret = RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> >((n->UnpackMapType<int32_t, RobotRaconteurServiceIndex::ServiceInfo>(me->CastData<RobotRaconteur::MessageElementMap<int32_t> >())));
+				RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> > ret = RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> >((n->UnpackMapType<int32_t, RobotRaconteurServiceIndex::ServiceInfo>(me->CastDataToNestedList())));
 
 				if (ret)
 				{
@@ -706,7 +706,7 @@ namespace RobotRaconteur
 				return;
 			}
 
-			boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, const std::string&, RR_SHARED_PTR<RobotRaconteurException>)> handler2 = handler;
+			boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, boost::string_ref, RR_SHARED_PTR<RobotRaconteurException>)> handler2 = handler;
 			handler.clear();
 						
 			{
@@ -813,12 +813,12 @@ namespace RobotRaconteur
 
 		}
 
-		void Discovery_updateserviceinfo::AsyncUpdateServiceInfo(RR_SHARED_PTR<Discovery_nodestorage> storage, const std::string& service_nonce, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, const std::string&, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t extra_backoff)
+		void Discovery_updateserviceinfo::AsyncUpdateServiceInfo(RR_SHARED_PTR<Discovery_nodestorage> storage, boost::string_ref service_nonce, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<Discovery_nodestorage>, RR_SHARED_PTR<std::vector<ServiceInfo2> >, boost::string_ref, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t extra_backoff)
 		{
 			this->storage = storage;
 			this->handler = handler;
 			this->retry_count = 0;
-			this->service_nonce = service_nonce;
+			this->service_nonce = RR_MOVE(service_nonce.to_string());
 
 
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
@@ -1010,7 +1010,7 @@ namespace RobotRaconteur
 
 		}
 
-		void Discovery::EndUpdateServiceInfo(RR_SHARED_PTR<Discovery_nodestorage> storage, RR_SHARED_PTR<std::vector<ServiceInfo2> > info, const std::string& nonce, RR_SHARED_PTR<RobotRaconteurException> err)
+		void Discovery::EndUpdateServiceInfo(RR_SHARED_PTR<Discovery_nodestorage> storage, RR_SHARED_PTR<std::vector<ServiceInfo2> > info, boost::string_ref nonce, RR_SHARED_PTR<RobotRaconteurException> err)
 		{
 
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
@@ -1018,7 +1018,7 @@ namespace RobotRaconteur
 
 			if (!info) return;
 			storage->services = info;
-			storage->last_update_nonce = nonce;
+			storage->last_update_nonce = RR_MOVE(nonce.to_string());
 			storage->last_update_time = n->NowUTC();
 
 			if (storage->last_update_nonce != storage->info->ServiceStateNonce)
@@ -1105,7 +1105,7 @@ namespace RobotRaconteur
 		}
 
 
-		void Discovery::NodeAnnouncePacketReceived(const std::string& packet)
+		void Discovery::NodeAnnouncePacketReceived(boost::string_ref packet)
 		{
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
 			if (!n) return;
@@ -1123,7 +1123,7 @@ namespace RobotRaconteur
 
 					RobotRaconteur::NodeID nodeid(idline.at(0));
 
-					std::string nodename = "";
+					std::string nodename;
 					if (idline.size() > 1)
 					{
 						nodename = idline.at(1);
@@ -1138,7 +1138,7 @@ namespace RobotRaconteur
 					}
 					if (nodename.size() > 128)
 					{
-						nodename = "";
+						nodename.clear();
 					}
 
 					try
@@ -1271,7 +1271,7 @@ namespace RobotRaconteur
 		}
 
 
-		void Discovery::AsyncFindServiceByType(const std::string &servicetype, const std::vector<std::string>& transportschemes, boost::function<void(RR_SHARED_PTR<std::vector<ServiceInfo2> >) >& handler, int32_t timeout)
+		void Discovery::AsyncFindServiceByType(boost::string_ref servicetype, const std::vector<std::string>& transportschemes, boost::function<void(RR_SHARED_PTR<std::vector<ServiceInfo2> >) >& handler, int32_t timeout)
 		{
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
 			if (!n) throw InvalidOperationException("Node has been released");
@@ -1315,8 +1315,7 @@ namespace RobotRaconteur
 			f->AsyncFindServiceByType(servicetype, transportschemes, RR_MOVE(handler), timeout);
 
 		}
-	
-
+		
 		void Discovery::AsyncFindNodeByID(const RobotRaconteur::NodeID& id, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout)
 		{
 			RobotRaconteur::NodeID id1 = id;
@@ -1377,10 +1376,10 @@ namespace RobotRaconteur
 			detail::InvokeHandler(node, handler, ret);
 
 		}
-		
-		void Discovery::AsyncFindNodeByName(const std::string& name, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout)
+
+		void Discovery::AsyncFindNodeByName(boost::string_ref name, const std::vector<std::string>& transportschemes, boost::function< void(RR_SHARED_PTR<std::vector<NodeInfo2> >) >& handler, int32_t timeout)
 		{
-			boost::function<void()> h = boost::bind(&Discovery::EndAsyncFindNodeByName, shared_from_this(), name, transportschemes, handler);
+			boost::function<void()> h = boost::bind(&Discovery::EndAsyncFindNodeByName, shared_from_this(), name.to_string(), transportschemes, handler);
 			AsyncUpdateDetectedNodes(transportschemes, h, timeout);
 		}
 
@@ -1518,7 +1517,7 @@ namespace RobotRaconteur
 
 			{
 				is_shutdown.data() = true;
-				subscriptions.swap(subscriptions1);
+				subscriptions = RR_MOVE(subscriptions1);
 			}
 
 			BOOST_FOREACH(RR_WEAK_PTR<IServiceSubscription>& s, subscriptions1)

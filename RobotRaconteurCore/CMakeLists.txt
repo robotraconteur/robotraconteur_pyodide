@@ -4,7 +4,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fPIC" )
 endif()
 
 IF (MSVC)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251 /wd4275")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4251 /wd4275 /bigobj")
 ENDIF()
 
 set(RobotRaconteurCore_src
@@ -26,8 +26,7 @@ set(RobotRaconteurCore_src
 	src/ServiceFactory.cpp	
 	src/Transport.cpp
 	src/WireMember.cpp
-	src/WireMember_private.h
-	src/ASIOStreamBaseTransport.h
+	src/WireMember_private.h	
 	src/ASIOStreamBaseTransport.cpp
 	src/Timer.cpp
 	src/AsyncUtils.cpp	
@@ -44,6 +43,7 @@ set(RobotRaconteurCore_src
 	src/NodeSetup.cpp
 	src/BrowserWebSocketTransport.cpp
 	src/BrowserWebSocketTransport_private.h 
+	src/DataTypesPacking.cpp
 )
 
 set(RobotRaconteurCore_header
@@ -76,6 +76,8 @@ set(RobotRaconteurCore_header
 	include/RobotRaconteur/Generator.h
 	include/RobotRaconteur/NodeSetup.h
 	include/RobotRaconteur/BrowserWebSocketTransport.h
+	include/RobotRaconteur/DataTypesPacking.h
+	include/RobotRaconteur/ASIOStreamBaseTransport.h
 )
 
 link_directories("${Boost_LIBRARY_DIRS}")

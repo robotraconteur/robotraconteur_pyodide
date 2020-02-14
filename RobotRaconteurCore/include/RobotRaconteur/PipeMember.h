@@ -406,7 +406,7 @@ namespace RobotRaconteur
 
 		void AsyncConnect_internal1(RR_INTRUSIVE_PTR<MessageEntry> ret, RR_SHARED_PTR<RobotRaconteurException> err, int32_t index, int32_t key, boost::function<void (RR_SHARED_PTR<PipeEndpointBase>,RR_SHARED_PTR<RobotRaconteurException>)>& handler);
 
-		PipeClientBase(const std::string& name, RR_SHARED_PTR<ServiceStub> stub, bool unreliable, MemberDefinition_Direction direction);
+		PipeClientBase(boost::string_ref name, RR_SHARED_PTR<ServiceStub> stub, bool unreliable, MemberDefinition_Direction direction);
 
 		virtual RR_SHARED_PTR<PipeEndpointBase> CreateNewPipeEndpoint(int32_t index, bool unreliable, MemberDefinition_Direction direction, bool message3)=0;
 
@@ -430,7 +430,7 @@ namespace RobotRaconteur
 			AsyncConnect_internal(index,boost::bind(handler,boost::bind(&PipeClient<T>::AsyncConnect_cast,_1),_2),timeout); 
 		}
 		
-		PipeClient(const std::string& name, RR_SHARED_PTR<ServiceStub> stub, bool unreliable=false, MemberDefinition_Direction direction = MemberDefinition_Direction_both, boost::function<void(RR_INTRUSIVE_PTR<RRValue>&)> verify=NULL) : PipeClientBase(name,stub,unreliable,direction), Pipe<T>(verify)
+		PipeClient(boost::string_ref name, RR_SHARED_PTR<ServiceStub> stub, bool unreliable=false, MemberDefinition_Direction direction = MemberDefinition_Direction_both, boost::function<void(RR_INTRUSIVE_PTR<RRValue>&)> verify=NULL) : PipeClientBase(name,stub,unreliable,direction), Pipe<T>(verify)
 		{
 			if (boost::is_same<T,RR_INTRUSIVE_PTR<MessageElement> >::value)
 			{

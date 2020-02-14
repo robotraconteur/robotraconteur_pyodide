@@ -186,18 +186,19 @@ RR_Ensure_GIL gil; \
 		virtual std::string GetServiceName();
 		virtual std::string DefString();
 		virtual RR_SHARED_PTR<ServiceDefinition> ServiceDef();
-		virtual RR_SHARED_PTR<RobotRaconteur::StructureStub> FindStructureStub(const std::string& s);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> structin);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementStructure> mstructin);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodArray> PackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> UnpackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodMultiDimArray> PackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementPodMultiDimArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedArray> PackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> UnpackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedMultiDimArray> PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> structure);
-		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNamedMultiDimArray> structure);
-		virtual RR_SHARED_PTR<RobotRaconteur::ServiceStub> CreateStub(const std::string& objecttype, const std::string& path, RR_SHARED_PTR<RobotRaconteur::ClientContext> context);
+		virtual RR_SHARED_PTR<RobotRaconteur::StructureStub> FindStructureStub(boost::string_ref s);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> PackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::RRStructure> structin);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRValue> UnpackStructure(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> mstructin);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> PackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseArray> UnpackPodArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> PackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRPodBaseMultiDimArray> UnpackPodMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> PackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseArray> UnpackNamedArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> PackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> structure);
+		virtual RR_INTRUSIVE_PTR<RobotRaconteur::RRNamedBaseMultiDimArray> UnpackNamedMultiDimArray(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElementNestedElementList> structure);
+		virtual RR_SHARED_PTR<RobotRaconteur::ServiceStub> CreateStub(boost::string_ref objecttype, boost::string_ref path, RR_SHARED_PTR<RobotRaconteur::ClientContext> context);
+		
 		virtual void DownCastAndThrowException(RobotRaconteurException& exp)
 		{
 			throw exp;
@@ -217,7 +218,7 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~WrappedDynamicServiceFactory() {}
-		virtual RR_SHARED_PTR<ServiceFactory> CreateServiceFactory(const std::string& def);
+		virtual RR_SHARED_PTR<ServiceFactory> CreateServiceFactory(boost::string_ref def);
 		virtual std::vector<RR_SHARED_PTR<ServiceFactory> > CreateServiceFactories(const std::vector<std::string>& def);
 	};
 
@@ -230,11 +231,26 @@ RR_Ensure_GIL gil; \
 
 	};*/
 
+	class HandlerErrorInfo
+	{
+	public:
+		uint32_t error_code;
+		std::string errorname;
+		std::string errormessage;
+		std::string errorsubname;
+		boost::intrusive_ptr<RobotRaconteur::MessageElement> param_;
+
+		HandlerErrorInfo();
+		HandlerErrorInfo(const RobotRaconteurException& exp);
+		HandlerErrorInfo(boost::shared_ptr<RobotRaconteurException> exp);
+		HandlerErrorInfo(boost::intrusive_ptr<MessageEntry> m);
+	};
+
 	class AsyncRequestDirector
 	{
 	public:
 		virtual ~AsyncRequestDirector() {}
-		virtual void handler(RR_INTRUSIVE_PTR<MessageElement> ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(RR_INTRUSIVE_PTR<MessageElement> ret, HandlerErrorInfo& error) {};
 
 	};
 
@@ -242,7 +258,7 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~AsyncVoidReturnDirector() {}
-		virtual void handler(uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(HandlerErrorInfo& error) {};
 	};
 
 	class AsyncVoidNoErrReturnDirector
@@ -256,21 +272,21 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~AsyncStringReturnDirector() {}
-		virtual void handler(const std::string& ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(const std::string& ret, HandlerErrorInfo& error) {};
 	};
 
 	class AsyncUInt32ReturnDirector
 	{
 	public:
 		virtual ~AsyncUInt32ReturnDirector() {}
-		virtual void handler(uint32_t ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(uint32_t ret, HandlerErrorInfo& error) {};
 	};
 
 	class AsyncTimerEventReturnDirector
 	{
 	public:
 		virtual ~AsyncTimerEventReturnDirector() {}
-		virtual void handler(const TimerEvent& ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(const TimerEvent& ret, HandlerErrorInfo& error) {};
 	};
 
 	
@@ -293,13 +309,13 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~AsyncStubReturnDirector() {}
-		virtual void handler(boost::shared_ptr<WrappedServiceStub> stub, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(boost::shared_ptr<WrappedServiceStub> stub, HandlerErrorInfo& error) {};
 	};
 
 	class WrappedServiceStub : public virtual RobotRaconteur::ServiceStub
 	{
 	public:
-		WrappedServiceStub(const std::string& path, RR_SHARED_PTR<ServiceEntryDefinition> type, RR_SHARED_PTR<RobotRaconteur::ClientContext> c);
+		WrappedServiceStub(boost::string_ref path, RR_SHARED_PTR<ServiceEntryDefinition> type, RR_SHARED_PTR<RobotRaconteur::ClientContext> c);
 		virtual ~WrappedServiceStub();
 
 		virtual void async_PropertyGet(const std::string& PropertyName, int32_t timeout, AsyncRequestDirector* handler,int32_t id);
@@ -326,8 +342,9 @@ RR_Ensure_GIL gil; \
 		virtual RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> CallbackCall(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m);
 		virtual RR_SHARED_PTR<RobotRaconteur::WrappedPipeClient> GetPipe(const std::string& membername);
 		virtual RR_SHARED_PTR<RobotRaconteur::WrappedWireClient> GetWire(const std::string& membername);
-		virtual RR_SHARED_PTR<PipeClientBase> RRGetPipeClient(const std::string& membername);
-		virtual RR_SHARED_PTR<WireClientBase> RRGetWireClient(const std::string& membername);		
+		virtual RR_SHARED_PTR<PipeClientBase> RRGetPipeClient(boost::string_ref membername);
+		virtual RR_SHARED_PTR<WireClientBase> RRGetWireClient(boost::string_ref membername);
+		
 		virtual void RRClose();
 		virtual void RRInitStub();
 	public:
@@ -411,6 +428,13 @@ RR_Ensure_GIL gil; \
 
 	};
 
+	class WrappedTryReceivePacketWaitResult
+	{
+	public:
+		bool res;
+		RR_INTRUSIVE_PTR<MessageElement> packet;
+	};
+
 	class WrappedPipeEndpoint : public PipeEndpointBase
 	{
 
@@ -424,7 +448,8 @@ RR_Ensure_GIL gil; \
 		virtual void AsyncSendPacket(RR_INTRUSIVE_PTR<MessageElement> packet, AsyncUInt32ReturnDirector* handler, int32_t id);
 		virtual RR_INTRUSIVE_PTR<MessageElement> ReceivePacket();
 		virtual RR_INTRUSIVE_PTR<MessageElement> PeekNextPacket();
-		virtual bool TryReceivePacket(RR_INTRUSIVE_PTR<MessageElement>& packet, bool peek = false);
+		
+		virtual WrappedTryReceivePacketWaitResult TryReceivePacketWait(int32_t timeout = RR_TIMEOUT_INFINITE, bool peek = false);
 		
 		WrappedPipeEndpoint(RR_SHARED_PTR<PipeBase> parent, int32_t index, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, bool unreliable, MemberDefinition_Direction direction, bool message3);
 		RR_SHARED_PTR<TypeDefinition> Type;
@@ -465,7 +490,7 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~AsyncPipeEndpointReturnDirector() {}
-		virtual void handler(boost::shared_ptr<WrappedPipeEndpoint> ep, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(boost::shared_ptr<WrappedPipeEndpoint> ep, HandlerErrorInfo& error) {};
 	};
 
 	class WrappedPipeClient : public virtual PipeClientBase
@@ -497,6 +522,14 @@ RR_Ensure_GIL gil; \
 		virtual void WireConnectionClosedCallback() {}
 	};
 
+	class TryGetValueResult
+	{
+	public:
+		bool res;
+		RR_INTRUSIVE_PTR<MessageElement> value;
+		TimeSpec ts;
+	};
+
 	class WrappedWireConnection : public virtual WireConnectionBase
 	{
 	public:
@@ -509,8 +542,8 @@ RR_Ensure_GIL gil; \
 		virtual RR_INTRUSIVE_PTR<MessageElement> GetOutValue();
 		virtual void SetOutValue(RR_INTRUSIVE_PTR<MessageElement> value);
 
-		bool TryGetInValue(RR_INTRUSIVE_PTR<MessageElement>& value, TimeSpec& ts);
-		bool TryGetOutValue(RR_INTRUSIVE_PTR<MessageElement>& value, TimeSpec& ts);
+		TryGetValueResult TryGetInValue();
+		TryGetValueResult TryGetOutValue();
 
 		WrappedWireConnection(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, MemberDefinition_Direction direction, bool message3) ;
 
@@ -541,14 +574,14 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~AsyncWireConnectionReturnDirector() {}
-		virtual void handler(boost::shared_ptr<WrappedWireConnection> ep, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(boost::shared_ptr<WrappedWireConnection> ep, HandlerErrorInfo& error) {};
 	};
 
 	class AsyncWirePeekReturnDirector
 	{
 	public:
 		virtual ~AsyncWirePeekReturnDirector() {}
-		virtual void handler(RR_INTRUSIVE_PTR<MessageElement> value, const TimeSpec& ts, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(RR_INTRUSIVE_PTR<MessageElement> value, const TimeSpec& ts, HandlerErrorInfo& error) {};
 	};
 
 	class WrappedWireClient : public virtual WireClientBase
@@ -578,7 +611,7 @@ RR_Ensure_GIL gil; \
 	{
 	public:
 		virtual ~AsyncGeneratorClientReturnDirector() {}
-		virtual void handler(boost::shared_ptr<WrappedGeneratorClient> ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage) {};
+		virtual void handler(boost::shared_ptr<WrappedGeneratorClient> ret, HandlerErrorInfo& error) {};
 	};
 
 	class WrappedGeneratorClient : public GeneratorClientBase

@@ -27,9 +27,9 @@ namespace RobotRaconteur
 		std::string m_MemberName;
 
 	public:
-		Callback(const std::string& name)
+		Callback(boost::string_ref name)
 		{
-			m_MemberName = name;
+			m_MemberName = RR_MOVE(name.to_string());
 		}
 
 		virtual ~Callback() {}
@@ -58,7 +58,7 @@ namespace RobotRaconteur
 	class CallbackClient : public Callback<T>
 	{
 	public:
-		CallbackClient(const std::string& name) : Callback<T>(name)
+		CallbackClient(boost::string_ref name) : Callback<T>(name)
 		{
 			InitializeInstanceFields();
 		}

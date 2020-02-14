@@ -43,6 +43,6 @@ namespace RobotRaconteur
 	{
 	public:
 		virtual ~AsyncGeneratorClientReturnDirector() {}
-		virtual void handler(boost::shared_ptr<WrappedGeneratorClient> ret, uint32_t error_code, const std::string& errorname, const std::string& errormessage);
-	};	
+		virtual void handler(boost::shared_ptr<WrappedGeneratorClient> ret, HandlerErrorInfo& error);
+	};
 }

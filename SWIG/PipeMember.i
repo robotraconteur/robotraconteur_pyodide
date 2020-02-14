@@ -35,7 +35,14 @@ class AsyncPipeEndpointReturnDirector
 {
 public:
 	virtual ~AsyncPipeEndpointReturnDirector();
-	virtual void handler(boost::shared_ptr<RobotRaconteur::WrappedPipeEndpoint> ep, uint32_t error_code, const std::string& errorname, const std::string& errormessage);
+	virtual void handler(boost::shared_ptr<RobotRaconteur::WrappedPipeEndpoint> ep, HandlerErrorInfo& error);
+};
+
+class WrappedTryReceivePacketWaitResult
+{
+public:
+    bool res;
+	boost::intrusive_ptr<MessageElement> packet;
 };
 
 %nodefaultctor WrappedPipeEndpoint;
@@ -47,8 +54,7 @@ public:
 	virtual boost::intrusive_ptr<RobotRaconteur::MessageElement> ReceivePacket();
 	virtual boost::intrusive_ptr<RobotRaconteur::MessageElement> PeekNextPacket();
 
-	bool TryReceivePacket(boost::intrusive_ptr<MessageElement>& packet, bool peek = false);
-	
+	WrappedTryReceivePacketWaitResult TryReceivePacketWait(int32_t timeout = RR_TIMEOUT_INFINITE, bool peek = false);
 	
 	virtual int32_t GetIndex();
 	virtual uint32_t GetEndpoint();

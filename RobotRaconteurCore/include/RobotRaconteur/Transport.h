@@ -124,9 +124,10 @@ namespace RobotRaconteur
 
 		//public abstract string Scheme { get; }
 
-		virtual bool CanConnectService(const std::string& url) = 0;
+		virtual bool CanConnectService(boost::string_ref url) = 0;
 
-		virtual void AsyncCreateTransportConnection(const std::string& url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& handler)=0;
+
+		virtual void AsyncCreateTransportConnection(boost::string_ref url, RR_SHARED_PTR<Endpoint> e, boost::function<void (RR_SHARED_PTR<ITransportConnection>, RR_SHARED_PTR<RobotRaconteurException> ) >& handler)=0;
 
 		virtual void CloseTransportConnection(RR_SHARED_PTR<Endpoint> e) = 0;
 		
@@ -140,7 +141,8 @@ namespace RobotRaconteur
 
 		virtual void PeriodicCleanupTask();
 
-		virtual uint32_t TransportCapability(const std::string& name);
+
+		virtual uint32_t TransportCapability(boost::string_ref name);
 
 		//typedef void (*TransportListenerDelegate)(const RR_SHARED_PTR<Transport> &transport, TransportListenerEventType ev, const RR_SHARED_PTR<void> &parameter);
 
@@ -172,7 +174,7 @@ namespace RobotRaconteur
 		std::string service;
 	};
 
-	ROBOTRACONTEUR_CORE_API ParseConnectionURLResult ParseConnectionURL(const std::string& url);
+	ROBOTRACONTEUR_CORE_API ParseConnectionURLResult ParseConnectionURL(boost::string_ref url);
 
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 	using TransportPtr = RR_SHARED_PTR<Transport>;

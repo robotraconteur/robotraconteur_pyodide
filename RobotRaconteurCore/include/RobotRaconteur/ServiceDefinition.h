@@ -26,7 +26,6 @@
 
 namespace RobotRaconteur
 {
-	
 	class ROBOTRACONTEUR_CORE_API  ServiceEntryDefinition;
 	class ROBOTRACONTEUR_CORE_API  MemberDefinition;
 	class ROBOTRACONTEUR_CORE_API  FunctionDefinition;
@@ -62,10 +61,10 @@ namespace RobotRaconteur
 	public:
 		RobotRaconteurVersion();
 		RobotRaconteurVersion(uint32_t major, uint32_t minor, uint32_t patch=0, uint32_t tweak=0);
-		RobotRaconteurVersion(const std::string& v);
+		RobotRaconteurVersion(boost::string_ref v);
 
 		std::string ToString() const;
-		void FromString(const std::string& v, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref v, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		ROBOTRACONTEUR_CORE_API friend bool operator == (const RobotRaconteurVersion &v1, const RobotRaconteurVersion &v2);
 		ROBOTRACONTEUR_CORE_API friend bool operator != (const RobotRaconteurVersion &v1, const RobotRaconteurVersion &v2);
@@ -82,6 +81,52 @@ namespace RobotRaconteur
 		uint32_t tweak;
 
 		ServiceDefinitionParseInfo ParseInfo;
+	};
+
+	class ROBOTRACONTEUR_CORE_API  ServiceDefinitionParseException : public ServiceDefinitionException
+	{
+
+	public:
+
+		ServiceDefinitionParseInfo ParseInfo;
+
+		std::string ShortMessage;
+
+		ServiceDefinitionParseException(const std::string& e);
+		ServiceDefinitionParseException(const std::string& e, const ServiceDefinitionParseInfo& info);
+
+		virtual std::string ToString();
+
+		virtual const char* what() const throw ();
+
+		~ServiceDefinitionParseException() throw () {}
+
+	private:
+		std::string what_store;
+
+	};
+
+	class ROBOTRACONTEUR_CORE_API  ServiceDefinitionVerifyException : public ServiceDefinitionException
+	{
+
+	public:
+
+		ServiceDefinitionParseInfo ParseInfo;
+
+		std::string ShortMessage;
+
+		ServiceDefinitionVerifyException(const std::string& e);
+		ServiceDefinitionVerifyException(const std::string& e, const ServiceDefinitionParseInfo& info);
+
+		virtual std::string ToString();
+
+		virtual const char* what() const throw ();
+
+		~ServiceDefinitionVerifyException() throw () {}
+
+	private:
+		std::string what_store;
+
 	};
 
 	class ROBOTRACONTEUR_CORE_API  ServiceDefinition : public RR_ENABLE_SHARED_FROM_THIS<ServiceDefinition>
@@ -113,8 +158,8 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
-		void FromString(const std::string &s, std::vector<ServiceDefinitionParseException>& warnings, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, std::vector<ServiceDefinitionParseException>& warnings, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void ToStream(std::ostream& os);
 		void FromStream(std::istream& is, const ServiceDefinitionParseInfo* parse_info = NULL);
@@ -156,8 +201,8 @@ namespace RobotRaconteur
 		virtual std::string ToString();
 		virtual void ToStream(std::ostream& os);
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);		
-		void FromString(const std::string &s, std::vector<ServiceDefinitionParseException>& warnings, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);		
+		void FromString(boost::string_ref s, std::vector<ServiceDefinitionParseException>& warnings, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		void FromStream(std::istream &is, const ServiceDefinitionParseInfo* parse_info = NULL);
 		void FromStream(std::istream &is, std::vector<ServiceDefinitionParseException>& warnings, const ServiceDefinitionParseInfo* parse_info = NULL);
@@ -207,7 +252,7 @@ namespace RobotRaconteur
 
 		std::string ToString(bool isstruct);
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 
@@ -226,7 +271,7 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 
@@ -243,7 +288,7 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 			
 		virtual void Reset();
 	};
@@ -260,7 +305,7 @@ namespace RobotRaconteur
 		virtual std::string ToString();
 
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 	};
@@ -274,7 +319,7 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 
@@ -296,7 +341,7 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 
@@ -311,7 +356,7 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 
@@ -328,7 +373,7 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		virtual void Reset();
 
@@ -361,9 +406,9 @@ namespace RobotRaconteur
 
 		virtual std::string ToString();
 
-		void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
-		static DataTypes DataTypeFromString(const std::string &d);
+		static DataTypes DataTypeFromString(boost::string_ref d);
 
 		static std::string StringFromDataType(DataTypes d);
 			
@@ -372,7 +417,7 @@ namespace RobotRaconteur
 		void CopyTo(TypeDefinition& def) const;
 		RR_SHARED_PTR<TypeDefinition> Clone() const;
 
-		void Rename(const std::string& name);
+		void Rename(boost::string_ref name);
 		void RemoveContainers();
 		void RemoveArray();
 		void QualifyTypeStringWithUsing();
@@ -399,7 +444,7 @@ namespace RobotRaconteur
 		UsingDefinition(RR_SHARED_PTR<ServiceDefinition> service);
 
 		std::string ToString();
-		void FromString(const std::string& s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 	};
 
@@ -429,17 +474,22 @@ namespace RobotRaconteur
 		ConstantDefinition(RR_SHARED_PTR<ServiceEntryDefinition> service_entry);
 		
 		std::string ToString();
-		void FromString(const std::string& s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 
 		void Reset();
 
-		static bool VerifyTypeAndValue(TypeDefinition& t, boost::iterator_range<std::string::const_iterator> value);
+		static bool VerifyTypeAndValue(TypeDefinition& t, boost::string_ref value);
 		bool VerifyValue();
 
 		template<typename T>
 		T ValueToScalar()
 		{
-			return boost::lexical_cast<T>(boost::trim_copy(Value));
+			T v;
+			if (!detail::try_convert_string_to_number(boost::trim_copy(Value), v))
+			{
+				throw ServiceDefinitionParseException("Invalid constant", ParseInfo);
+			}
+			return v;
 		}
 
 		template<typename T>
@@ -465,12 +515,15 @@ namespace RobotRaconteur
 
 			size_t i = 0;
 
-			//Count number of elements
+			//Read elements
 			typedef boost::split_iterator<std::string::const_iterator> string_split_iterator;
 			for (string_split_iterator e = boost::make_split_iterator(value1, boost::token_finder(boost::is_any_of(","), boost::token_compress_on));
 				e != string_split_iterator(); e++)
 			{
-				(*o)[i] = boost::lexical_cast<T>(boost::trim_copy(*e));
+				if (!detail::try_convert_string_to_number(boost::trim_copy(*e), (*o)[i]))
+				{
+					throw ServiceDefinitionParseException("Invalid constant", ParseInfo);
+				}				
 				i++;
 			}
 
@@ -482,9 +535,8 @@ namespace RobotRaconteur
 		
 		std::vector<ConstantDefinition_StructField> ValueToStructFields();
 
-		static std::string UnescapeString(const std::string& in);
-		static std::string EscapeString(const std::string& in);
-
+		static std::string UnescapeString(boost::string_ref in);
+		static std::string EscapeString(boost::string_ref in);				
 	};
 
 	class ROBOTRACONTEUR_CORE_API  EnumDefinition : public NamedTypeDefinition
@@ -501,7 +553,7 @@ namespace RobotRaconteur
 		EnumDefinition(RR_SHARED_PTR<ServiceDefinition> service);		
 
 		std::string ToString();
-		void FromString(const std::string& s, const ServiceDefinitionParseInfo* parse_info = NULL);
+		void FromString(boost::string_ref s, const ServiceDefinitionParseInfo* parse_info = NULL);
 		
 		bool VerifyValues();
 
@@ -522,61 +574,15 @@ namespace RobotRaconteur
 		bool HexValue;
 	};
 		
-	class ROBOTRACONTEUR_CORE_API  ServiceDefinitionParseException : public ServiceDefinitionException
-	{
-
-	public:
-		
-		ServiceDefinitionParseInfo ParseInfo;
-
-		std::string ShortMessage;
-
-		ServiceDefinitionParseException(const std::string &e);
-		ServiceDefinitionParseException(const std::string &e, const ServiceDefinitionParseInfo& info);
-
-		virtual std::string ToString();
-
-		virtual const char* what() const throw ();
-
-		~ServiceDefinitionParseException() throw () {}
-
-	private:
-		std::string what_store;
-
-	};
-
-	class ROBOTRACONTEUR_CORE_API  ServiceDefinitionVerifyException : public ServiceDefinitionException
-	{
-
-	public:
-
-		ServiceDefinitionParseInfo ParseInfo;
-
-		std::string ShortMessage;
-
-		ServiceDefinitionVerifyException(const std::string &e);
-		ServiceDefinitionVerifyException(const std::string &e, const ServiceDefinitionParseInfo& info);
-
-		virtual std::string ToString();
-
-		virtual const char* what() const throw ();
-
-		~ServiceDefinitionVerifyException() throw () {}
-
-	private:
-		std::string what_store;
-
-	};
-
 	ROBOTRACONTEUR_CORE_API void VerifyServiceDefinitions(std::vector<RR_SHARED_PTR<ServiceDefinition> > def, std::vector<ServiceDefinitionParseException>& warnings);
 	ROBOTRACONTEUR_CORE_API void VerifyServiceDefinitions(std::vector<RR_SHARED_PTR<ServiceDefinition> > def);
 
 	ROBOTRACONTEUR_CORE_API bool CompareServiceDefinitions(RR_SHARED_PTR<ServiceDefinition> def1, RR_SHARED_PTR<ServiceDefinition> def2);
 
-	ROBOTRACONTEUR_CORE_API boost::tuple<std::string, std::string> SplitQualifiedName(const std::string& name);
+	ROBOTRACONTEUR_CORE_API boost::tuple<boost::string_ref, boost::string_ref> SplitQualifiedName(boost::string_ref name);
 	
 	template <typename T>
-	RR_SHARED_PTR<T> TryFindByName(std::vector<RR_SHARED_PTR<T> >& v, const std::string& name)
+	RR_SHARED_PTR<T> TryFindByName(std::vector<RR_SHARED_PTR<T> >& v, boost::string_ref name)
 	{
 		for (typename std::vector<RR_SHARED_PTR<T> >::iterator e = v.begin(); e != v.end(); ++e)
 		{
@@ -595,7 +601,7 @@ namespace RobotRaconteur
 	ROBOTRACONTEUR_CORE_API size_t EstimatePodPackedElementSize(RR_SHARED_PTR<ServiceEntryDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > other_defs = std::vector<RR_SHARED_PTR<ServiceDefinition> >(), RR_SHARED_PTR<RobotRaconteurNode> node = RR_SHARED_PTR<RobotRaconteurNode>(), RR_SHARED_PTR<RRObject> client = RR_SHARED_PTR<RRObject>());
 
 	ROBOTRACONTEUR_CORE_API boost::tuple<DataTypes, size_t> GetNamedArrayElementTypeAndCount(RR_SHARED_PTR<ServiceEntryDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > other_defs = std::vector<RR_SHARED_PTR<ServiceDefinition> >(), RR_SHARED_PTR<RobotRaconteurNode> node = RR_SHARED_PTR<RobotRaconteurNode>(), RR_SHARED_PTR<RRObject> client = RR_SHARED_PTR<RRObject>());
-	
+		
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 	using ServiceDefinitionPtr = RR_SHARED_PTR<ServiceDefinition>;
 	using NamedTypeDefinitionPtr = RR_SHARED_PTR<NamedTypeDefinition>;
