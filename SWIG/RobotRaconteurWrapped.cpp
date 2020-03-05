@@ -1046,7 +1046,10 @@ namespace RobotRaconteur
 		DIRECTOR_CALL2(handler->handler(stub,err3));
 	}
 
-	
+	void AsyncVoidNoErrReturn_handler(RR_SHARED_PTR<AsyncVoidNoErrReturnDirector> handler)
+	{
+		DIRECTOR_CALL2(handler->handler());
+	}	
 
 	void AsyncStringReturn_handler(RR_SHARED_PTR<std::string> str, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncStringReturnDirector> handler)
 	{
