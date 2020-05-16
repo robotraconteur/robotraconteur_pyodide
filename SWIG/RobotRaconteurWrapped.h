@@ -25,6 +25,7 @@ namespace RobotRaconteur
 {
 #ifdef RR_PYTHON
 
+	// Use -threads SWIG option instead of manually releasing and ensuring GIL
 	class RR_Release_GIL
 	{
 	public:
@@ -60,7 +61,7 @@ namespace RobotRaconteur
 	};
 
 #define DIRECTOR_CALL(dirtype,command){ \
-	RR_Ensure_GIL gil; \
+	/*RR_Ensure_GIL gil;*/ \
 	boost::shared_ptr<dirtype> RR_Director2(this->RR_Director); \
 	\
 	 \
@@ -69,12 +70,12 @@ namespace RobotRaconteur
 }
 
 #define DIRECTOR_CALL2(command) { \
-RR_Ensure_GIL gil; \
+/*RR_Ensure_GIL gil;*/ \
 {command ;}\
 }
 
 #define DIRECTOR_CALL3(dirtype,command){ \
-	RR_Ensure_GIL gil; \
+	/*RR_Ensure_GIL gil;*/ \
 	boost::shared_ptr<dirtype> RR_Director2(this->RR_Director); \
 	\
 	 \
@@ -126,7 +127,7 @@ RR_Ensure_GIL gil; \
 
 	public:
 		static void Reset();
-		static void SetError(RR_INTRUSIVE_PTR<MessageEntry> err);
+		static void SetError(RR_INTRUSIVE_PTR<MessageEntry> err, const std::string& exception_str);
 		static bool IsErrorPending();
 		static RR_INTRUSIVE_PTR<MessageEntry> GetError();
 
@@ -941,4 +942,20 @@ RR_Ensure_GIL gil; \
 
 	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& service_types, RR_SHARED_PTR<WrappedServiceSubscriptionFilter> filter = RR_SHARED_PTR<WrappedServiceSubscriptionFilter>());
 	
+	class UserLogRecordHandlerDirector
+	{
+	public:
+		virtual void HandleLogRecord(const RRLogRecord& record) {}
+		virtual ~UserLogRecordHandlerDirector() {}
+	};
+
+	class UserLogRecordHandlerBase : public LogRecordHandler
+	{
+		RR_SHARED_PTR<UserLogRecordHandlerDirector> handler_director;
+	public:
+		void SetHandler(UserLogRecordHandlerDirector* director, int32_t id);
+
+    	virtual void HandleLogRecord(const RRLogRecord& record);
+	};
+
 }

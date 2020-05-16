@@ -1,16 +1,25 @@
-// Copyright 2011-2019 Wason Technology, LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/** 
+ * @file RobotRaconteurConstants.h
+ * 
+ * @author Dr. John Wason
+ * 
+ * @copyright Copyright 2011-2020 Wason Technology, LLC
+ *
+ * @par License
+ * Software License Agreement (Apache License)
+ * @par
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * @par
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * @par
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
@@ -301,4 +310,39 @@ namespace RobotRaconteur
 	const uint32_t TransportCapabilityCode_MESSAGE3_STRINGTABLE_MESSAGE_LOCAL = 0x00000002;
 	const uint32_t TransportCapabilityCode_MESSAGE3_STRINGTABLE_DYNAMIC_TABLE = 0x00000004;
 	const uint32_t TransportCapabilityCode_MESSAGE3_STRINGTABLE_STANDARD_TABLE = 0x00000008;
+
+	enum RobotRaconteur_LogLevel
+	{
+		RobotRaconteur_LogLevel_Trace,
+		RobotRaconteur_LogLevel_Debug,
+		RobotRaconteur_LogLevel_Info,
+		RobotRaconteur_LogLevel_Warning,
+		RobotRaconteur_LogLevel_Error,
+		RobotRaconteur_LogLevel_Fatal,
+		RobotRaconteur_LogLevel_Disable=1000
+	};
+
+	enum RobotRaconteur_LogComponent
+	{
+		RobotRaconteur_LogComponent_Default,
+		RobotRaconteur_LogComponent_Node,
+		RobotRaconteur_LogComponent_Transport,
+		RobotRaconteur_LogComponent_Message,
+		RobotRaconteur_LogComponent_Client,
+		RobotRaconteur_LogComponent_Service,
+		RobotRaconteur_LogComponent_Member,		
+		RobotRaconteur_LogComponent_Pack,
+		RobotRaconteur_LogComponent_Unpack,
+		RobotRaconteur_LogComponent_ServiceDefinition,
+		RobotRaconteur_LogComponent_Discovery,
+		RobotRaconteur_LogComponent_Subscription,
+		RobotRaconteur_LogComponent_NodeSetup,
+		RobotRaconteur_LogComponent_Utility,
+		RobotRaconteur_LogComponent_RobDefLib,
+		RobotRaconteur_LogComponent_User,
+		RobotRaconteur_LogComponent_UserClient,
+		RobotRaconteur_LogComponent_UserService,
+		RobotRaconteur_LogComponent_ThirdParty
+	};
+
 }

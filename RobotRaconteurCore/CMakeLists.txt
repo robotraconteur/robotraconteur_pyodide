@@ -44,6 +44,7 @@ set(RobotRaconteurCore_src
 	src/BrowserWebSocketTransport.cpp
 	src/BrowserWebSocketTransport_private.h 
 	src/DataTypesPacking.cpp
+	src/Logging.cpp
 )
 
 set(RobotRaconteurCore_header
@@ -78,6 +79,7 @@ set(RobotRaconteurCore_header
 	include/RobotRaconteur/BrowserWebSocketTransport.h
 	include/RobotRaconteur/DataTypesPacking.h
 	include/RobotRaconteur/ASIOStreamBaseTransport.h
+	include/RobotRaconteur/Logging.h
 )
 
 link_directories("${Boost_LIBRARY_DIRS}")

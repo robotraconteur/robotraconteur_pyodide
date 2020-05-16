@@ -880,7 +880,7 @@ namespace RobotRaconteur
 
 					PyObject* item;
 
-					while (item = PyIter_Next(iter.get()))
+					while ((item = PyIter_Next(iter.get())))
 					{						
 						PyAutoPtr<PyObject> item1(item);
 

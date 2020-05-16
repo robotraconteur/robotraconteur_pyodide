@@ -1,16 +1,25 @@
-// Copyright 2011-2019 Wason Technology, LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License. 
+/** 
+ * @file PipeMember.h
+ * 
+ * @author Dr. John Wason
+ * 
+ * @copyright Copyright 2011-2020 Wason Technology, LLC
+ *
+ * @par License
+ * Software License Agreement (Apache License)
+ * @par
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * @par
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * @par
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
@@ -120,6 +129,8 @@ namespace RobotRaconteur
 		RR_WEAK_PTR<PipeBase> parent;
 		int32_t index;
 		uint32_t endpoint;
+		std::string service_path;
+		std::string member_name;
 
 		RR_UNORDERED_MAP<uint32_t,RR_INTRUSIVE_PTR<RRValue> > out_of_order_packets;
 
@@ -272,7 +283,7 @@ namespace RobotRaconteur
 
 		virtual void Shutdown()=0;
 
-
+		virtual std::string GetServicePath()=0;
 		
 
 		virtual void AsyncClose(RR_SHARED_PTR<PipeEndpointBase> endpoint, bool remote, uint32_t ee, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)=0;
@@ -387,6 +398,8 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<ServiceStub> GetStub();
 
+		virtual std::string GetServicePath();
+
 	protected:
 
 		virtual void AsyncSendPipePacket(RR_INTRUSIVE_PTR<RRValue> data, int32_t index, uint32_t packetnumber, bool requestack, uint32_t endpoint, bool unreliable, bool message3, RR_MOVE_ARG(boost::function<void(uint32_t,RR_SHARED_PTR<RobotRaconteurException>)>) handler);
@@ -401,6 +414,8 @@ namespace RobotRaconteur
 		std::list<boost::tuple<int32_t, int32_t> > connecting_endpoints;
 		int32_t connecting_key_count;
 		RR_UNORDERED_MAP<int32_t, RR_SHARED_PTR<PipeEndpointBase> > early_endpoints;
+		std::string service_path;
+		uint32_t endpoint;
 
 		void AsyncConnect_internal(int32_t index, RR_MOVE_ARG(boost::function<void (RR_SHARED_PTR<PipeEndpointBase>,RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout);
 

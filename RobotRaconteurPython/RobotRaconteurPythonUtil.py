@@ -1524,6 +1524,23 @@ class ClientNodeSetup(RobotRaconteurNodeSetup):
     def __init__(self, node_name=None, flags=RobotRaconteurPython.RobotRaconteurNodeSetupFlags_CLIENT_DEFAULT, node=None):
         super(ClientNodeSetup,self).__init__(node_name,0,flags,node)
 
+class UserLogRecordHandlerDirectorPython(RobotRaconteurPython.UserLogRecordHandlerDirector):
+    def __init__(self, handler):
+        super(UserLogRecordHandlerDirectorPython,self).__init__()
+        self.handler = handler
+
+    def HandleLogRecord(self,record):
+        if self.handler is not None:
+            self.handler(record)
+
+class UserLogRecordHandler(RobotRaconteurPython.UserLogRecordHandlerBase):
+    def __init__(self,handler):
+        super(UserLogRecordHandler,self).__init__()
+        director = UserLogRecordHandlerDirectorPython(handler)
+        self._SetHandler(director,0)
+        director.__disown__()
+
+
 def settrace():
     # Enable debugging in vscode if ptvsd has been loaded
     # This may potentially activate debugging when not expected if ptvsd has been imported

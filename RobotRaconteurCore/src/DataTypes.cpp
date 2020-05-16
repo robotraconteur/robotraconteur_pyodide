@@ -98,55 +98,6 @@ std::string RRBaseArray::RRType()
 
 }
 
-#ifdef ROBOTRACONTEUR_USE_WSTRING
-
-ROBOTRACONTEUR_CORE_API std::string utf8_encode(const std::wstring &wstr)
-{
-	if (wstr.size()==0) return "";
-
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
-    std::string strTo( size_needed, 0 );
-    WideCharToMultiByte                  (CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
-    return strTo;
-}
-
-// Convert an UTF8 string to a wide Unicode String
-ROBOTRACONTEUR_CORE_API std::wstring utf8_decode(boost::string_ref str)
-{
-	if (str.size()==0) return L"";
-
-    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
-    std::wstring wstrTo( size_needed, 0 );
-    MultiByteToWideChar                  (CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
-    return wstrTo;
-}
-
-ROBOTRACONTEUR_CORE_API RR_INTRUSIVE_PTR<RRArray<char> > wstringToRRArray(const std::wstring& str)
-{
-	std::string str2=utf8_encode(str);
-	size_t s=str2.size();
-	RR_INTRUSIVE_PTR<RRArray<char> > ret=AllocateRRArray<char>(s);
-	memcpy(ret->ptr(),str.c_str(),s);
-	return ret;
-
-
-}
-
-ROBOTRACONTEUR_CORE_API std::wstring RRArrayToWString(RR_INTRUSIVE_PTR<RRArray<char> > arr)
-{
-	if (!arr)
-	{
-		throw DataTypeException("Null pointer");
-		
-	}
-
-	size_t s=arr->Length();
-    std::string utf(arr->ptr(),s);
-	return utf8_decode(utf);
-}
-
-#endif
-
 ROBOTRACONTEUR_CORE_API std::string GetRRDataTypeString(DataTypes type)
 {
 	switch (type)
@@ -340,14 +291,22 @@ TimeSpec TimeSpec::Now()
 TimeSpec TimeSpec::Now(RR_SHARED_PTR<RobotRaconteurNode> node)
 {
 	boost::posix_time::ptime now=node->NowUTC();
+	return ptimeToTimeSpec(now);	
+}
 
+boost::posix_time::ptime TimeSpecToPTime(const TimeSpec& ts)
+{
 	boost::posix_time::ptime epoch(boost::gregorian::date(1970,boost::gregorian::Jan,1),boost::posix_time::time_duration(0,0,0));
-	boost::posix_time::time_duration diff=now-epoch;
+	// TODO: increase precision
+	return epoch + boost::posix_time::seconds(ts.seconds) + boost::posix_time::microseconds(ts.nanoseconds/1000);
+}
+TimeSpec ptimeToTimeSpec(const boost::posix_time::ptime& t)
+{
+	boost::posix_time::ptime epoch(boost::gregorian::date(1970,boost::gregorian::Jan,1),boost::posix_time::time_duration(0,0,0));
+	boost::posix_time::time_duration diff=t-epoch;	
 
-	
-
-	uint64_t sec=diff.total_seconds();
-	uint32_t nanosec=boost::numeric_cast<uint32_t>((diff.fractional_seconds() * boost::numeric_cast<uint32_t>(pow(10.0,(9-diff.num_fractional_digits())))));
+	int64_t sec=diff.total_seconds();
+	int32_t nanosec=boost::numeric_cast<int32_t>((diff.fractional_seconds() * boost::numeric_cast<int32_t>(pow(10.0,(9-diff.num_fractional_digits())))));
 
 	return TimeSpec(sec,nanosec);
 }
@@ -855,6 +814,17 @@ std::size_t hash_value(const RobotRaconteur::MessageStringPtr& k)
 {
 	boost::string_ref k1 = k.str();
 	return boost::hash_range(k1.begin(), k1.end());
+}
+
+std::ostream & operator << (std::ostream &out, const MessageStringPtr &str)
+{
+	out << str.str();
+	return out;
+}
+std::ostream & operator << (std::ostream &out, const MessageStringRef &str)
+{
+	out << str.str();
+	return out;
 }
 
 }

@@ -21,9 +21,13 @@
 %enddef
 
 %define RR_RELEASE_GIL() 
-RR_Py_Exception_GIL()
+//RR_Py_Exception_GIL()
+// Use SWIG -threads option instead of manually releasing GIL
+//%thread;
+RR_Py_Exception()
 %enddef
 %define RR_KEEP_GIL() 
+//%nothread;
 RR_Py_Exception()
 %enddef
 
@@ -35,6 +39,8 @@ RR_Py_Exception()
 
 %init
 {
+
+PyDateTime_IMPORT;
 
 RobotRaconteur::PythonTypeSupport_Init();
 
@@ -57,6 +63,9 @@ RobotRaconteur::RobotRaconteurNode::s()->SetDynamicServiceFactory(RR_MAKE_SHARED
 %include "PythonTypemaps.i"
 %include "PythonExceptionTypemaps.i"
 RR_Py_Exception()
+
+%rename("%(regex:/^(RobotRaconteur_LogLevel)_(.*)/LogLevel_\\2/)s", %$isenumitem) "";
+%rename("%(regex:/^(RobotRaconteur_LogComponent)_(.*)/LogComponent_\\2/)s", %$isenumitem) "";
 %include "RobotRaconteurConstants.i"
 %include "DataTypes.i"
 
@@ -83,6 +92,8 @@ RR_Py_Exception()
 
 %include "DiscoveryPython.i"
 %include "Subscription.i"
+
+%include "LoggingPython.i"
 
 %include "RobotRaconteurNodePython.i"
 

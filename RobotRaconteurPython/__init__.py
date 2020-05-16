@@ -5,5 +5,5 @@ from .RobotRaconteurPython import *
 from .RobotRaconteurPythonError import *
 from .RobotRaconteurPythonUtil import \
     ServiceSubscriptionFilter, ServiceSubscriptionFilterNode, RobotRaconteurNodeSetup, \
-    ClientNodeSetup, WebLoop
+    ClientNodeSetup, WebLoop, UserLogRecordHandler
 from .RobotRaconteurPythonDataTypes import *

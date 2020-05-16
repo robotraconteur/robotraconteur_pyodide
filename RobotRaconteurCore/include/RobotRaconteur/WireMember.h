@@ -1,16 +1,25 @@
-// Copyright 2011-2019 Wason Technology, LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/** 
+ * @file WireMember.h
+ * 
+ * @author Dr. John Wason
+ * 
+ * @copyright Copyright 2011-2020 Wason Technology, LLC
+ *
+ * @par License
+ * Software License Agreement (Apache License)
+ * @par
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * @par
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * @par
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #pragma once
 
@@ -85,6 +94,8 @@ namespace RobotRaconteur
 
 		uint32_t endpoint;
 		RR_WEAK_PTR<WireBase> parent;
+		std::string service_path;
+		std::string member_name;
 
 		bool send_closed;
 		bool recv_closed;
@@ -245,6 +256,8 @@ namespace RobotRaconteur
 
 		virtual std::string GetMemberName()=0;
 
+		virtual std::string GetServicePath()=0;
+
 		virtual void WirePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e=0)=0;
 
 		virtual void Shutdown()=0;
@@ -355,6 +368,8 @@ namespace RobotRaconteur
 
 		virtual std::string GetMemberName();
 
+		virtual std::string GetServicePath();
+
 		virtual void WirePacketReceived(RR_INTRUSIVE_PTR<MessageEntry> m, uint32_t e = 0);
 
 		virtual void Shutdown();
@@ -368,6 +383,8 @@ namespace RobotRaconteur
 		virtual void SendWirePacket(RR_INTRUSIVE_PTR<RRValue> packet, TimeSpec time, uint32_t endpoint, bool message3);
 
 		std::string m_MemberName;
+		std::string service_path;
+		uint32_t endpoint;
 
 		RR_SHARED_PTR<WireConnectionBase> connection;
 

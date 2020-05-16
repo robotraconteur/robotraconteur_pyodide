@@ -26,9 +26,12 @@ namespace RobotRaconteur
 {
 	GeneratorClientBase::GeneratorClientBase(boost::string_ref name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
 	{
+		this->node=stub->RRGetNode();
+		this->endpoint=stub->GetContext()->GetLocalEndpoint();		
 		this->name = RR_MOVE(name.to_string());
 		this->id = id;
 		this->stub = stub;
+		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node,Client,endpoint,service_path,name,"Created generator with id " << id);
 	}
 
 	RR_SHARED_PTR<ServiceStub> GeneratorClientBase::GetStub()
@@ -40,6 +43,7 @@ namespace RobotRaconteur
 	
 	void GeneratorClientBase::AsyncAbort(boost::function<void(RR_SHARED_PTR<RobotRaconteurException> err)> handler, int32_t timeout)
 	{
+		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node,Client,endpoint,service_path,name,"Requesting async generator abort with id " << id);
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
 		AbortOperationException err("Generator abort requested");
 		RobotRaconteurExceptionUtil::ExceptionToMessageEntry(err, m);
@@ -49,6 +53,7 @@ namespace RobotRaconteur
 	
 	void GeneratorClientBase::AsyncClose(boost::function<void(RR_SHARED_PTR<RobotRaconteurException> err)> handler, int32_t timeout)
 	{
+		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node,Client,endpoint,service_path,name,"Requesting async generator close with id " << id);
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
 		StopIterationException err("");
 		RobotRaconteurExceptionUtil::ExceptionToMessageEntry(err, m);
@@ -63,6 +68,7 @@ namespace RobotRaconteur
 	
 	void GeneratorClientBase::AsyncNextBase(RR_INTRUSIVE_PTR<MessageElement> v, boost::function<void(RR_INTRUSIVE_PTR<MessageElement> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<RobotRaconteurNode>)> handler, int32_t timeout)
 	{
+		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node,Client,endpoint,service_path,name,"Calling async generator next with id " << id);
 		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_GeneratorNextReq, GetMemberName());
 		m->AddElement("index", ScalarToRRArray(id));
 		if (v)
