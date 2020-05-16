@@ -1475,7 +1475,7 @@ void RobotRaconteurNode::LogRecord(const RRLogRecord& record)
 	}
 	
 	
-	std::cerr << record << std::endl; 
+	std::cerr << "ROBOTRACONTEUR_LOG: " << record << std::endl; 
 
 }
 
