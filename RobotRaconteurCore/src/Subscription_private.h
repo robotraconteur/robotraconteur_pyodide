@@ -18,8 +18,6 @@
 #include "WireMember_private.h"
 #include "PipeMember_private.h"
 
-#include "RobotRaconteur/browser_deadline_timer.h"
-
 #pragma once
 
 namespace RobotRaconteur
@@ -75,11 +73,11 @@ namespace RobotRaconteur
 			void Cancel();
 			int64_t MillisecondsRemaining();
 
-			static void timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const boost::system::error_code& ec);
+			static void timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const TimerEvent& ec);
 
 			RR_WEAK_PTR<RobotRaconteurNode> node;
 
-			RR_SHARED_PTR<browser_deadline_timer> timer;
+			RR_SHARED_PTR<Timer> timer;
 			boost::posix_time::ptime timer_start_time;
 
 		};

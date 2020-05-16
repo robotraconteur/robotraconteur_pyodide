@@ -306,7 +306,7 @@ namespace RobotRaconteur
 
 		}
 
-		void RobotRaconteurNode_connector::connect_timer_callback(const boost::system::error_code& e)
+		void RobotRaconteurNode_connector::connect_timer_callback(const TimerEvent& e)
 		{
 
 
@@ -337,14 +337,13 @@ namespace RobotRaconteur
 			if (timeout != RR_TIMEOUT_INFINITE)
 			{
 				
-				connect_timer.reset(new browser_deadline_timer());
-				connect_timer->expires_from_now(boost::posix_time::milliseconds(timeout));
-				connect_timer->async_wait(boost::bind(&RobotRaconteurNode_connector::connect_timer_callback, shared_from_this(), boost::asio::placeholders::error));
+				connect_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&RobotRaconteurNode_connector::connect_timer_callback, shared_from_this(), boost::asio::placeholders::error), true);				
+				connect_timer->Start();
 				
 			}
 		}
 
-		void RobotRaconteurNode_connector::connect2(RR_SHARED_PTR<std::vector<std::string> > urls, int32_t main_key, const boost::system::error_code &e)
+		void RobotRaconteurNode_connector::connect2(RR_SHARED_PTR<std::vector<std::string> > urls, int32_t main_key, const TimerEvent &e)
 		{
 			{
 				
@@ -431,12 +430,17 @@ namespace RobotRaconteur
 					
 					
 					
-					if (!connect_backoff_timer)
+					if (connect_backoff_timer)
 					{
-						connect_backoff_timer.reset(new browser_deadline_timer());
+						try
+						{
+							connect_backoff_timer->Stop();
+						}
+						catch (std::exception&) {}
+						connect_backoff_timer.reset();
 					}
-					connect_backoff_timer->expires_from_now(boost::posix_time::milliseconds(15));
-					connect_backoff_timer->async_wait(boost::bind(&RobotRaconteurNode_connector::connect2, shared_from_this(), urls, main_key, boost::asio::placeholders::error));
+					connect_backoff_timer = node->CreateTimer(boost::posix_time::milliseconds(15), boost::bind(&RobotRaconteurNode_connector::connect2, shared_from_this(), urls, main_key, boost::asio::placeholders::error),true);
+					connect_backoff_timer->Start();
 					
 					return;
 				}
@@ -481,7 +485,8 @@ namespace RobotRaconteur
 					throw ConnectionException("No URLs specified");
 				}
 
-				boost::system::error_code ec2;
+				TimerEvent ec2;
+				ec2.stopped=false;
 				
 				connect2(urls, key, ec2);
 

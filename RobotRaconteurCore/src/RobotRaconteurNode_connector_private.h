@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include "RobotRaconteur/RobotRaconteurNode.h"
-#include "RobotRaconteur/browser_deadline_timer.h"
 
 #pragma once
 
@@ -37,14 +36,14 @@ namespace RobotRaconteur
 			bool transport_connected;
 			std::list<RR_SHARED_PTR<RobotRaconteurException> > errors;
 
-			RR_SHARED_PTR<browser_deadline_timer> connect_timer;
+			RR_SHARED_PTR<Timer> connect_timer;
 			
 
 
 			RR_SHARED_PTR<RobotRaconteurNode> node;
 
 			
-			RR_SHARED_PTR<browser_deadline_timer> connect_backoff_timer;
+			RR_SHARED_PTR<Timer> connect_backoff_timer;
 
 			class endpoint_cleanup
 			{
@@ -71,9 +70,9 @@ namespace RobotRaconteur
 
 			void connected_transport(RR_SHARED_PTR<Transport> transport, RR_SHARED_PTR<ITransportConnection> connection, RR_SHARED_PTR<RobotRaconteurException> err, std::string url, RR_SHARED_PTR<endpoint_cleanup> ep, int32_t key);
 
-			void connect_timer_callback(const boost::system::error_code& ec);
+			void connect_timer_callback(const TimerEvent& ec);
 
-			void connect2(RR_SHARED_PTR<std::vector<std::string> > urls, int32_t main_key, const boost::system::error_code &ec);
+			void connect2(RR_SHARED_PTR<std::vector<std::string> > urls, int32_t main_key, const TimerEvent &ec);
 
 			void start_connect_timer();
 

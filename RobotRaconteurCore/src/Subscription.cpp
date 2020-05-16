@@ -20,8 +20,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/asio/placeholders.hpp>
 
-#include <RobotRaconteur/browser_deadline_timer.h>
-
 namespace RobotRaconteur
 {
 	namespace detail
@@ -50,9 +48,8 @@ namespace RobotRaconteur
 
 			if (cancelled.data()) return;
 
-			RR_SHARED_PTR<browser_deadline_timer> t(new browser_deadline_timer());
-			t->expires_from_now(boost::posix_time::milliseconds(timeout));
-			t->async_wait(boost::bind(&ServiceSubscription_retrytimer::timer_handler, shared_from_this(), boost::asio::placeholders::error));
+			RR_SHARED_PTR<Timer> t = n->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&ServiceSubscription_retrytimer::timer_handler, shared_from_this(), boost::asio::placeholders::error), true);
+			t->Start();
 
 			this->timer = t;
 
@@ -72,9 +69,9 @@ namespace RobotRaconteur
 			return (boost::posix_time::microsec_clock::universal_time() - timer_start_time).total_milliseconds();
 		}
 
-		void ServiceSubscription_retrytimer::timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const boost::system::error_code& ec)
+		void ServiceSubscription_retrytimer::timer_handler(RR_WEAK_PTR<ServiceSubscription_retrytimer> this_, const TimerEvent& ec)
 		{
-			if (ec) return;
+			if (ec.stopped) return;
 
 			RR_SHARED_PTR<ServiceSubscription_retrytimer> this1 = this_.lock();
 			if (!this1) return;

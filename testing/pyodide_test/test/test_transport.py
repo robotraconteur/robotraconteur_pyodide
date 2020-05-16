@@ -20,6 +20,8 @@ def connect_cb(c, err):
     print_div("connect error: " + str(err))
     c.async_get_d1(d1_cb)
 
+RRN.SetLogLevel(RR.LogLevel_Debug)
+
 RRN.AsyncConnectService("rr+ws://localhost:2222?service=RobotRaconteurTestService", None, None, None, connect_cb)
 
 
