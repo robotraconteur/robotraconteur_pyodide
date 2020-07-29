@@ -1781,7 +1781,6 @@ namespace RobotRaconteur
 		void SetLogRecordHandler(RR_SHARED_PTR<LogRecordHandler> handler);
 
 	protected:
-		boost::shared_mutex tap_lock;
 		RR_SHARED_PTR<MessageTap> tap;
 
 	public:

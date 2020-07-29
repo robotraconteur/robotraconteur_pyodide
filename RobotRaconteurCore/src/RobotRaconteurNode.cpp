@@ -515,7 +515,6 @@ void RobotRaconteurNode::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::fu
 	}
 
 	{
-		boost::shared_lock<boost::shared_mutex> lock3(tap_lock);
 		if (tap)
 		{
 			tap->RecordMessage(m);
@@ -560,7 +559,6 @@ static void empty_end_send_message(RR_SHARED_PTR<RobotRaconteurException>) {}
 void RobotRaconteurNode::MessageReceived(RR_INTRUSIVE_PTR<Message> m)
 {
 	{
-		boost::shared_lock<boost::shared_mutex> lock3(tap_lock);
 		if (tap)
 		{
 			tap->RecordMessage(m);
@@ -1514,7 +1512,6 @@ void RobotRaconteurNode::LogRecord(const RRLogRecord& record)
 	
 	if (record.Level < log_level)
 	{
-		boost::shared_lock<boost::shared_mutex> lock(log_level_mutex);
 		if (record.Level < log_level)
 		{
 			return;
@@ -1527,7 +1524,6 @@ void RobotRaconteurNode::LogRecord(const RRLogRecord& record)
 	
 
 	{
-		boost::shared_lock<boost::shared_mutex> lock3(tap_lock);
 		if (tap)
 		{
 			tap->RecordLogRecord(record);
@@ -1562,7 +1558,6 @@ RobotRaconteur_LogLevel RobotRaconteurNode::SetLogLevelFromEnvVariable(const std
 
 RobotRaconteur_LogLevel RobotRaconteurNode::SetLogLevelFromString(boost::string_ref loglevel)
 {
-	boost::unique_lock<boost::shared_mutex> lock(log_level_mutex);
 	if (loglevel== "DISABLE")
 	{
 		log_level = RobotRaconteur_LogLevel_Disable;
@@ -1625,13 +1620,11 @@ void RobotRaconteurNode::SetLogRecordHandler(RR_SHARED_PTR<LogRecordHandler> han
 
 RR_SHARED_PTR<MessageTap> RobotRaconteurNode::GetMessageTap()
 {
-	boost::shared_lock<boost::shared_mutex> lock(tap_lock);
 	return tap;
 }
 
 void RobotRaconteurNode::SetMessageTap(RR_SHARED_PTR<MessageTap> message_tap)
 {
-	boost::unique_lock<boost::shared_mutex> lock(tap_lock);
 	tap = message_tap;
 }
 

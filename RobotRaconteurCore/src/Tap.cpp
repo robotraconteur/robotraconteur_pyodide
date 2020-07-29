@@ -150,7 +150,6 @@ namespace RobotRaconteur
             bool LogAll;
             bool sending;
 
-            boost::mutex this_lock;
 
             std::list<RR_INTRUSIVE_PTR<Message> > send_queue;
             boost::shared_array<uint8_t> send_buffer;
@@ -184,7 +183,6 @@ namespace RobotRaconteur
 
             void RecordMessage(RR_INTRUSIVE_PTR<Message> message)
             {
-                boost::mutex::scoped_lock lock(this_lock);
 
                 if (sending)
                 {
@@ -223,7 +221,6 @@ namespace RobotRaconteur
                     return;
                 }
 
-                boost::mutex::scoped_lock lock(this_lock);
                 message_pos += bytes_transferred;
                 if (message_pos < message_len)
                 {
@@ -261,7 +258,6 @@ namespace RobotRaconteur
                     return;
                 }
 
-                boost::mutex::scoped_lock lock(this_lock);
                 socket->socket->async_read_some(boost::asio::buffer(recv_buf, sizeof(recv_buf)),
                     boost::bind(&LocalMessageTapConnectionImpl::end_recv,shared_from_this(),
                     boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));
@@ -281,14 +277,13 @@ namespace RobotRaconteur
             boost::filesystem::path all_tap_fname;
             boost::filesystem::path log_tap_fname;
 
-            boost::atomic<bool> is_open;
+            bool is_open;
 
-            boost::mutex connections_lock;
             std::list<RR_WEAK_PTR<LocalMessageTapConnectionImpl> > connections;
 
             void Open(const std::string& tap_name)
             {
-                is_open.store(true);
+                is_open=(true);
                 io_context = RR_MAKE_SHARED<RR_BOOST_ASIO_IO_CONTEXT>();
 
                 try
@@ -342,7 +337,7 @@ namespace RobotRaconteur
             {
                 if (error)
                     return;
-                if (!is_open.load())
+                if (!is_open
                     return;
 
                 try
@@ -350,7 +345,6 @@ namespace RobotRaconteur
                     RR_SHARED_PTR<LocalMessageTapConnectionImpl> c = RR_MAKE_SHARED<LocalMessageTapConnectionImpl>(io_context, true);
                     c->AttachSocket(socket);
                     {
-                        boost::mutex::scoped_lock lock(connections_lock);
                         connections.push_back(c);
                     }
                 }
@@ -366,7 +360,7 @@ namespace RobotRaconteur
             {
                 if (error)
                     return;
-                if (!is_open.load())
+                if (!is_open)
                     return;
 
                 try
@@ -374,7 +368,6 @@ namespace RobotRaconteur
                     RR_SHARED_PTR<LocalMessageTapConnectionImpl> c = RR_MAKE_SHARED<LocalMessageTapConnectionImpl>(io_context, false);
                     c->AttachSocket(socket);
                     {
-                        boost::mutex::scoped_lock lock(connections_lock);
                         connections.push_back(c);
                     }
                 }
@@ -399,7 +392,7 @@ namespace RobotRaconteur
                             break;
                         }
 
-                        if (!this3->is_open.load())
+                        if (!this3->is_open)
                         {
                             break;
                         }
@@ -424,10 +417,9 @@ namespace RobotRaconteur
 
             void Close()
             {
-                is_open.store(false);
+                is_open=(false);
                 io_context->stop();
                 {
-                    boost::mutex::scoped_lock lock(connections_lock);
                     for(std::list<RR_WEAK_PTR<LocalMessageTapConnectionImpl> >::iterator c=connections.begin(); c!=connections.end();)
                     {
                         RR_SHARED_PTR<LocalMessageTapConnectionImpl> c1 = c->lock();
@@ -451,7 +443,6 @@ namespace RobotRaconteur
                 message2->header->MetaData = message2->header->MetaData.str() + "timestamp: " + boost::posix_time::to_iso_extended_string(now) + "\n";
                 message2->ComputeSize4();
                 {
-                    boost::mutex::scoped_lock lock(connections_lock);
                     for(std::list<RR_WEAK_PTR<LocalMessageTapConnectionImpl> >::iterator c=connections.begin(); c!=connections.end();)
                     {
                         RR_SHARED_PTR<LocalMessageTapConnectionImpl> c1 = c->lock();
@@ -475,7 +466,6 @@ namespace RobotRaconteur
                 message2->header->MetaData = message2->header->MetaData.str() + "timestamp: " + boost::posix_time::to_iso_extended_string(now) + "\n";
                 message2->ComputeSize4();
                 {
-                    boost::mutex::scoped_lock lock(connections_lock);                    
                     for(std::list<RR_WEAK_PTR<LocalMessageTapConnectionImpl> >::iterator c=connections.begin(); c!=connections.end();)
                     {
                         RR_SHARED_PTR<LocalMessageTapConnectionImpl> c1 = c->lock();

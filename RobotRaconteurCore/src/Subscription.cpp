@@ -1084,7 +1084,6 @@ namespace RobotRaconteur
 
 	bool ServiceSubscription::TryGetDefaultClientBase(RR_SHARED_PTR<RRObject>& client_out)
 	{	
-		boost::mutex::scoped_lock lock(this_lock);
 
 		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceSubscription_client> c, clients | boost::adaptors::map_values)
 		{
@@ -1191,13 +1190,11 @@ namespace RobotRaconteur
 
 	int32_t WireSubscriptionBase::GetInValueLifespan()
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		return in_value_lifespan;
 	}
 
 	void WireSubscriptionBase::SetInValueLifespan(int32_t millis)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
 		in_value_lifespan = millis;
 	}
 

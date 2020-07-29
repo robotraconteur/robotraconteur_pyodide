@@ -394,23 +394,19 @@ namespace RobotRaconteur
 
 	int32_t WireConnectionBase::GetInValueLifespan()
 	{
-		boost::mutex::scoped_lock lock(inval_lock);
 		return inval_lifespan;
 	}
 	void WireConnectionBase::SetInValueLifespan(int32_t millis)
 	{
-		boost::mutex::scoped_lock lock(inval_lock);
 		inval_lifespan = millis;
 	}
 	
 	int32_t WireConnectionBase::GetOutValueLifespan()
 	{
-		boost::mutex::scoped_lock lock(outval_lock);
 		return outval_lifespan;
 	}	
 	void WireConnectionBase::SetOutValueLifespan(int32_t millis)
 	{
-		boost::mutex::scoped_lock lock(outval_lock);
 		outval_lifespan = millis;
 	}
 

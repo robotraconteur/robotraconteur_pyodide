@@ -108,7 +108,7 @@ namespace RobotRaconteur
 			bool send_large_transfer_authorized;
 			bool recv_large_transfer_authorized;
 
-			boost::atomic<bool> send_version4;
+			bool send_version4;
 			
 			
 			bool server;

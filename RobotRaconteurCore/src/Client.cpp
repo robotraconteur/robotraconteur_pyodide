@@ -1632,7 +1632,7 @@ namespace RobotRaconteur
 
 	bool ClientContext::VerifyObjectImplements(boost::string_ref objecttype, boost::string_ref implementstype)
 	{
-		boost::mutex::scoped_lock lock(pulled_service_defs_lock);
+		//boost::mutex::scoped_lock lock(pulled_service_defs_lock);
 		if (!VerifyObjectImplements2(objecttype, implementstype))
 			throw ServiceException("Invalid object type");
 		return true;
