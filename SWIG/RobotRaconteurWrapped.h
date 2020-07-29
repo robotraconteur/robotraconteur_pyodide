@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -452,7 +452,7 @@ namespace RobotRaconteur
 		
 		virtual WrappedTryReceivePacketWaitResult TryReceivePacketWait(int32_t timeout = RR_TIMEOUT_INFINITE, bool peek = false);
 		
-		WrappedPipeEndpoint(RR_SHARED_PTR<PipeBase> parent, int32_t index, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, bool unreliable, MemberDefinition_Direction direction, bool message3);
+		WrappedPipeEndpoint(RR_SHARED_PTR<PipeBase> parent, int32_t index, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, bool unreliable, MemberDefinition_Direction direction);
 		RR_SHARED_PTR<TypeDefinition> Type;
 
 	protected:
@@ -510,7 +510,7 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<TypeDefinition> Type;
 
 	protected:
-		virtual RR_SHARED_PTR<PipeEndpointBase> CreateNewPipeEndpoint(int32_t index, bool unreliable, MemberDefinition_Direction direction, bool message3);
+		virtual RR_SHARED_PTR<PipeEndpointBase> CreateNewPipeEndpoint(int32_t index, bool unreliable, MemberDefinition_Direction direction);
 		void AsyncConnect_handler(RR_SHARED_PTR<PipeEndpointBase> ep, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncPipeEndpointReturnDirector> handler);
 	};
 
@@ -546,7 +546,7 @@ namespace RobotRaconteur
 		TryGetValueResult TryGetInValue();
 		TryGetValueResult TryGetOutValue();
 
-		WrappedWireConnection(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, MemberDefinition_Direction direction, bool message3) ;
+		WrappedWireConnection(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, MemberDefinition_Direction direction) ;
 
 		virtual void fire_WireValueChanged(RR_INTRUSIVE_PTR<RRValue> value, TimeSpec time);
 		virtual void fire_WireClosedCallback();
@@ -603,7 +603,7 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<TypeDefinition> Type;
 
 	protected:
-		virtual RR_SHARED_PTR<WireConnectionBase> CreateNewWireConnection(MemberDefinition_Direction direction, bool message3);
+		virtual RR_SHARED_PTR<WireConnectionBase> CreateNewWireConnection(MemberDefinition_Direction direction);
 		void AsyncConnect_handler(RR_SHARED_PTR<WireConnectionBase> ep, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncWireConnectionReturnDirector> handler);
 		
 	};
@@ -794,7 +794,9 @@ namespace RobotRaconteur
 	public:
 		RR_INTRUSIVE_PTR<MessageElement> packet;
 		RR_SHARED_PTR<TypeDefinition> type;
-		RR_SHARED_PTR<WrappedServiceStub> stub;		
+		RR_SHARED_PTR<WrappedServiceStub> stub;
+		RR_SHARED_PTR<ClientContext> context;
+		uint32_t client;
 	};
 
 	class WrappedServiceSubscription;
@@ -827,9 +829,11 @@ namespace RobotRaconteur
 		uint32_t GetConnectRetryDelay();
 		void SetConnectRetryDelay(uint32_t delay_milliseconds);
 
-		RR_SHARED_PTR<WrappedWireSubscription> SubscribeWire(const std::string& membername);
+		RR_SHARED_PTR<WrappedWireSubscription> SubscribeWire(const std::string& membername, const std::string& servicepath);
 
-		RR_SHARED_PTR<WrappedPipeSubscription> SubscribePipe(const std::string& membername, uint32_t max_recv_packets = std::numeric_limits<uint32_t>::max());
+		RR_SHARED_PTR<WrappedPipeSubscription> SubscribePipe(const std::string& membername, const std::string& servicepath, uint32_t max_recv_packets = std::numeric_limits<uint32_t>::max());
+
+		RR_SHARED_PTR<WrappedServiceStub> GetDefaultClient();
 
 		void SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id);
 		
@@ -862,7 +866,7 @@ namespace RobotRaconteur
 
 		friend class WrappedWireSubscription_send_iterator;
 
-		WrappedWireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername);
+		WrappedWireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, const std::string& servicepath);
 
 		WrappedService_typed_packet GetInValue(TimeSpec* time = NULL);
 		bool TryGetInValue(WrappedService_typed_packet& val, TimeSpec* time = NULL);
@@ -906,7 +910,7 @@ namespace RobotRaconteur
 
 		friend class WrappedPipeSubscription_send_iterator;
 
-		WrappedPipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
+		WrappedPipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, const std::string& servicepath, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
 
 		WrappedService_typed_packet ReceivePacket();
 		bool TryReceivePacket(WrappedService_typed_packet& packet, bool peek = false);
@@ -940,7 +944,11 @@ namespace RobotRaconteur
 	
 	RR_SHARED_PTR<WrappedServiceInfo2Subscription> WrappedSubscribeServiceInfo2(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& service_types, RR_SHARED_PTR<WrappedServiceSubscriptionFilter> filter = RR_SHARED_PTR<WrappedServiceSubscriptionFilter>());
 
-	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& service_types, RR_SHARED_PTR<WrappedServiceSubscriptionFilter> filter = RR_SHARED_PTR<WrappedServiceSubscriptionFilter>());
+	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeServiceByType(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& service_types, RR_SHARED_PTR<WrappedServiceSubscriptionFilter> filter = RR_SHARED_PTR<WrappedServiceSubscriptionFilter>());
+
+	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "");
+
+	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::string& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "");
 	
 	class UserLogRecordHandlerDirector
 	{

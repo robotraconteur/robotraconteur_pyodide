@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -111,7 +111,7 @@ namespace RobotRaconteur
 		
 		boost::string_ref servicetype=res.get<0>();
 		boost::string_ref objecttype=res.get<1>();
-		if (servicetype != GetServiceName()) return RobotRaconteur::RobotRaconteurNode::s()->GetServiceType(servicetype)->CreateStub(type,path,context);
+		if (servicetype != GetServiceName()) return GetNode()->GetServiceType(servicetype)->CreateStub(type,path,context);
 		for (std::vector<RR_SHARED_PTR<ServiceEntryDefinition> >::iterator ee=servicedef->Objects.begin(); ee!=servicedef->Objects.end(); ++ee)
 		{
 			if ((*ee)->Name==objecttype)
@@ -181,33 +181,33 @@ namespace RobotRaconteur
 
 	void WrappedServiceStub::async_PropertyGet(const std::string& PropertyName, int32_t timeout, AsyncRequestDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, _1, id));
+		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		RR_INTRUSIVE_PTR<MessageEntry> req=CreateMessageEntry(MessageEntryType_PropertyGetReq,PropertyName);
-		AsyncProcessRequest(req,boost::bind(&WrappedServiceStub::async_PropertyGet_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		AsyncProcessRequest(req,boost::bind(&WrappedServiceStub::async_PropertyGet_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 
 	}
 	void WrappedServiceStub::async_PropertySet(const std::string& PropertyName,  RR_INTRUSIVE_PTR<MessageElement> value, int32_t timeout, AsyncRequestDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, _1, id));
+		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		RR_INTRUSIVE_PTR<MessageEntry> req=CreateMessageEntry(MessageEntryType_PropertySetReq, PropertyName);
 		value->ElementName="value";
 		req->AddElement(value);
-		AsyncProcessRequest(req,boost::bind(&WrappedServiceStub::async_PropertySet_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		AsyncProcessRequest(req,boost::bind(&WrappedServiceStub::async_PropertySet_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 	void WrappedServiceStub::async_FunctionCall(const std::string& FunctionName, const std::vector<RR_INTRUSIVE_PTR<MessageElement> >& args, int32_t timeout, AsyncRequestDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, _1, id));
+		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		RR_INTRUSIVE_PTR<MessageEntry> req=CreateMessageEntry(MessageEntryType_FunctionCallReq, FunctionName);
 		req->elements=args;
-		AsyncProcessRequest(req,boost::bind(&WrappedServiceStub::async_FunctionCall_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		AsyncProcessRequest(req,boost::bind(&WrappedServiceStub::async_FunctionCall_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 	
 	void WrappedServiceStub::async_GeneratorFunctionCall(const std::string& FunctionName, const std::vector<RR_INTRUSIVE_PTR<MessageElement> >& args, int32_t timeout, AsyncGeneratorClientReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncGeneratorClientReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncGeneratorClientReturnDirector>, _1, id));
+		RR_SHARED_PTR<AsyncGeneratorClientReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncGeneratorClientReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		RR_INTRUSIVE_PTR<MessageEntry> req = CreateMessageEntry(MessageEntryType_FunctionCallReq, FunctionName);
 		req->elements = args;
-		AsyncProcessRequest(req, boost::bind(&WrappedServiceStub::async_GeneratorFunctionCall_handler, rr_cast<WrappedServiceStub>(shared_from_this()), FunctionName, _1, _2, sphandler), timeout);
+		AsyncProcessRequest(req, boost::bind(&WrappedServiceStub::async_GeneratorFunctionCall_handler, rr_cast<WrappedServiceStub>(shared_from_this()), FunctionName, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), sphandler), timeout);
 	}
 
 	void WrappedServiceStub::async_PropertyGet_handler( RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncRequestDirector> handler)
@@ -311,26 +311,26 @@ namespace RobotRaconteur
 
 	void WrappedServiceStub::async_FindObjRef(const std::string& path, int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, _1, id));
-		AsyncFindObjRef(path,boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncFindObjRef(path,boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void WrappedServiceStub::async_FindObjRef(const std::string& path, const std::string& ind, int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, _1, id));
-		AsyncFindObjRef(path,ind,boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncFindObjRef(path,ind,boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void WrappedServiceStub::async_FindObjRefTyped(const std::string& path, const std::string& type, int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, _1, id));
-		AsyncFindObjRefTyped(path,type,boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncFindObjRefTyped(path,type,boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void WrappedServiceStub::async_FindObjRefTyped(const std::string& path, const std::string& ind, const std::string& type, int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, _1, id));
-		AsyncFindObjRefTyped(path,ind,type, boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),_1,_2,sphandler),timeout);
+		RR_SHARED_PTR<AsyncStubReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncStubReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncFindObjRefTyped(path,ind,type, boost::bind(&WrappedServiceStub::async_FindObjRef_handler,rr_cast<WrappedServiceStub>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void WrappedServiceStub::async_FindObjRef_handler(RR_SHARED_PTR<RRObject> stub, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncStubReturnDirector> handler)
@@ -500,7 +500,7 @@ namespace RobotRaconteur
 	void WrappedServiceStub::SetRRDirector(WrappedServiceStubDirector* director, int32_t id)
 	{
 		objectheapid=id;
-		this->RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedServiceStubDirector>, _1, id));
+		this->RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedServiceStubDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 	}
 	
 	int WrappedServiceStub::GetObjectHeapID()
@@ -512,8 +512,8 @@ namespace RobotRaconteur
 
 	void WrappedPipeEndpoint::AsyncSendPacket(RR_INTRUSIVE_PTR<MessageElement> packet, AsyncUInt32ReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncUInt32ReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncUInt32ReturnDirector>, _1, id));
-		AsyncSendPacketBase(rr_cast<RRValue>(packet),boost::bind(&WrappedPipeEndpoint::AsyncSendPacket_handler,rr_cast<WrappedPipeEndpoint>(shared_from_this()),_1,_2,sphandler));
+		RR_SHARED_PTR<AsyncUInt32ReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncUInt32ReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncSendPacketBase(rr_cast<RRValue>(packet),boost::bind(&WrappedPipeEndpoint::AsyncSendPacket_handler,rr_cast<WrappedPipeEndpoint>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler));
 	}
 
 	void WrappedPipeEndpoint::AsyncSendPacket_handler(uint32_t id, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncUInt32ReturnDirector> handler)
@@ -557,8 +557,8 @@ namespace RobotRaconteur
 	}
 
 
-	WrappedPipeEndpoint::WrappedPipeEndpoint(RR_SHARED_PTR<PipeBase> parent, int32_t index, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> type, bool unreliable, MemberDefinition_Direction direction, bool message3)
-		: PipeEndpointBase(parent,index,endpoint,unreliable,direction,message3) {
+	WrappedPipeEndpoint::WrappedPipeEndpoint(RR_SHARED_PTR<PipeBase> parent, int32_t index, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> type, bool unreliable, MemberDefinition_Direction direction)
+		: PipeEndpointBase(parent,index,endpoint,unreliable,direction) {
 		this->Type=type;
 		//this->RR_Director=0;
 		//this->objectheapid=0;
@@ -605,7 +605,7 @@ namespace RobotRaconteur
 	}*/
 	void WrappedPipeEndpoint::SetRRDirector(WrappedPipeEndpointDirector* director, int32_t id)
 	{
-		this->RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedPipeEndpointDirector>, _1, id));
+		this->RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedPipeEndpointDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 	}
 
 	RR_SHARED_PTR<WrappedServiceStub> WrappedPipeEndpoint::GetStub()
@@ -619,13 +619,13 @@ namespace RobotRaconteur
 
 	void WrappedPipeEndpoint::AsyncClose(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, _1, id));
+		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 
 		{
 		RR_Director.reset();
 		}
 
-		PipeEndpointBase::AsyncClose(boost::bind(&WrappedPipeEndpoint::AsyncClose_handler,rr_cast<WrappedPipeEndpoint>(shared_from_this()),_1,sphandler),timeout);
+		PipeEndpointBase::AsyncClose(boost::bind(&WrappedPipeEndpoint::AsyncClose_handler,rr_cast<WrappedPipeEndpoint>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),sphandler),timeout);
 
 
 	}
@@ -652,8 +652,8 @@ namespace RobotRaconteur
 	
 	void WrappedPipeClient::AsyncConnect(int32_t index, int32_t timeout, AsyncPipeEndpointReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncPipeEndpointReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncPipeEndpointReturnDirector>, _1, id));
-		AsyncConnect_internal(index,boost::bind(&WrappedPipeClient::AsyncConnect_handler,rr_cast<WrappedPipeClient>(shared_from_this()),_1,_2,sphandler),timeout);
+		RR_SHARED_PTR<AsyncPipeEndpointReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncPipeEndpointReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncConnect_internal(index,boost::bind(&WrappedPipeClient::AsyncConnect_handler,rr_cast<WrappedPipeClient>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void WrappedPipeClient::AsyncConnect_handler(RR_SHARED_PTR<PipeEndpointBase> ep, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncPipeEndpointReturnDirector> handler)
@@ -678,9 +678,9 @@ namespace RobotRaconteur
 		this->rawelements=true;
 	}	
 	
-	RR_SHARED_PTR<PipeEndpointBase> WrappedPipeClient::CreateNewPipeEndpoint(int32_t index, bool unreliable, MemberDefinition_Direction direction, bool message3)
+	RR_SHARED_PTR<PipeEndpointBase> WrappedPipeClient::CreateNewPipeEndpoint(int32_t index, bool unreliable, MemberDefinition_Direction direction)
 	{
-		return RR_MAKE_SHARED<WrappedPipeEndpoint>(rr_cast<WrappedPipeClient>(shared_from_this()),index,0,Type,unreliable,direction,message3);
+		return RR_MAKE_SHARED<WrappedPipeEndpoint>(rr_cast<WrappedPipeClient>(shared_from_this()),index,0,Type,unreliable,direction);
 	}
 	
 	//WrappedWireConnection
@@ -699,8 +699,8 @@ namespace RobotRaconteur
 		SetOutValueBase(RRPrimUtil<RR_INTRUSIVE_PTR<MessageElement> >::PrePack(value));
 	}
 
-	WrappedWireConnection::WrappedWireConnection(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, MemberDefinition_Direction direction, bool message3)
-		: WireConnectionBase(parent,endpoint,direction,message3) 
+	WrappedWireConnection::WrappedWireConnection(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, RR_SHARED_PTR<TypeDefinition> Type, MemberDefinition_Direction direction)
+		: WireConnectionBase(parent,endpoint,direction) 
 	{
 		this->Type=Type;
 		//this->RR_Director=0;
@@ -731,7 +731,8 @@ namespace RobotRaconteur
 
 	void WrappedWireConnection::SetRRDirector(WrappedWireConnectionDirector* director, int32_t id)
 	{
-		this->RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedWireConnectionDirector>, _1, id));
+		
+		this->RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedWireConnectionDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 	}
 
 	RR_SHARED_PTR<WrappedServiceStub> WrappedWireConnection::GetStub()
@@ -750,13 +751,13 @@ namespace RobotRaconteur
 	
 	void WrappedWireConnection::AsyncClose(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, _1, id));
+		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 
 		{
 		RR_Director.reset();
 		}
 
-		WireConnectionBase::AsyncClose(boost::bind(&WrappedWireConnection::AsyncClose_handler,rr_cast<WrappedWireConnection>(shared_from_this()),_1,sphandler),timeout);
+		WireConnectionBase::AsyncClose(boost::bind(&WrappedWireConnection::AsyncClose_handler,rr_cast<WrappedWireConnection>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),sphandler),timeout);
 
 
 	}
@@ -808,8 +809,8 @@ namespace RobotRaconteur
 
 	void WrappedWireClient::AsyncConnect(int32_t timeout, AsyncWireConnectionReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncWireConnectionReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncWireConnectionReturnDirector>, _1, id));
-		AsyncConnect_internal(boost::bind(&WrappedWireClient::AsyncConnect_handler,rr_cast<WrappedWireClient>(shared_from_this()),_1,_2,sphandler),timeout);
+		RR_SHARED_PTR<AsyncWireConnectionReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncWireConnectionReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncConnect_internal(boost::bind(&WrappedWireClient::AsyncConnect_handler,rr_cast<WrappedWireClient>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void WrappedWireClient::AsyncConnect_handler(RR_SHARED_PTR<WireConnectionBase> ep, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncWireConnectionReturnDirector> handler)
@@ -834,25 +835,25 @@ namespace RobotRaconteur
 		this->rawelements=true;
 	}
 
-	RR_SHARED_PTR<WireConnectionBase> WrappedWireClient::CreateNewWireConnection(MemberDefinition_Direction direction,bool message3)
+	RR_SHARED_PTR<WireConnectionBase> WrappedWireClient::CreateNewWireConnection(MemberDefinition_Direction direction)
 	{
-		return RR_MAKE_SHARED<WrappedWireConnection>(rr_cast<WrappedWireClient>(shared_from_this()),0,Type,direction,message3);
+		return RR_MAKE_SHARED<WrappedWireConnection>(rr_cast<WrappedWireClient>(shared_from_this()),0,Type,direction);
 	}
 	
 	void WrappedWireClient::AsyncPeekInValue(int32_t timeout, AsyncWirePeekReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncWirePeekReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncWirePeekReturnDirector>, _1, id));
-		AsyncPeekInValueBase(boost::bind(&WrappedWireClient::AsyncPeekValue_handler, rr_cast<WrappedWireClient>(shared_from_this()), _1, _2, _3, sphandler), timeout);
+		RR_SHARED_PTR<AsyncWirePeekReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncWirePeekReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncPeekInValueBase(boost::bind(&WrappedWireClient::AsyncPeekValue_handler, rr_cast<WrappedWireClient>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), sphandler), timeout);
 	}
 	void WrappedWireClient::AsyncPeekOutValue(int32_t timeout, AsyncWirePeekReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncWirePeekReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncWirePeekReturnDirector>, _1, id));
-		AsyncPeekOutValueBase(boost::bind(&WrappedWireClient::AsyncPeekValue_handler, rr_cast<WrappedWireClient>(shared_from_this()), _1, _2, _3, sphandler), timeout);
+		RR_SHARED_PTR<AsyncWirePeekReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncWirePeekReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncPeekOutValueBase(boost::bind(&WrappedWireClient::AsyncPeekValue_handler, rr_cast<WrappedWireClient>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), sphandler), timeout);
 	}
 	void WrappedWireClient::AsyncPokeOutValue(const RR_INTRUSIVE_PTR<MessageElement>& value, int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, _1, id));
-		AsyncPokeOutValueBase(value, boost::bind(&WrappedWireClient::AsyncPokeValue_handler, rr_cast<WrappedWireClient>(shared_from_this()), _1, sphandler), timeout);
+		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncPokeOutValueBase(value, boost::bind(&WrappedWireClient::AsyncPokeValue_handler, rr_cast<WrappedWireClient>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1), sphandler), timeout);
 	}
 
 	void WrappedWireClient::AsyncPeekValue_handler(const RR_INTRUSIVE_PTR<RRValue>& value, const TimeSpec& ts, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncWirePeekReturnDirector> handler)
@@ -885,8 +886,11 @@ namespace RobotRaconteur
 
 	//Generator Function
 
-	
-	//Generator Function
+	void AsyncWrappedUpdateDetectedNodes(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& schemes, int32_t timeout, AsyncVoidNoErrReturnDirector* handler, int32_t id1)
+	{
+		RR_SHARED_PTR<AsyncVoidNoErrReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id1));
+		node->AsyncUpdateDetectedNodes(schemes, boost::bind(&AsyncVoidNoErrReturn_handler, sphandler), timeout);
+	}
 
 	WrappedGeneratorClient::WrappedGeneratorClient(const std::string& name, int32_t id, RR_SHARED_PTR<ServiceStub> stub)
 		: GeneratorClientBase(name, id, stub)
@@ -896,8 +900,8 @@ namespace RobotRaconteur
 
 	void WrappedGeneratorClient::AsyncNext(RR_INTRUSIVE_PTR<MessageElement> v, int32_t timeout, AsyncRequestDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, _1, id));
-		AsyncNextBase(v, boost::bind(&WrappedGeneratorClient::AsyncNext_handler,  _1, _2, sphandler), timeout);
+		RR_SHARED_PTR<AsyncRequestDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncRequestDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		AsyncNextBase(v, boost::bind(&WrappedGeneratorClient::AsyncNext_handler,  RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), sphandler), timeout);
 	}
 
 	void WrappedGeneratorClient::AsyncNext_handler(RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> m, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncRequestDirector> handler)
@@ -915,14 +919,14 @@ namespace RobotRaconteur
 		
 	void WrappedGeneratorClient::AsyncAbort(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, _1, id));
-		GeneratorClientBase::AsyncAbort(boost::bind(&WrappedGeneratorClient::AsyncAbort_handler, _1, sphandler), timeout);
+		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		GeneratorClientBase::AsyncAbort(boost::bind(&WrappedGeneratorClient::AsyncAbort_handler, RR_BOOST_PLACEHOLDERS(_1), sphandler), timeout);
 	}
 
 	void WrappedGeneratorClient::AsyncClose(int32_t timeout, AsyncVoidReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, _1, id));
-		GeneratorClientBase::AsyncClose(boost::bind(&WrappedGeneratorClient::AsyncAbort_handler, _1, sphandler), timeout);
+		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		GeneratorClientBase::AsyncClose(boost::bind(&WrappedGeneratorClient::AsyncAbort_handler, RR_BOOST_PLACEHOLDERS(_1), sphandler), timeout);
 	}
 
 	void WrappedGeneratorClient::AsyncAbort_handler(RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncVoidReturnDirector> handler)
@@ -981,14 +985,14 @@ namespace RobotRaconteur
 
 	void AsyncWrappedFindServiceByType(RR_SHARED_PTR<RobotRaconteurNode> node, const std::string &servicetype, const std::vector<std::string>& transportschemes, int32_t timeout, AsyncServiceInfo2VectorReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncServiceInfo2VectorReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector <AsyncServiceInfo2VectorReturnDirector>, _1, id));
-		node->AsyncFindServiceByType(servicetype,transportschemes,boost::bind(&AsyncServiceInfo2VectorReturn_handler,_1,sphandler),timeout);
+		RR_SHARED_PTR<AsyncServiceInfo2VectorReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector <AsyncServiceInfo2VectorReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
+		node->AsyncFindServiceByType(servicetype,transportschemes,boost::bind(&AsyncServiceInfo2VectorReturn_handler,RR_BOOST_PLACEHOLDERS(_1),sphandler),timeout);
 	}
 
 	void AsyncWrappedFindNodeByID(RR_SHARED_PTR<RobotRaconteurNode> node, const NodeID& id, const std::vector<std::string>& transportschemes, int32_t timeout, AsyncNodeInfo2VectorReturnDirector* handler, int32_t id1)
 	{
-		RR_SHARED_PTR<AsyncNodeInfo2VectorReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncNodeInfo2VectorReturnDirector>, _1, id1));
-		node->AsyncFindNodeByID(id,transportschemes,boost::bind(&AsyncNodeInfo2VectorReturn_handler,_1,sphandler),timeout);
+		RR_SHARED_PTR<AsyncNodeInfo2VectorReturnDirector> sphandler(handler, boost::bind(&ReleaseDirector<AsyncNodeInfo2VectorReturnDirector>, RR_BOOST_PLACEHOLDERS(_1), id1));
+		node->AsyncFindNodeByID(id,transportschemes,boost::bind(&AsyncNodeInfo2VectorReturn_handler,RR_BOOST_PLACEHOLDERS(_1),sphandler),timeout);
 	}
 	
 	void AsyncWrappedFindNodeByName(RR_SHARED_PTR<RobotRaconteurNode> node, const std::string& name, const std::vector<std::string>& transportschemes, int32_t timeout, AsyncNodeInfo2VectorReturnDirector* handler, int32_t id)
@@ -1125,7 +1129,7 @@ namespace RobotRaconteur
 
 	void WrappedServiceSubscriptionFilter::SetRRPredicateDirector(WrappedServiceSubscriptionFilterPredicateDirector* director, int32_t id)
 	{
-		Predicate.reset(director, boost::bind(&ReleaseDirector<WrappedServiceSubscriptionFilterPredicateDirector>, _1, id));
+		Predicate.reset(director, boost::bind(&ReleaseDirector<WrappedServiceSubscriptionFilterPredicateDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 	}
 
 
@@ -1161,13 +1165,14 @@ namespace RobotRaconteur
 
 	void WrappedServiceInfo2Subscription::SetRRDirector(WrappedServiceInfo2SubscriptionDirector* director, int32_t id)
 	{
-		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedServiceInfo2SubscriptionDirector>, _1, id));
+		
+		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedServiceInfo2SubscriptionDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		if (!events_connected)
 		{
 			events_connected.data() = true;
 			RR_WEAK_PTR<WrappedServiceInfo2Subscription> weak_this = shared_from_this();
-			subscription->AddServiceDetectedListener(boost::bind(&WrappedServiceInfo2Subscription::ServiceDetected, weak_this, _1, _2, _3));
-			subscription->AddServiceLostListener(boost::bind(&WrappedServiceInfo2Subscription::ServiceLost, weak_this, _1, _2, _3));
+			subscription->AddServiceDetectedListener(boost::bind(&WrappedServiceInfo2Subscription::ServiceDetected, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
+			subscription->AddServiceLostListener(boost::bind(&WrappedServiceInfo2Subscription::ServiceLost, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
 		}
 	}
 
@@ -1249,29 +1254,35 @@ namespace RobotRaconteur
 		subscription->SetConnectRetryDelay(delay_milliseconds);
 	}
 
-	RR_SHARED_PTR<WrappedWireSubscription> WrappedServiceSubscription::SubscribeWire(const std::string& membername)
+	RR_SHARED_PTR<WrappedWireSubscription> WrappedServiceSubscription::SubscribeWire(const std::string& membername, const std::string& servicepath)
 	{
-		RR_SHARED_PTR<WrappedWireSubscription> o = RR_MAKE_SHARED<WrappedWireSubscription>(subscription, membername);
+		RR_SHARED_PTR<WrappedWireSubscription> o = RR_MAKE_SHARED<WrappedWireSubscription>(subscription, membername, servicepath);
 		detail::ServiceSubscription_custom_member_subscribers::SubscribeWire(subscription, o);
 		return o;
 	}
 
-	RR_SHARED_PTR<WrappedPipeSubscription> WrappedServiceSubscription::SubscribePipe(const std::string& membername, uint32_t max_recv_packets)
+	RR_SHARED_PTR<WrappedPipeSubscription> WrappedServiceSubscription::SubscribePipe(const std::string& membername, const std::string& servicepath, uint32_t max_recv_packets)
 	{
-		RR_SHARED_PTR<WrappedPipeSubscription> o = RR_MAKE_SHARED<WrappedPipeSubscription>(subscription, membername, max_recv_packets);
+		RR_SHARED_PTR<WrappedPipeSubscription> o = RR_MAKE_SHARED<WrappedPipeSubscription>(subscription, membername, servicepath, max_recv_packets);
 		detail::ServiceSubscription_custom_member_subscribers::SubscribePipe(subscription, o);
 		return o;
 	}
 
+	RR_SHARED_PTR<WrappedServiceStub> WrappedServiceSubscription::GetDefaultClient()
+	{
+		return rr_cast<WrappedServiceStub>(subscription->GetDefaultClient<RRObject>());
+	}
+
 	void WrappedServiceSubscription::SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id)
 	{
-		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedServiceSubscriptionDirector>, _1, id));
+		
+		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedServiceSubscriptionDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		if (!events_connected)
 		{
 			events_connected.data() = true;
 			RR_WEAK_PTR<WrappedServiceSubscription> weak_this=shared_from_this();
-			subscription->AddClientConnectListener(boost::bind(&WrappedServiceSubscription::ClientConnected, weak_this, _1, _2, _3));
-			subscription->AddClientDisconnectListener(boost::bind(&WrappedServiceSubscription::ClientDisconnected, weak_this, _1, _2, _3));
+			subscription->AddClientConnectListener(boost::bind(&WrappedServiceSubscription::ClientConnected, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
+			subscription->AddClientDisconnectListener(boost::bind(&WrappedServiceSubscription::ClientDisconnected, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
 		}
 	}
 
@@ -1301,8 +1312,8 @@ namespace RobotRaconteur
 		DIRECTOR_CALL3(WrappedServiceSubscriptionDirector, RR_Director->ClientDisconnected(s, id, client2));
 	}
 
-	WrappedWireSubscription::WrappedWireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername)
-		: WireSubscriptionBase(parent, membername)
+	WrappedWireSubscription::WrappedWireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, const std::string& servicepath)
+		: WireSubscriptionBase(parent, membername, servicepath)
 	{
 		
 	}
@@ -1318,6 +1329,16 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<WrappedWireConnection> connection2 = rr_cast<WrappedWireConnection>(connection1);
 		o.type = connection2->Type;
 		o.stub = connection2->GetStub();
+		//TODO: Make this more efficient
+		try
+		{
+			o.context = o.stub->GetContext();
+		}
+		catch (InvalidOperationException&)
+		{
+			throw ValueNotSetException("Value not set");
+		}
+		
 		return o;		
 	}
 
@@ -1333,12 +1354,23 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<WrappedWireConnection> connection2 = rr_cast<WrappedWireConnection>(connection1);
 		val.type = connection2->Type;
 		val.stub = connection2->GetStub();
+
+		//TODO: Make this more efficient
+		try
+		{
+			val.context = val.stub->GetContext();
+		}
+		catch (InvalidOperationException&)
+		{
+			return false;
+		}
 		return ret;
 	}
 		
 	void WrappedWireSubscription::SetRRDirector(WrappedWireSubscriptionDirector* director, int32_t id)
 	{
-		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedWireSubscriptionDirector>, _1, id));		
+		
+		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedWireSubscriptionDirector>, RR_BOOST_PLACEHOLDERS(_1), id));		
 	}
 
 	
@@ -1349,6 +1381,15 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<WrappedWireConnection> connection2 = rr_cast<WrappedWireConnection>(connection);
 		val.type = connection2->Type;
 		val.stub = connection2->GetStub();
+		//TODO: Make this more efficient
+		try
+		{
+			val.context = val.stub->GetContext();
+		}
+		catch (InvalidOperationException&)
+		{
+			return;
+		}
 		RR_SHARED_PTR<WrappedWireSubscription> s = RR_STATIC_POINTER_CAST<WrappedWireSubscription>(shared_from_this());
 		DIRECTOR_CALL3(WrappedWireSubscriptionDirector, RR_Director->WireValueChanged(s, val, time));
 	}
@@ -1395,8 +1436,8 @@ namespace RobotRaconteur
 	}
 
 
-	WrappedPipeSubscription::WrappedPipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, int32_t max_recv_packets, int32_t max_send_backlog)
-		: PipeSubscriptionBase(parent, membername, max_recv_packets, max_send_backlog)
+	WrappedPipeSubscription::WrappedPipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, const std::string& servicepath, int32_t max_recv_packets, int32_t max_send_backlog)
+		: PipeSubscriptionBase(parent, membername, servicepath, max_recv_packets, max_send_backlog)
 	{
 		
 	}
@@ -1418,17 +1459,27 @@ namespace RobotRaconteur
 		RR_INTRUSIVE_PTR<RRValue> packet1;
 		bool ret = PipeSubscriptionBase::TryReceivePacketBase(packet1, peek, &endpoint1);
 		if (!ret) return false;
-		packet.packet = RR_STATIC_POINTER_CAST<MessageElement>(packet.packet);
+		packet.packet = RR_STATIC_POINTER_CAST<MessageElement>(packet1);
 		if (!endpoint1) throw InvalidOperationException("Invalid subscription pipe endpoint");
 		RR_SHARED_PTR<WrappedPipeEndpoint> endpoint2 = rr_cast<WrappedPipeEndpoint>(endpoint1);
 		packet.type = endpoint2->Type;
 		packet.stub = endpoint2->GetStub();
+		//TODO: Make this more efficient
+		try
+		{
+			packet.context = packet.stub->GetContext();
+		}
+		catch (InvalidOperationException&)
+		{
+			return false;
+		}
 		return ret;
 	}
 		
 	void WrappedPipeSubscription::SetRRDirector(WrappedPipeSubscriptionDirector* director, int32_t id)
 	{
-		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedPipeSubscriptionDirector>, _1, id));		
+		
+		RR_Director.reset(director, boost::bind(&ReleaseDirector<WrappedPipeSubscriptionDirector>, RR_BOOST_PLACEHOLDERS(_1), id));		
 	}
 
 	
@@ -1521,7 +1572,7 @@ namespace RobotRaconteur
 
 			if (filter->Predicate)
 			{
-				filter2->Predicate = boost::bind(&WrappedServiceSubscriptionFilterPredicateDirector::CallPredicate, filter->Predicate, _1);
+				filter2->Predicate = boost::bind(&WrappedServiceSubscriptionFilterPredicateDirector::CallPredicate, filter->Predicate, RR_BOOST_PLACEHOLDERS(_1));
 			}
 		}
 
@@ -1537,13 +1588,31 @@ namespace RobotRaconteur
 		return RR_MAKE_SHARED<WrappedServiceInfo2Subscription>(sub);
 	}
 
-	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& service_types, RR_SHARED_PTR<WrappedServiceSubscriptionFilter> filter)
+	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeServiceByType(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& service_types, RR_SHARED_PTR<WrappedServiceSubscriptionFilter> filter)
 	{
 		
 		RR_SHARED_PTR<ServiceSubscriptionFilter> filter2=WrappedSubscribeService_LoadFilter(node, filter);
 
-		RR_SHARED_PTR<ServiceSubscription> sub = node->SubscribeService(service_types, filter2);
+		RR_SHARED_PTR<ServiceSubscription> sub = node->SubscribeServiceByType(service_types, filter2);
 
+		return RR_MAKE_SHARED<WrappedServiceSubscription>(sub);
+	}
+
+	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<std::string>& url, const std::string& username, boost::intrusive_ptr<MessageElementData> credentials,  const std::string& objecttype)
+	{
+		boost::intrusive_ptr<RRMap<std::string,RRValue> > credentials2;
+		if (credentials) credentials2=rr_cast<RRMap<std::string,RRValue> >(node->UnpackMapType<std::string,RRValue>(rr_cast<MessageElementNestedElementList>(credentials)));
+
+		RR_SHARED_PTR<ServiceSubscription> sub = node->SubscribeService(url, username, credentials2, objecttype);
+		return RR_MAKE_SHARED<WrappedServiceSubscription>(sub);
+	}
+
+	RR_SHARED_PTR<WrappedServiceSubscription> WrappedSubscribeService(RR_SHARED_PTR<RobotRaconteurNode> node, const std::string& url, const std::string& username, boost::intrusive_ptr<MessageElementData> credentials,  const std::string& objecttype)
+	{
+		boost::intrusive_ptr<RRMap<std::string,RRValue> > credentials2;
+		if (credentials) credentials2=rr_cast<RRMap<std::string,RRValue> >(node->UnpackMapType<std::string,RRValue>(rr_cast<MessageElementNestedElementList>(credentials)));
+
+		RR_SHARED_PTR<ServiceSubscription> sub = node->SubscribeService(url, username, credentials2, objecttype);
 		return RR_MAKE_SHARED<WrappedServiceSubscription>(sub);
 	}
 
@@ -1621,7 +1690,7 @@ namespace RobotRaconteur
 			return;
 		}
 
-		RR_SHARED_PTR<UserLogRecordHandlerDirector> spdirector(director, boost::bind(&ReleaseDirector<UserLogRecordHandlerDirector>, _1, id));
+		RR_SHARED_PTR<UserLogRecordHandlerDirector> spdirector(director, boost::bind(&ReleaseDirector<UserLogRecordHandlerDirector>, RR_BOOST_PLACEHOLDERS(_1), id));
 		handler_director = spdirector;
 	}
 

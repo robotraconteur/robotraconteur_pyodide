@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -621,7 +621,8 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<RobotRaconteurNode> n= parent->GetNode();
 		this->retry_delay = 15000;
 
-		this->node = n;	
+		this->node = n;
+		use_service_url = false;
 	}
 
 	void ServiceSubscription::Init(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter)
@@ -633,8 +634,84 @@ namespace RobotRaconteur
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceSubscription initialized for service types: " << boost::join(service_types,", "));
 	}
 
+	void ServiceSubscription::InitServiceURL(const std::vector<std::string>& url, boost::string_ref username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials,  boost::string_ref objecttype)
+	{
+		if (url.empty())
+		{
+			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Subscription, -1, "No urls specified for SubscribeService");
+			throw InvalidArgumentException("URL vector must not be empty for SubscribeService");
+		}		
+
+		NodeID service_nodeid;
+		std::string service_nodename;
+		std::string service_name;
+
+		ParseConnectionURLResult url_res = ParseConnectionURL(url.at(0));
+		service_nodeid = url_res.nodeid;
+		service_nodename = url_res.nodename;
+		service_name = url_res.service;
+
+		for (size_t i=1; i<url.size(); i++)
+		{	
+			ParseConnectionURLResult url_res1 = ParseConnectionURL(url.at(0));
+			if (url_res1.nodeid != url_res.nodeid
+				|| url_res1.nodename != url_res.nodename
+				|| url_res1.service != url_res.service)
+			{
+				ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Subscription, -1, "Provided URLs do not point to same service in SubscribeService");
+				throw InvalidArgumentException("URLs must point to same service in SubscribeService");
+			}
+		}
+
+		RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
+		if (!n) throw InvalidOperationException("Node has been released");
+
+		this->retry_delay = 2500;
+
+		this->active = true;
+		this->service_url = url;
+		this->service_url_username = username.to_string();
+		this->service_url_credentials = credentials;
+
+		RR_SHARED_PTR<detail::ServiceSubscription_client> c2 = RR_MAKE_SHARED<detail::ServiceSubscription_client>();
+		c2->connecting.data() = true;
+		c2->nodeid = service_nodeid;
+		c2->nodename = service_nodename;
+		c2->service_name = service_name;
+		c2->service_type = objecttype.to_string();
+		c2->urls = url;
+		c2->last_node_update = n->NowUTC();
+						
+		c2->username = username.to_string();
+		c2->credentials = credentials;
+					
+		try
+		{
+			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceSubscription begin connect to service service with url " << url.front());
+			RR_WEAK_PTR<ServiceSubscription> weak_this = shared_from_this();
+			n->AsyncConnectService(url, c2->username, c2->credentials,
+				boost::bind(&ServiceSubscription::ClientEvent, weak_this ,RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), c2),
+				objecttype,
+				boost::bind(&ServiceSubscription::ClientConnected, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), c2),
+				n->GetRequestTimeout() * 2);
+			clients.insert(std::make_pair(ServiceSubscriptionClientID(c2->nodeid, c2->service_name), c2));
+			return;
+		}
+		catch (std::exception& exp2)
+		{
+			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Subscription, -1, "ServiceSubscription connect to service with url " << url.front() << " failed: " << exp2.what());
+		}
+
+		ConnectRetry(c2);
+
+
+	}
+
+
 	void ServiceSubscription::NodeUpdated(RR_SHARED_PTR<detail::Discovery_nodestorage> storage)
 	{
+		
+		if (use_service_url) return;
 		if (!active) return;
 		if (!storage) return;
 		if (!storage->services) return;
@@ -692,9 +769,9 @@ namespace RobotRaconteur
 						<< info.NodeID.ToString());
 					RR_WEAK_PTR<ServiceSubscription> weak_this = shared_from_this();
 					n->AsyncConnectService(urls, c2->username, c2->credentials,
-						boost::bind(&ServiceSubscription::ClientEvent, weak_this ,_1, _2, _3, c2),
+						boost::bind(&ServiceSubscription::ClientEvent, weak_this ,RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), c2),
 						client_service_type,
-						boost::bind(&ServiceSubscription::ClientConnected, shared_from_this(), _1, _2, c2),
+						boost::bind(&ServiceSubscription::ClientConnected, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), c2),
 						n->GetRequestTimeout() * 2);
 					clients.insert(std::make_pair(ServiceSubscriptionClientID(c2->nodeid, c2->service_name), c2));
 					continue;
@@ -740,6 +817,7 @@ namespace RobotRaconteur
 
 	void ServiceSubscription::NodeLost(RR_SHARED_PTR<detail::Discovery_nodestorage> storage)
 	{
+		if (use_service_url) return;
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceSubscription received node lost for " << storage->info->NodeID.ToString());
 	}
 
@@ -758,6 +836,16 @@ namespace RobotRaconteur
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceSubscription connected to service named \"" << c2->service_name << "\" on node " 
 						<< c2->nodeid.ToString());
+
+		if (c2->nodeid.IsAnyNode())
+		{
+			c2->nodeid = n->GetServiceNodeID(c);
+		}
+
+		if (c2->nodename.empty())
+		{
+			c2->nodename = n->GetServiceNodeName(c);
+		}
 
 		c2->connecting.data() = false;
 		c2->client = c;
@@ -793,7 +881,7 @@ namespace RobotRaconteur
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceSubscription begin retry timer config for service \"" << c2->service_name << "\" on node " 
 						<< c2->nodeid.ToString() << " with error count " << c2->error_count);
-		if (c2->error_count > 25)
+		if (c2->error_count > 25 && !use_service_url)
 		{
 			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Subscription, -1, "ServiceSubscription for service \"" << c2->service_name << "\" on node " 
 						<< c2->nodeid.ToString() << " with error count " << c2->error_count << " aborting retry due to too many errors");
@@ -836,9 +924,9 @@ namespace RobotRaconteur
 						<< c2->nodeid.ToString());
 			RR_WEAK_PTR<ServiceSubscription> weak_this = shared_from_this();
 			n->AsyncConnectService(c2->urls, c2->username, c2->credentials,
-				boost::bind(&ServiceSubscription::ClientEvent, weak_this, _1, _2, _3, c2),
+				boost::bind(&ServiceSubscription::ClientEvent, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), c2),
 				c2->service_type,
-				boost::bind(&ServiceSubscription::ClientConnected, shared_from_this(), _1, _2, c2),
+				boost::bind(&ServiceSubscription::ClientConnected, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), c2),
 				n->GetRequestTimeout() * 2);
 			return;
 		}
@@ -994,6 +1082,36 @@ namespace RobotRaconteur
 		}
 	}
 
+	bool ServiceSubscription::TryGetDefaultClientBase(RR_SHARED_PTR<RRObject>& client_out)
+	{	
+		boost::mutex::scoped_lock lock(this_lock);
+
+		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceSubscription_client> c, clients | boost::adaptors::map_values)
+		{
+			RR_SHARED_PTR<RRObject> c1 = c->client.lock();
+			if (c1)
+			{
+				client_out = c1;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	RR_SHARED_PTR<RRObject> ServiceSubscription::GetDefaultClientBase()
+	{
+		
+		RR_SHARED_PTR<RRObject> client;
+		if (!TryGetDefaultClientBase(client))
+		{
+			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Subscription, -1, "No clients connected for default client");
+			throw ConnectionException("No clients connected");
+		}
+
+		return client;			
+	}
+
 	//class WireSubscriptionBase
 
 	static void WireSubscriptionBase_emptyhandler(RR_SHARED_PTR<RobotRaconteurException> e)
@@ -1013,6 +1131,18 @@ namespace RobotRaconteur
 	bool WireSubscriptionBase::TryGetInValueBase(RR_INTRUSIVE_PTR<RRValue>& val, TimeSpec* time, RR_SHARED_PTR<WireConnectionBase>* connection)
 	{
 		if (!in_value_valid) return false;
+
+		if (in_value_lifespan >= 0)
+		{
+			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
+			if (!n)
+				return false;
+
+			if (in_value_time_local + boost::posix_time::milliseconds(in_value_lifespan) < n->NowUTC())
+			{
+				return false;
+			}
+		}
 
 		val = in_value;
 		if (time)
@@ -1057,6 +1187,18 @@ namespace RobotRaconteur
 		}
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "IgnoreInValue set to " << ignore);
+	}
+
+	int32_t WireSubscriptionBase::GetInValueLifespan()
+	{
+		boost::mutex::scoped_lock lock(this_lock);
+		return in_value_lifespan;
+	}
+
+	void WireSubscriptionBase::SetInValueLifespan(int32_t millis)
+	{
+		boost::mutex::scoped_lock lock(this_lock);
+		in_value_lifespan = millis;
 	}
 
 	void WireSubscriptionBase::SetOutValueAllBase(const RR_INTRUSIVE_PTR<RRValue>& val)
@@ -1113,11 +1255,34 @@ namespace RobotRaconteur
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "WireSubscription closed");
 	}
 
-	WireSubscriptionBase::WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername)
+	WireSubscriptionBase::WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath)
 	{
 		this->parent = parent;
 		this->node = parent->node;
 		this->membername = RR_MOVE(membername.to_string());
+		this->servicepath = RR_MOVE(servicepath.to_string());
+		this->wire_value_changed_semaphore = RR_MAKE_SHARED<detail::async_signal_pool_semaphore>(parent->node.lock());
+		this->in_value_lifespan = -1;
+	}
+
+	static RR_SHARED_PTR<ServiceStub> MemberSubscriptionBase_GetClientStub(RR_SHARED_PTR<RRObject> client, boost::string_ref service_path)
+	{
+		RR_SHARED_PTR<ServiceStub> stub = RR_DYNAMIC_POINTER_CAST<ServiceStub>(client);
+		if (!stub) return RR_SHARED_PTR<ServiceStub>();
+
+		if (service_path.empty() || service_path == "*")
+		{
+			return stub;
+		}
+
+		std::string service_path1 = service_path.to_string();
+
+		if (boost::starts_with(service_path1, "*."))
+		{
+			boost::replace_first(service_path1, "*", stub->GetContext()->GetServiceName());
+		}
+
+		return rr_cast<ServiceStub>(stub->GetContext()->FindObjRef(service_path1));		
 	}
 
 	void WireSubscriptionBase::ClientConnected(RR_SHARED_PTR<RRObject> client)
@@ -1132,11 +1297,11 @@ namespace RobotRaconteur
 
 		try
 		{
-			RR_SHARED_PTR<ServiceStub> stub = RR_DYNAMIC_POINTER_CAST<ServiceStub>(client);
+			RR_SHARED_PTR<ServiceStub> stub = MemberSubscriptionBase_GetClientStub(client,servicepath);
 			if (!stub) return;
-
+			
 			RR_SHARED_PTR<WireClientBase> wire_client=stub->RRGetWireClient(membername);
-			wire_client->AsyncConnect_internal(boost::bind(&WireSubscriptionBase::ClientConnected1, shared_from_this(), client, _1, _2), n->GetRequestTimeout());
+			wire_client->AsyncConnect_internal(boost::bind(&WireSubscriptionBase::ClientConnected1, shared_from_this(), client, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2)), n->GetRequestTimeout());
 
 		}
 		catch (std::exception& exp) {
@@ -1193,7 +1358,9 @@ namespace RobotRaconteur
 		if (!connection) return;
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "Wire subscription received InValue");
-						
+
+		RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
+
 		{
 
 			if (ignore_in_value.data())
@@ -1203,6 +1370,12 @@ namespace RobotRaconteur
 			in_value_time = time;
 			in_value_connection = connection;
 			in_value_valid.data() = true;
+			if (n)
+			{
+				in_value_time_local = n->NowUTC();
+			}
+
+			
 		}
 
 		
@@ -1401,9 +1574,16 @@ namespace RobotRaconteur
 		
 		BOOST_FOREACH(RR_SHARED_PTR<detail::PipeSubscription_connection> c, connections)
 		{
-			if (c->DoSendPacket())
+			try
 			{
-				c->AsyncSendPacket(packet);
+				if (c->DoSendPacket())
+				{
+					c->AsyncSendPacket(packet);
+				}
+			}
+			catch (std::exception& exp)
+			{
+				ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "AsyncSendPacketAll failed for subscription connection: " << exp.what());
 			}
 		}
 	}
@@ -1442,11 +1622,12 @@ namespace RobotRaconteur
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "PipeSubscription closed");
 	}
 
-	PipeSubscriptionBase::PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, int32_t max_recv_packets, int32_t max_send_backlog)		
+	PipeSubscriptionBase::PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath, int32_t max_recv_packets, int32_t max_send_backlog)		
 	{
 		this->parent = parent;
 		this->node = parent->node;
 		this->membername = RR_MOVE(membername.to_string());
+		this->servicepath = RR_MOVE(servicepath.to_string());
 		this->max_recv_packets.data() = max_recv_packets;
 		this->max_send_backlog.data() = max_send_backlog;
 	}
@@ -1463,11 +1644,11 @@ namespace RobotRaconteur
 
 		try
 		{
-			RR_SHARED_PTR<ServiceStub> stub = RR_DYNAMIC_POINTER_CAST<ServiceStub>(client);
+			RR_SHARED_PTR<ServiceStub> stub = MemberSubscriptionBase_GetClientStub(client,servicepath);
 			if (!stub) return;
 
 			RR_SHARED_PTR<PipeClientBase> pipe_client = stub->RRGetPipeClient(membername);
-			pipe_client->AsyncConnect_internal(-1, boost::bind(&PipeSubscriptionBase::ClientConnected1, shared_from_this(), client, _1, _2),n->GetRequestTimeout());
+			pipe_client->AsyncConnect_internal(-1, boost::bind(&PipeSubscriptionBase::ClientConnected1, shared_from_this(), client, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2)),n->GetRequestTimeout());
 
 		}
 		catch (std::exception& exp) {
@@ -1635,12 +1816,12 @@ namespace RobotRaconteur
 			active_sends.push_back(send_key);
 			if (!send_copy_element.data())
 			{
-				ep->AsyncSendPacketBase(packet, boost::bind(&PipeSubscription_connection::pipe_packet_send_handler, this->shared_from_this(), _1, _2, send_key));
+				ep->AsyncSendPacketBase(packet, boost::bind(&PipeSubscription_connection::pipe_packet_send_handler, this->shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), send_key));
 			}
 			else
 			{
 				RR_INTRUSIVE_PTR<MessageElement> packet2 = ShallowCopyMessageElement(rr_cast<MessageElement>(packet));
-				ep->AsyncSendPacketBase(packet2, boost::bind(&PipeSubscription_connection::pipe_packet_send_handler, this->shared_from_this(), _1, _2, send_key));
+				ep->AsyncSendPacketBase(packet2, boost::bind(&PipeSubscription_connection::pipe_packet_send_handler, this->shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), send_key));
 			}
 		}
 

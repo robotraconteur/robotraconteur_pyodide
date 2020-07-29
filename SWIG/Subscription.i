@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -135,20 +135,14 @@ namespace RobotRaconteur
 		uint32_t GetConnectRetryDelay();
 		void SetConnectRetryDelay(uint32_t delay_milliseconds);
 
-		boost::shared_ptr<WrappedWireSubscription> SubscribeWire(const std::string& membername);
+		boost::shared_ptr<WrappedWireSubscription> SubscribeWire(const std::string& membername, const std::string& servicepath);
 
-		boost::shared_ptr<WrappedPipeSubscription> SubscribePipe(const std::string& membername, int32_t max_recv_packets = -1);
+		boost::shared_ptr<WrappedPipeSubscription> SubscribePipe(const std::string& membername, const std::string& servicepath, int32_t max_recv_packets = -1);
+
+		boost::shared_ptr<WrappedServiceStub> GetDefaultClient();
 
 		void SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id);
 			
-	};
-
-	class WrappedService_typed_packet
-	{
-	public:
-		boost::intrusive_ptr<RobotRaconteur::MessageElement> packet;
-		boost::shared_ptr<RobotRaconteur::TypeDefinition> type;
-		boost::shared_ptr<RobotRaconteur::WrappedServiceStub> stub;		
 	};
 
 	class WrappedWireSubscriptionDirector
@@ -169,7 +163,10 @@ namespace RobotRaconteur
 		bool TryGetInValue(WrappedService_typed_packet& val, TimeSpec* time = NULL);
 
 		bool GetIgnoreInValue();
-		void SetIgnoreInValue(bool ignore);		
+		void SetIgnoreInValue(bool ignore);
+
+		int32_t GetInValueLifespan();
+		void SetInValueLifespan(int32_t millis);	
 
 		size_t GetActiveWireConnectionCount();
 
@@ -234,6 +231,10 @@ namespace RobotRaconteur
 
 	std::vector<ServiceSubscriptionClientID> WrappedServiceSubscriptionClientsToVector(std::map<ServiceSubscriptionClientID, boost::shared_ptr<WrappedServiceStub> >& clients);
 
-	boost::shared_ptr<WrappedServiceSubscription> WrappedSubscribeService(boost::shared_ptr<RobotRaconteurNode> node, const std::vector<std::string>& service_types, boost::shared_ptr<WrappedServiceSubscriptionFilter> filter = boost::shared_ptr<WrappedServiceSubscriptionFilter>());
+	boost::shared_ptr<WrappedServiceSubscription> WrappedSubscribeServiceByType(boost::shared_ptr<RobotRaconteurNode> node, const std::vector<std::string>& service_types, boost::shared_ptr<WrappedServiceSubscriptionFilter> filter = boost::shared_ptr<WrappedServiceSubscriptionFilter>());
+
+	boost::shared_ptr<WrappedServiceSubscription> WrappedSubscribeService(boost::shared_ptr<RobotRaconteurNode> node, const std::vector<std::string>& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "");
+	
+	boost::shared_ptr<WrappedServiceSubscription> WrappedSubscribeService(boost::shared_ptr<RobotRaconteurNode> node, const std::string& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "");
 
 }

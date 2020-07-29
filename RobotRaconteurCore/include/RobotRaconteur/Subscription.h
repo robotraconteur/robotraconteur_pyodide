@@ -1,7 +1,7 @@
 /** 
  * @file Subscription.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -184,19 +184,41 @@ namespace RobotRaconteur
 		void SetConnectRetryDelay(uint32_t delay_milliseconds);
 
 		template <typename T>
-		RR_SHARED_PTR<WireSubscription<T> > SubscribeWire(boost::string_ref membername)
+		RR_SHARED_PTR<WireSubscription<T> > SubscribeWire(boost::string_ref membername, boost::string_ref servicepath = "")
 		{
-			RR_SHARED_PTR<WireSubscription<T> > o = RR_MAKE_SHARED<WireSubscription<T> >(shared_from_this(), membername);
+			RR_SHARED_PTR<WireSubscription<T> > o = RR_MAKE_SHARED<WireSubscription<T> >(shared_from_this(), membername, servicepath);
 			SubscribeWire1(o);
 			return o;
 		}
 
 		template <typename T>
-		RR_SHARED_PTR<PipeSubscription<T> > SubscribePipe(boost::string_ref membername, uint32_t max_recv_packets=std::numeric_limits<uint32_t>::max())
+		RR_SHARED_PTR<PipeSubscription<T> > SubscribePipe(boost::string_ref membername, boost::string_ref servicepath = "", uint32_t max_recv_packets=std::numeric_limits<uint32_t>::max())
 		{
-			RR_SHARED_PTR<PipeSubscription<T> > o = RR_MAKE_SHARED<PipeSubscription<T> >(shared_from_this(), membername, max_recv_packets);
+			RR_SHARED_PTR<PipeSubscription<T> > o = RR_MAKE_SHARED<PipeSubscription<T> >(shared_from_this(), membername, servicepath, max_recv_packets);
 			SubscribePipe1(o);
 			return o;
+		}
+
+		template <typename T>
+		RR_SHARED_PTR<T> GetDefaultClient()
+		{
+			return rr_cast<T>(GetDefaultClientBase());
+		}
+
+		template <typename T>
+		bool TryGetDefaultClient(RR_SHARED_PTR<T>& client_out)
+		{
+			RR_SHARED_PTR<RRObject> c;
+			if (!TryGetDefaultClientBase(c))
+			{
+				return false;
+			}
+			RR_SHARED_PTR<T> c1 = RR_DYNAMIC_POINTER_CAST<T>(c);
+			if (!c1)
+				return false;
+
+			client_out = c1;
+			return true;
 		}
 
 	protected:
@@ -219,11 +241,17 @@ namespace RobotRaconteur
 		boost::unordered_set<RR_SHARED_PTR<WireSubscriptionBase> > wire_subscriptions;
 		boost::unordered_set<RR_SHARED_PTR<PipeSubscriptionBase> > pipe_subscriptions;
 
+		bool use_service_url;
+		std::vector<std::string> service_url;
+		std::string service_url_username;
+		RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > service_url_credentials;
+
 	public:
 		//Do not call, use RobotRaconteurNode()->SubscribeService()
 		ServiceSubscription(RR_SHARED_PTR<detail::Discovery> parent);
 	protected:
 		virtual void Init(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter);
+		virtual void InitServiceURL(const std::vector<std::string>& url, boost::string_ref username = "", RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials=(RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> >()),  boost::string_ref objecttype = "");
 		virtual void NodeUpdated(RR_SHARED_PTR<detail::Discovery_nodestorage> storage);
 		virtual void NodeLost(RR_SHARED_PTR<detail::Discovery_nodestorage> storage);
 
@@ -241,6 +269,9 @@ namespace RobotRaconteur
 
 		void WireSubscriptionClosed(RR_SHARED_PTR<WireSubscriptionBase> s);
 		void PipeSubscriptionClosed(RR_SHARED_PTR<PipeSubscriptionBase> s);
+
+		RR_SHARED_PTR<RRObject> GetDefaultClientBase();
+		bool TryGetDefaultClientBase(RR_SHARED_PTR<RRObject>& client_out);
 	};
 
 	class ROBOTRACONTEUR_CORE_API WireSubscriptionBase : public RR_ENABLE_SHARED_FROM_THIS<WireSubscriptionBase>, private boost::noncopyable
@@ -261,13 +292,16 @@ namespace RobotRaconteur
 		bool GetIgnoreInValue();
 		void SetIgnoreInValue(bool ignore);
 
+		int32_t GetInValueLifespan();
+		void SetInValueLifespan(int32_t millis);
+
 		void SetOutValueAllBase(const RR_INTRUSIVE_PTR<RRValue>& val);
 
 		size_t GetWireConnectionCount();
 
 		void Close();
 
-		WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername);
+		WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath);
 
 	protected:
 
@@ -285,11 +319,14 @@ namespace RobotRaconteur
 		TimeSpec in_value_time;
 		boost::initialized<bool> in_value_valid;
 		RR_SHARED_PTR<WireConnectionBase> in_value_connection;
+		int32_t in_value_lifespan;
+		boost::posix_time::ptime in_value_time_local;
 
 		
 		boost::initialized<bool> ignore_in_value;
 
 		std::string membername;
+		std::string servicepath;
 
 		virtual void fire_WireValueChanged(RR_INTRUSIVE_PTR<RRValue> value, const TimeSpec& time, RR_SHARED_PTR<WireConnectionBase> connection);
 		virtual bool isempty_WireValueChanged();
@@ -301,8 +338,8 @@ namespace RobotRaconteur
 	{
 	public:
 
-		WireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername)
-			: WireSubscriptionBase(parent, membername)
+		WireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath)
+			: WireSubscriptionBase(parent, membername, servicepath)
 		{
 
 		}
@@ -323,7 +360,7 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<WireConnectionBase> connection1;
 			if (!TryGetInValueBase(o, time, &connection1)) return false;
 			val = RRPrimUtil<T>::PreUnpack(o);
-			if (connection1)
+			if (connection && connection1)
 			{
 				*connection = RR_DYNAMIC_POINTER_CAST<WireConnection<T> >(connection1);
 			}
@@ -381,7 +418,7 @@ namespace RobotRaconteur
 
 		void Close();
 
-		PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
+		PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath = "", int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
 
 	protected:
 
@@ -398,6 +435,7 @@ namespace RobotRaconteur
 		std::deque<boost::tuple<RR_INTRUSIVE_PTR<RRValue>, RR_SHARED_PTR<PipeEndpointBase> > > recv_packets;
 		
 		std::string membername;
+		std::string servicepath;
 
 		boost::initialized<int32_t> max_recv_packets;
 		boost::initialized<bool> ignore_incoming_packets;
@@ -413,8 +451,8 @@ namespace RobotRaconteur
 	{
 	public:
 
-		PipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, int32_t max_recv_packets = -1, int32_t max_send_backlog = 5)
-			: PipeSubscriptionBase(parent, membername, max_recv_packets)
+		PipeSubscription(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath = "", int32_t max_recv_packets = -1, int32_t max_send_backlog = 5)
+			: PipeSubscriptionBase(parent, membername, servicepath, max_recv_packets)
 		{
 
 		}

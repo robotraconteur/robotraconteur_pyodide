@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -85,14 +85,15 @@ namespace RobotRaconteur
 		}		
 	}
 
-	WireConnectionBase::WireConnectionBase(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, MemberDefinition_Direction direction, bool message3)
+	WireConnectionBase::WireConnectionBase(RR_SHARED_PTR<WireBase> parent, uint32_t endpoint, MemberDefinition_Direction direction)
 	{
 		this->parent=parent;
 		this->endpoint=endpoint;
 		outval_valid=false;
 		inval_valid=false;
+		inval_lifespan=-1;
+		outval_lifespan=-1;
 		ignore_inval = false;
-		this->message3 = message3;
 		send_closed = false;
 		recv_closed = false;
 		node = parent->GetNode();
@@ -111,6 +112,8 @@ namespace RobotRaconteur
 	void WireConnectionBase::WirePacketReceived(TimeSpec timespec, RR_INTRUSIVE_PTR<RRValue> packet)
 	{		
 		{
+			
+			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
 
 			if (ignore_inval)
 			{
@@ -124,7 +127,12 @@ namespace RobotRaconteur
 				{
 					inval = packet;
 					lasttime_recv = timespec;
-					inval_valid = true;					
+					if (n)
+					{
+						lasttime_recv_local = n->NowUTC();
+					}					
+					inval_valid = true;
+					
 				}
 
 				
@@ -184,6 +192,29 @@ namespace RobotRaconteur
 		
 	}
 
+	namespace detail
+	{
+		bool WireConnectionBase_IsValueExpired(RR_WEAK_PTR<RobotRaconteurNode> node, const boost::posix_time::ptime& recv_time, int32_t lifespan)
+		{
+			if (lifespan < 0)
+			{
+				return false;
+			}
+
+			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
+			if (!n)
+			{
+				return true;
+			}
+
+			if (recv_time + boost::posix_time::milliseconds(lifespan) < n->NowUTC())
+			{
+				return true;
+			}
+			return false;
+		}
+	}
+
 	RR_INTRUSIVE_PTR<RRValue> WireConnectionBase::GetInValueBase()
 	{
 		if (direction == MemberDefinition_Direction_writeonly)
@@ -195,6 +226,10 @@ namespace RobotRaconteur
 		{
 		if (!inval_valid)
 			throw ValueNotSetException("Value not set");
+		if(detail::WireConnectionBase_IsValueExpired(node, lasttime_recv_local,inval_lifespan))
+		{
+			throw ValueNotSetException("Value expired");
+		}
 		val=inval;
 		}
 		return val;
@@ -211,6 +246,10 @@ namespace RobotRaconteur
 		{
 		if (!outval_valid)
 			throw ValueNotSetException("Value not set");
+		if(detail::WireConnectionBase_IsValueExpired(node, lasttime_send_local,outval_lifespan))
+		{
+			throw ValueNotSetException("Value expired");
+		}
 		val=outval;
 		}
 		return val;
@@ -223,6 +262,8 @@ namespace RobotRaconteur
 			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Member, endpoint, service_path, member_name, "Attempt to get OutValue of read only wire");
 			throw ReadOnlyMemberException("Read only member");
 		}
+
+		RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
 
 		try		
 		{
@@ -237,10 +278,15 @@ namespace RobotRaconteur
 			
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, member_name, "Wire sending out value packet timespec " << time.seconds << "," << time.nanoseconds);
 			
-			GetParent()->SendWirePacket(value, time, endpoint, message3);
+			GetParent()->SendWirePacket(value, time, endpoint);
+			
+			
 			outval = value;
 			lasttime_send = time;
-			outval_valid = true;			
+			lasttime_send_local = n->NowUTC();
+			outval_valid = true;
+			
+			
 		}
 		catch (std::exception& exp)
 		{
@@ -251,7 +297,17 @@ namespace RobotRaconteur
 
 	bool WireConnectionBase::TryGetInValueBase(RR_INTRUSIVE_PTR<RRValue>& value, TimeSpec& time)
 	{
+		if (direction == MemberDefinition_Direction_writeonly)
+		{
+			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Member, endpoint, service_path, member_name, "Attempt to get InValue of write only wire");
+			throw WriteOnlyMemberException("Write only member");
+		}
+		
 		if (!inval_valid) return false;
+		if(detail::WireConnectionBase_IsValueExpired(node, lasttime_recv_local,inval_lifespan))
+		{
+			return false;
+		}
 		value = inval;
 		time = lasttime_recv;
 		return true;
@@ -259,7 +315,17 @@ namespace RobotRaconteur
 
 	bool WireConnectionBase::TryGetOutValueBase(RR_INTRUSIVE_PTR<RRValue>& value, TimeSpec& time)
 	{
-		if (!outval_valid) return false;				
+		if (direction == MemberDefinition_Direction_readonly)
+		{
+			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Member, endpoint, service_path, member_name, "Attempt to get OutValue of read only wire");
+			throw ReadOnlyMemberException("Read only member");
+		}
+		
+		if (!outval_valid) return false;
+		if(detail::WireConnectionBase_IsValueExpired(node, lasttime_send_local,outval_lifespan))
+		{
+			return false;
+		}			
 		value = outval;
 		time = lasttime_send;
 		return true;
@@ -326,19 +392,35 @@ namespace RobotRaconteur
 		return direction;
 	}
 
+	int32_t WireConnectionBase::GetInValueLifespan()
+	{
+		boost::mutex::scoped_lock lock(inval_lock);
+		return inval_lifespan;
+	}
+	void WireConnectionBase::SetInValueLifespan(int32_t millis)
+	{
+		boost::mutex::scoped_lock lock(inval_lock);
+		inval_lifespan = millis;
+	}
+	
+	int32_t WireConnectionBase::GetOutValueLifespan()
+	{
+		boost::mutex::scoped_lock lock(outval_lock);
+		return outval_lifespan;
+	}	
+	void WireConnectionBase::SetOutValueLifespan(int32_t millis)
+	{
+		boost::mutex::scoped_lock lock(outval_lock);
+		outval_lifespan = millis;
+	}
+
 	RR_INTRUSIVE_PTR<RRValue> WireBase::UnpackPacket(RR_INTRUSIVE_PTR<MessageEntry> me, TimeSpec& ts)
 	{
-		if (me->EntryFlags & MessageEntryFlags_TIMESPEC)
-		{
-			ts = me->EntryTimeSpec;
-		}
-		else
-		{
-			RR_INTRUSIVE_PTR<MessageElementNestedElementList> s = MessageElement::FindElement(me->elements, "packettime")->CastDataToNestedList(DataTypes_structure_t);
-			int64_t seconds = RRArrayToScalar(MessageElement::FindElement(s->Elements, "seconds")->CastData<RRArray<int64_t> >());
-			int32_t nanoseconds = RRArrayToScalar(MessageElement::FindElement(s->Elements, "nanoseconds")->CastData<RRArray<int32_t> >());
-			ts = TimeSpec(seconds, nanoseconds);
-		}
+		
+		RR_INTRUSIVE_PTR<MessageElementNestedElementList> s = MessageElement::FindElement(me->elements, "packettime")->CastDataToNestedList(DataTypes_structure_t);
+		int64_t seconds = RRArrayToScalar(MessageElement::FindElement(s->Elements, "seconds")->CastData<RRArray<int64_t> >());
+		int32_t nanoseconds = RRArrayToScalar(MessageElement::FindElement(s->Elements, "nanoseconds")->CastData<RRArray<int32_t> >());
+		ts = TimeSpec(seconds, nanoseconds);		
 
 		RR_INTRUSIVE_PTR<RRValue> data;
 		if (!rawelements)
@@ -360,54 +442,32 @@ namespace RobotRaconteur
 		e->WirePacketReceived(timespec,data);
 	}
 
-	RR_INTRUSIVE_PTR<MessageEntry> WireBase::PackPacket(RR_INTRUSIVE_PTR<RRValue> data, TimeSpec time, bool message3)
-	{
-		if (message3)
-		{
-			RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePacket, GetMemberName());
-			m->EntryTimeSpec = time;
-			m->EntryFlags |= MessageEntryFlags_TIMESPEC;
-			if (!rawelements)
-			{
-				RR_INTRUSIVE_PTR<MessageElementData> pdata = PackData(data);
-				m->elements.push_back(CreateMessageElement("packet", pdata));
-			}
-			else
-			{
-				RR_INTRUSIVE_PTR<MessageElement> pme = RR_DYNAMIC_POINTER_CAST<MessageElement>(data);
-				pme->ElementName = "packet";
-				m->elements.push_back(pme);
-			}
+	RR_INTRUSIVE_PTR<MessageEntry> WireBase::PackPacket(RR_INTRUSIVE_PTR<RRValue> data, TimeSpec time)
+	{		
+		std::vector<RR_INTRUSIVE_PTR<MessageElement> > timespec1;
+		timespec1.push_back(CreateMessageElement("seconds", ScalarToRRArray(time.seconds)));
+		timespec1.push_back(CreateMessageElement("nanoseconds", ScalarToRRArray(time.nanoseconds)));
+		RR_INTRUSIVE_PTR<MessageElementNestedElementList> s = CreateMessageElementNestedElementList(DataTypes_structure_t, "RobotRaconteur.TimeSpec", RR_MOVE(timespec1));
 
-			return m;
+
+		std::vector<RR_INTRUSIVE_PTR<MessageElement> > elems;
+		elems.push_back(CreateMessageElement("packettime", s));
+		if (!rawelements)
+		{
+			RR_INTRUSIVE_PTR<MessageElementData> pdata = PackData(data);
+			elems.push_back(CreateMessageElement("packet", pdata));
 		}
 		else
 		{
-			std::vector<RR_INTRUSIVE_PTR<MessageElement> > timespec1;
-			timespec1.push_back(CreateMessageElement("seconds", ScalarToRRArray(time.seconds)));
-			timespec1.push_back(CreateMessageElement("nanoseconds", ScalarToRRArray(time.nanoseconds)));
-			RR_INTRUSIVE_PTR<MessageElementNestedElementList> s = CreateMessageElementNestedElementList(DataTypes_structure_t, "RobotRaconteur.TimeSpec", RR_MOVE(timespec1));
-
-
-			std::vector<RR_INTRUSIVE_PTR<MessageElement> > elems;
-			elems.push_back(CreateMessageElement("packettime", s));
-			if (!rawelements)
-			{
-				RR_INTRUSIVE_PTR<MessageElementData> pdata = PackData(data);
-				elems.push_back(CreateMessageElement("packet", pdata));
-			}
-			else
-			{
-				RR_INTRUSIVE_PTR<MessageElement> pme = RR_DYNAMIC_POINTER_CAST<MessageElement>(data);
-				pme->ElementName = "packet";
-				elems.push_back(pme);
-			}
-
-			RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePacket, GetMemberName());
-			m->elements = elems;
-			m->MetaData = "unreliable\n";
-			return m;
+			RR_INTRUSIVE_PTR<MessageElement> pme = RR_DYNAMIC_POINTER_CAST<MessageElement>(data);
+			pme->ElementName = "packet";
+			elems.push_back(pme);
 		}
+
+		RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePacket, GetMemberName());
+		m->elements = elems;
+		m->MetaData = "unreliable\n";
+		return m;		
 	}
 
 	RR_SHARED_PTR<RobotRaconteurNode> WireBase::GetNode()
@@ -510,9 +570,9 @@ namespace RobotRaconteur
 		return out;
 	}
 
-	void WireClientBase::SendWirePacket(RR_INTRUSIVE_PTR<RRValue> packet, TimeSpec time, uint32_t endpoint, bool message3)
+	void WireClientBase::SendWirePacket(RR_INTRUSIVE_PTR<RRValue> packet, TimeSpec time, uint32_t endpoint)
 	{
-		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(packet, time, message3);
+		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(packet, time);
 		
 		GetStub()->SendWireMessage(m);
 	}
@@ -525,7 +585,7 @@ namespace RobotRaconteur
 			if (!remote)
 			{
 			RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WireDisconnectReq, GetMemberName());
-			GetStub()->AsyncProcessRequest(m,boost::bind(handler,_2),timeout);
+			GetStub()->AsyncProcessRequest(m,boost::bind(handler,RR_BOOST_PLACEHOLDERS(_2)),timeout);
 			}
 			connection.reset();
 		}
@@ -545,7 +605,7 @@ namespace RobotRaconteur
 				}
 				
 				RR_INTRUSIVE_PTR<MessageEntry> m = CreateMessageEntry(MessageEntryType_WireConnectReq, GetMemberName());
-				GetStub()->AsyncProcessRequest(m,boost::bind(&WireClientBase::AsyncConnect_internal1, RR_DYNAMIC_POINTER_CAST<WireClientBase>(shared_from_this()),_1,_2,handler),timeout);
+				GetStub()->AsyncProcessRequest(m,boost::bind(&WireClientBase::AsyncConnect_internal1, RR_DYNAMIC_POINTER_CAST<WireClientBase>(shared_from_this()),RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),handler),timeout);
 
 				ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, m_MemberName, "Begin connect wire connection");
 				
@@ -578,7 +638,7 @@ namespace RobotRaconteur
 					
 					return;
 				}
-				connection = CreateNewWireConnection(direction, GetStub()->GetContext()->UseMessage3());
+				connection = CreateNewWireConnection(direction);
 			}
 			
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, m_MemberName, "Wire connected");
@@ -644,14 +704,14 @@ namespace RobotRaconteur
 	{
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, m_MemberName, "Requesting PeekInValue");
 		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePeekInValueReq, GetMemberName());
-		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase::AsyncPeekValueBaseEnd1, RR_DYNAMIC_POINTER_CAST<WireClientBase>(shared_from_this()), _1, _2, handler),timeout);		
+		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase::AsyncPeekValueBaseEnd1, RR_DYNAMIC_POINTER_CAST<WireClientBase>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), handler),timeout);		
 	}
 
 	void WireClientBase::AsyncPeekOutValueBase(RR_MOVE_ARG(boost::function<void(const RR_INTRUSIVE_PTR<RRValue>&, const TimeSpec&, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, m_MemberName, "Requesting PeekOutValue");
 		RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m = CreateMessageEntry(MessageEntryType_WirePeekOutValueReq, GetMemberName());
-		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase::AsyncPeekValueBaseEnd1, RR_DYNAMIC_POINTER_CAST<WireClientBase>(shared_from_this()), _1, _2, handler), timeout);
+		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase::AsyncPeekValueBaseEnd1, RR_DYNAMIC_POINTER_CAST<WireClientBase>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), handler), timeout);
 	}
 
 	void WireClientBase_AsyncPokeValueBaseEnd(RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> m, RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException> err, boost::function< void(RR_SHARED_PTR<RobotRaconteur::RobotRaconteurException>) > handler)
@@ -672,10 +732,10 @@ namespace RobotRaconteur
 	void WireClientBase::AsyncPokeOutValueBase(const RR_INTRUSIVE_PTR<RRValue>& value, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, m_MemberName, "Requesting PokeOutValue");
-		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(value, TimeSpec::Now(), GetStub()->GetContext()->UseMessage3());
+		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(value, TimeSpec::Now());
 		m->EntryType = MessageEntryType_WirePokeOutValueReq;
 		m->MetaData.reset();
-		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase_AsyncPokeValueBaseEnd, _1, _2, handler), timeout);
+		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase_AsyncPokeValueBaseEnd, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), handler), timeout);
 	}
 
 

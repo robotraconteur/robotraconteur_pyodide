@@ -1,7 +1,7 @@
 /** 
  * @file RobotRaconteurNode.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -34,7 +34,10 @@
 #include "RobotRaconteur/Discovery.h"
 #include "RobotRaconteur/DataTypesPacking.h"
 #include "RobotRaconteur/Logging.h"
+#include "RobotRaconteur/Tap.h"
+
 #include <queue>
+#include <boost/bind/placeholders.hpp>
 #include <boost/unordered_map.hpp>
 #include <boost/function.hpp>
 #include <boost/bind/protect.hpp>
@@ -948,6 +951,37 @@ namespace RobotRaconteur
 		std::map<std::string, RR_INTRUSIVE_PTR<RRValue> > GetServiceAttributes(RR_SHARED_PTR<RRObject> obj);
 
 		/**
+		 * @brief Get the service NodeID of the remote node from a client connection
+		 * 
+		 * Returns the NodeID of the remote node that a client is connected
+		 * 
+		 * @param obj The root object of the client to use to retrieve service attributes
+		 * @return NodeID The NodeID
+		 */
+		RobotRaconteur::NodeID GetServiceNodeID(RR_SHARED_PTR<RRObject> obj);
+
+		/**
+		 * @brief Get the service NodeName of the remote node from a client connection
+		 * 
+		 * Returns the NodeName of the remote node that a client is connected
+		 * 
+		 * @param obj The root object of the client to use to retrieve service attributes
+		 * @return std::string The NodeName
+		 */
+		std::string GetServiceNodeName(RR_SHARED_PTR<RRObject> obj);
+
+		
+		/**
+		 * @brief Get the name of a service from a client connection
+		 * 
+		 * Returns the service name of the remote service that a client is connected
+		 * 
+		 * @param obj The root object of the client to use to retrieve service attributes
+		 * @return std::string The service name
+		 */
+		std::string GetServiceName(RR_SHARED_PTR<RRObject> obj);
+
+		/**
 		 * @internal
 		 * 
 		 * @brief Registers an endpoint for use with the node
@@ -1003,6 +1037,8 @@ namespace RobotRaconteur
 		boost::signals2::signal<void(const NodeDiscoveryInfo&, const std::vector<ServiceInfo2>& )> discovery_updated_listeners;
 
 		boost::signals2::signal<void(const NodeDiscoveryInfo&)> discovery_lost_listeners;
+
+		RR_WEAK_PTR<RobotRaconteurNode> weak_this;
 				
 	public:
 
@@ -1152,14 +1188,43 @@ namespace RobotRaconteur
 		/**
 		 * @brief Subscribe to listen for available services and automatically connect
 		 * 
-		 * A Serviceubscription will track the availability of service types and
+		 * A ServiceSubscription will track the availability of service types and
 		 * create connections when available.
 		 * 
 		 * @param service_types A std::vector of service types to listen for, ie `com.robotraconteur.robotics.robot.Robot`
 		 * @param filter A filter to select individual services based on specified criteria
 		 * @return RR_SHARED_PTR<ServiceSubscription> The active subscription
 		 */
-		RR_SHARED_PTR<ServiceSubscription> SubscribeService(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter = RR_SHARED_PTR<ServiceSubscriptionFilter>());
+		RR_SHARED_PTR<ServiceSubscription> SubscribeServiceByType(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter = RR_SHARED_PTR<ServiceSubscriptionFilter>());
+
+		/**
+		 * @brief Subscribe to a service using one or more URL. Used to create robust connections to services
+		 * 
+		 * Creates a ServiceSubscription assigned to a service with one or more candidate connection URLs. The
+		 * subscription will attempt to maintain a peristent connection, reconnecting if the connection is lost.
+		 * 
+		 * @param url One or more candidate connection urls
+		 * @param username An optional username for authentication
+		 * @param credentials Optional credentials for authentication
+		 * @param objecttype The desired root object proxy type. Optional but highly recommended.
+		 * @return RR_SHARED_PTR<ServiceSubscription> The subscription object
+		 */
+		RR_SHARED_PTR<ServiceSubscription> SubscribeService(const std::vector<std::string>& url, boost::string_ref username = "", RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials=(RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> >()),  boost::string_ref objecttype = "");
+
+		/**
+		 * @brief Subscribe to a service using a URL. Used to create robust connections to services
+		 * 
+		 * Creates a ServiceSubscription assigned to a service with a URL. The
+		 * subscription will attempt to maintain a peristent connection, reconnecting if the connection is lost.
+		 * 
+		 * @param url The connection URL
+		 * @param username An optional username for authentication
+		 * @param credentials Optional credentials for authentication
+		 * @param objecttype The desired root object proxy type. Optional but highly recommended.
+		 * @return RR_SHARED_PTR<ServiceSubscription> The subscription object
+		 */
+		RR_SHARED_PTR<ServiceSubscription> SubscribeService(const std::string& url, boost::string_ref username = "", RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials=(RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> >()),  boost::string_ref objecttype = "");
+
 
 	protected:
 
@@ -1201,18 +1266,19 @@ namespace RobotRaconteur
 		 * the "best" URL to use. The selection criteria ranks URLs in roughly
 		 * the following order, lower number being better:
 		 * 
-		 * 1. "rr+local" for LocalTransport
-		 * 2. "rr+pci" or "rr+usb" for HardwareTransport
-		 * 3. "rrs+tcp://127.0.0.1" for secure TcpTransport loopback
-		 * 4. "rrs+tcp://[::1]" for secure TcpTransport IPv6 loopback
-		 * 5. "rrs+tcp://localhost" for secure TcpTransport loopback
-		 * 6. "rrs+tcp://[fe80" for secure TcpTransport link-local IPv6
-		 * 7. "rrs+tcp://" for any secure TcpTransport
-		 * 8. "rr+tcp://127.0.0.1" for TcpTransport loopback
-		 * 9. "rr+tcp://[::1]" for TcpTransport IPv6 loopback
-		 * 10. "rr+tcp://localhost" for TcpTransport loopback
-		 * 11. "rr+tcp://[fe80" for TcpTransport link-local IPv6
-		 * 12. "rr+tcp://" for any TcpTransport
+		 * 1. "rr+intra" for IntraTransport
+		 * 2. "rr+local" for LocalTransport
+		 * 3. "rr+pci" or "rr+usb" for HardwareTransport
+		 * 4. "rrs+tcp://127.0.0.1" for secure TcpTransport loopback
+		 * 5. "rrs+tcp://[::1]" for secure TcpTransport IPv6 loopback
+		 * 6. "rrs+tcp://localhost" for secure TcpTransport loopback
+		 * 7. "rrs+tcp://[fe80" for secure TcpTransport link-local IPv6
+		 * 8. "rrs+tcp://" for any secure TcpTransport
+		 * 9. "rr+tcp://127.0.0.1" for TcpTransport loopback
+		 * 10. "rr+tcp://[::1]" for TcpTransport IPv6 loopback
+		 * 11. "rr+tcp://localhost" for TcpTransport loopback
+		 * 12. "rr+tcp://[fe80" for TcpTransport link-local IPv6
+		 * 13. "rr+tcp://" for any TcpTransport
 		 *  
 		 * TODO: "rr+quic" QuicTransport
 		 *  
@@ -1660,6 +1726,7 @@ namespace RobotRaconteur
 		 * @return RobotRaconteur_LogLevel 
 		 */
 		RobotRaconteur_LogLevel GetLogLevel();
+		
 		/**
 		 * @brief Set the log level for the node
 		 * 
@@ -1668,6 +1735,18 @@ namespace RobotRaconteur
 		 * @param level The desired log level
 		 */
 		void SetLogLevel(RobotRaconteur_LogLevel level);
+
+		/**
+		 * @brief Set the log level for the node from a string
+		 * 
+		 * Must be one of the following values: DISABLE, FATAL, ERROR, WARNING, INFO, DEBUG, TRACE
+		 * 
+		 * Defaults to WARNING
+		 * 
+		 * @param level The desired log level
+		 * @return RobotRaconteur_LogLevel The log level
+		 */
+		RobotRaconteur_LogLevel SetLogLevelFromString(boost::string_ref level);
 
 		/**
 		 * @brief Set the log level for the node from specified environmental variable
@@ -1700,6 +1779,26 @@ namespace RobotRaconteur
 		 * @param handler The log record handler function
 		 */
 		void SetLogRecordHandler(RR_SHARED_PTR<LogRecordHandler> handler);
+
+	protected:
+		boost::shared_mutex tap_lock;
+		RR_SHARED_PTR<MessageTap> tap;
+
+	public:
+
+		/**
+		 * @brief Get the active message tap
+		 * 
+		 * @return RR_SHARED_PTR<MessageTap> 
+		 */
+		RR_SHARED_PTR<MessageTap> GetMessageTap();
+
+		/**
+		 * @brief Set the a message tap to record log records and messages
+		 * 
+		 * @param message_tap The message tap to use
+		 */
+		void SetMessageTap(RR_SHARED_PTR<MessageTap> message_tap);
 		
 	
 	};

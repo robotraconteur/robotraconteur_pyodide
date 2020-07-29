@@ -1,7 +1,7 @@
 /** 
  * @file Transport.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -91,6 +91,12 @@ namespace RobotRaconteur
 
 	class ROBOTRACONTEUR_CORE_API NodeDiscoveryInfo;
 
+	/**
+	 * @brief Base class for transports
+	 * 
+	 * Transports are used to create connections and pass messages between nodes.
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API Transport : public IPeriodicCleanupTask, boost::noncopyable
 	{
 	public:
@@ -186,6 +192,7 @@ namespace RobotRaconteur
 	ROBOTRACONTEUR_CORE_API ParseConnectionURLResult ParseConnectionURL(boost::string_ref url);
 
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
+	/** @brief Convenience alias for Transport shared_ptr */
 	using TransportPtr = RR_SHARED_PTR<Transport>;
 	using ITransportConnectionPtr = RR_SHARED_PTR<ITransportConnection>;
 #endif

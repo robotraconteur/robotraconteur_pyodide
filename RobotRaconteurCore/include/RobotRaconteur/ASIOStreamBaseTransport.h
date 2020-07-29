@@ -1,7 +1,7 @@
 /** 
  * @file ASIOStreamBaseTransport.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -107,10 +107,14 @@ namespace RobotRaconteur
 
 			bool send_large_transfer_authorized;
 			bool recv_large_transfer_authorized;
-						
+
+			boost::atomic<bool> send_version4;
+			
+			
 			bool server;
 
-			bool disable_message3;
+			bool disable_message4;
+			
 			bool disable_async_io;
 
 			mutable_buffers active_recv_bufs;
@@ -128,8 +132,8 @@ namespace RobotRaconteur
 			const_buffers async_send_bufs;
 
 			uint32_t active_capabilities_message2_basic;
-			uint32_t active_capabilities_message3_basic;			
-
+			uint32_t active_capabilities_message4_basic;
+			
 		protected:
 
 			ASIOStreamBaseTransport(RR_SHARED_PTR<RobotRaconteurNode> node);
@@ -270,8 +274,8 @@ namespace RobotRaconteur
 			
 		public:
 
-			virtual bool GetDisableMessage3();
-			virtual void SetDisableMessage3(bool d);
+			virtual bool GetDisableMessage4();
+			virtual void SetDisableMessage4(bool d);
 
 			virtual bool CheckCapabilityActive(uint32_t flag);
 

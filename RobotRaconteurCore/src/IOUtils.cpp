@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 namespace RobotRaconteur
 {
 
-ArrayBinaryReader::ArrayBinaryReader(uint8_t* buffer, size_t start_position, size_t length, bool nativeorder)
+ArrayBinaryReader::ArrayBinaryReader(const uint8_t* buffer, size_t start_position, size_t length, bool nativeorder)
 {
 	this->buffer=buffer;
 	this->position=start_position;

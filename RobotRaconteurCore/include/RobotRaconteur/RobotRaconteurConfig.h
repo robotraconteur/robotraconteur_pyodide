@@ -1,7 +1,7 @@
 /** 
  * @file RobotRaconteurConfig.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -25,8 +25,8 @@
 
 #ifndef ROBOTRACONTEUR_VERSION
 // Boost Style Version Number
-#define ROBOTRACONTEUR_VERSION 000903
-#define ROBOTRACONTEUR_VERSION_TEXT "0.9.3"
+#define ROBOTRACONTEUR_VERSION 001000
+#define ROBOTRACONTEUR_VERSION_TEXT "0.10.0"
 #endif
 
 #if (__GNUC__== 4 && __GNUC_MINOR__== 7 )
@@ -114,4 +114,10 @@
 #else
 #define RR_MOVE_ARG(type) type
 #define RR_MOVE(x) x
+#endif
+
+#if BOOST_VERSION <= 105900
+#define RR_BOOST_PLACEHOLDERS(arg) arg
+#else
+#define RR_BOOST_PLACEHOLDERS(arg) boost::placeholders::arg
 #endif

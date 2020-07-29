@@ -1,4 +1,4 @@
-# Copyright 2011-2019 Wason Technology, LLC
+# Copyright 2011-2020 Wason Technology, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -277,6 +277,15 @@ def InitStub(stub):
     outerstub.rrlock=threading.RLock()
     return outerstub
 
+def check_member_args(name, param_types, args, isasync=False):
+    expected_args_len = len(param_types)
+    if isasync:
+        expected_args_len += 1
+    if len(param_types) > 0 and param_types[-1].ContainerType == RobotRaconteurPython.DataTypes_ContainerTypes_generator:
+        expected_args_len -= 1        
+    if expected_args_len != len(args):
+            raise TypeError("%s() expects exactly %d arguments (%d given)" % (name, expected_args_len, len(args)))
+
 class AsyncRequestDirectorImpl(RobotRaconteurPython.AsyncRequestDirector):
     def __init__(self,handler,isvoid,Type,stub,node):
         super(AsyncRequestDirectorImpl,self).__init__()
@@ -319,6 +328,7 @@ def stub_async_setproperty(stub,name,type1,value,handler,timeout=-1):
 
 
 def stub_async_functioncall(stub,name,type1,*args):
+    check_member_args(name, type1.Parameters, args, True)
     m=RobotRaconteurPython.vectorptr_messageelement()
     i=0
     for p in type1.Parameters:
@@ -333,6 +343,7 @@ def stub_async_functioncall(stub,name,type1,*args):
     return async_call(stub.async_FunctionCall,(name,m,adjust_timeout(timeout)),AsyncRequestDirectorImpl,handler,directorargs=(False,type1.ReturnType,stub,stub.RRGetNode()))
 
 def stub_async_functioncallvoid(stub,name,type1,*args):
+    check_member_args(name, type1.Parameters, args, True)
     m=RobotRaconteurPython.vectorptr_messageelement()
     i=0
     for p in type1.Parameters:
@@ -348,6 +359,7 @@ def stub_async_functioncallvoid(stub,name,type1,*args):
     return async_call(stub.async_FunctionCall,(name,m,adjust_timeout(timeout)),AsyncRequestDirectorImpl,handler,directorargs=(True,type1.ReturnType,stub,stub.RRGetNode()))
 
 def stub_async_functioncallgenerator(stub,name,type1,*args):
+    check_member_args(name, type1.Parameters, args, True)
     m=RobotRaconteurPython.vectorptr_messageelement()
     i=0
     param_type = None
@@ -661,6 +673,34 @@ class WireConnection(object):
     def WireValueChanged(self,evt):
         if (evt is not self._WireValueChanged):
             raise RuntimeError("Invalid operation")
+
+    @property
+    def InValueLifespan(self):
+        t = self.__innerwire.GetInValueLifespan()
+        if t < 0:
+            return t
+        return float(t) / 1000.0
+
+    @InValueLifespan.setter
+    def InValueLifespan(self, secs):
+        if secs < 0:
+            self.__innerwire.SetInValueLifespan(-1)
+        else:
+            self.__innerwire.SetInValueLifespan(int(secs*1000.0))
+
+    @property
+    def OutValueLifespan(self):
+        t = self.__innerwire.GetOutValueLifespan()
+        if t < 0:
+            return t
+        return float(t) / 1000.0
+
+    @OutValueLifespan.setter
+    def OutValueLifespan(self, secs):
+        if secs < 0:
+            self.__innerwire.SetOutValueLifespan(-1)
+        else:
+            self.__innerwire.SetOutValueLifespan(int(secs*1000.0))
 
 class WireConnectionDirector(RobotRaconteurPython.WrappedWireConnectionDirector):
 
@@ -1229,12 +1269,16 @@ class ServiceSubscription(object):
             raise Exception("Invalid ConnectRetryDelay value")
         self._subscription.SetConnectRetryDelay(int(value*1000.0))
 
-    def SubscribeWire(self, wire_name):
-        s=self._subscription.SubscribeWire(wire_name)
+    def SubscribeWire(self, wire_name, service_path = None):
+        if service_path is None:
+            service_path = ""
+        s=self._subscription.SubscribeWire(wire_name, service_path)
         return WireSubscription(s)
 
-    def SubscribePipe(self, pipe_name):
-        s=self._subscription.SubscribePipe(pipe_name)
+    def SubscribePipe(self, pipe_name, service_path = None):
+        if service_path is None:
+            service_path = ""
+        s=self._subscription.SubscribePipe(pipe_name, service_path)
         return PipeSubscription(s)
     
     @property
@@ -1254,6 +1298,9 @@ class ServiceSubscription(object):
     def ClientDisconnected(self, evt):
         if (evt is not self._ClientDisconnected):
             raise RuntimeError("Invalid operation")
+
+    def GetDefaultClient(self):
+        return self._GetClientStub(self._subscription.GetDefaultClient())
             
 class WrappedWireSubscriptionDirectorPython(RobotRaconteurPython.WrappedWireSubscriptionDirector):
     def __init__(self,subscription):
@@ -1266,7 +1313,7 @@ class WrappedWireSubscriptionDirectorPython(RobotRaconteurPython.WrappedWireSubs
             return
 
         try:            
-            v=RobotRaconteurPython._UnpackMessageElement(value, None, None, None, True)            
+            v=RobotRaconteurPython._UnpackMessageElement(value.packet, value.type, value.stub, None)            
             s.WireValueChanged.fire(s,v,time)
         except:
             traceback.print_exc()
@@ -1280,7 +1327,7 @@ class WireSubscription(object):
         self._WireValueChanged=EventHook()
 
     def _UnpackValue(self, m):
-        return RobotRaconteurPython._UnpackMessageElement(m, None, None, None, True)
+        return RobotRaconteurPython._UnpackMessageElement(m.packet, m.type, m.stub, None)
 
     @property
     def InValue(self):
@@ -1291,6 +1338,15 @@ class WireSubscription(object):
         t=RobotRaconteurPython.TimeSpec()
         m=self._subscription.GetInValue(t)
         return (self._UnpackValue(m), t)
+
+    
+    def TryGetInValue(self):
+        val = RobotRaconteurPython.WrappedService_typed_packet()
+        t=RobotRaconteurPython.TimeSpec()
+        res=self._subscription.TryGetInValue(val,t)
+        if not res:
+            return False, None, None
+        return (True, self._UnpackValue(val), t)
 
     @property
     def ActiveWireConnectionCount(self):
@@ -1303,6 +1359,20 @@ class WireSubscription(object):
     @IgnoreInValue.setter
     def IgnoreInValue(self, ignore):
         self._subscription.SetIgnoreInValue(ignore)
+
+    @property
+    def InValueLifespan(self):
+        t = self._subscription.GetInValueLifespan()
+        if t < 0:
+            return t
+        return float(t) / 1000.0
+
+    @InValueLifespan.setter
+    def InValueLifespan(self, secs):
+        if secs < 0:
+            self._subscription.SetInValueLifespan(-1)
+        else:
+            self._subscription.SetInValueLifespan(int(secs*1000.0))
 
     def SetOutValueAll(self, value):        
         iter=RobotRaconteurPython.WrappedWireSubscription_send_iterator(self._subscription)
@@ -1349,7 +1419,7 @@ class PipeSubscription(object):
         self._PipePacketReceived=EventHook()
 
     def _UnpackValue(self, m):
-        return RobotRaconteurPython._UnpackMessageElement(m, None, None, None, True)
+        return RobotRaconteurPython._UnpackMessageElement(m.packet, m.type, m.stub, None)
 
     def ReceivePacket(self):
         return self._UnpackValue(self._subscription.ReceivePacket())
@@ -1357,12 +1427,13 @@ class PipeSubscription(object):
     def TryReceivePacket(self):
         return self.TryReceivePacketWait(0)
 
-    def TryReceivePacketWait(self, timeout=-1,peek=False):  
-        res=self._subscription.TryReceivePacketWait(adjust_timeout(timeout),peek)
-        if (not res.res):
+    def TryReceivePacketWait(self, timeout=-1,peek=False):
+        val = RobotRaconteurPython.WrappedService_typed_packet()
+        res=self._subscription.TryReceivePacketWait(val,adjust_timeout(timeout),peek)
+        if (not res):
             return (False, None)
         else:
-            return (True, self._UnpackValue(res.packet))
+            return (True, self._UnpackValue(val))
 
     @property
     def Available(self):
@@ -1455,7 +1526,7 @@ def SubscribeServiceInfo2(node, service_types, filter_=None):
     sub1=RobotRaconteurPython.WrappedSubscribeServiceInfo2(node, service_types2, filter2)
     return ServiceInfo2Subscription(sub1)
 
-def SubscribeService(node, service_types, filter_=None):
+def SubscribeServiceByType(node, service_types, filter_=None):
 
     filter2=_SubscribeService_LoadFilter(node, filter_)
 
@@ -1472,7 +1543,15 @@ def SubscribeService(node, service_types, filter_=None):
             for s in service_types: service_types2.append(s)
 
     
-    sub1=RobotRaconteurPython.WrappedSubscribeService(node, service_types2, filter2)
+    sub1=RobotRaconteurPython.WrappedSubscribeServiceByType(node, service_types2, filter2)
+    return ServiceSubscription(sub1)
+
+def SubscribeService(node, *args):
+    args2=list(args)
+    if (len(args) >= 3):
+        if (args[1]==None): args2[1]=""
+        args2[2]=PackMessageElement(args[2],"varvalue{string}",None,node).GetData()    
+    sub1=RobotRaconteurPython.WrappedSubscribeService(node, *args2)
     return ServiceSubscription(sub1)   
 
 def ReadServiceDefinitionFile(servicedef_name):
@@ -1499,19 +1578,27 @@ def ReadServiceDefinitionFile(servicedef_name):
         return f.read()
 
 class RobotRaconteurNodeSetup(object):
-    def __init__(self, node_name, tcp_port, flags, node=None):
-        if node_name is None:
-            node_name = ""
-        if tcp_port is None:
-            tcp_port = 0
-        if flags is None:
-            flags = 0
-        if node is None:
-            node=RobotRaconteurPython.RobotRaconteurNode.s
-        self.__setup=RobotRaconteurPython.WrappedRobotRaconteurNodeSetup(node,node_name,tcp_port,flags)    
-        # TODO: Add transport
-        # self.tcp_transport=self.__setup.GetTcpTransport()
-        
+    def __init__(self, node_name=None, tcp_port=None, flags=None, allowed_overrides=None, node=None, argv=None, config=None):
+        if (config is not None):
+            assert node_name is None and tcp_port is None and flags is None and allowed_overrides is None and argv is None
+            self.__setup=RobotRaconteurPython.WrappedRobotRaconteurNodeSetup(config)
+        else:
+            if node_name is None:
+                node_name = ""
+            if tcp_port is None:
+                tcp_port = 0
+            if flags is None:
+                flags = 0
+            if node is None:
+                node=RobotRaconteurPython.RobotRaconteurNode.s
+            if allowed_overrides is None:
+                allowed_overrides=0
+            if argv is None:
+                argv = []        
+            self.__setup=RobotRaconteurPython.WrappedRobotRaconteurNodeSetup(node,node_name,tcp_port,flags, allowed_overrides, \
+                RobotRaconteurPython.vectorstring(argv))
+        self.browser_websocket_transport=self.__setup.GetBrowserWebsocketTransport()
+        self.command_line_config = self.__setup.GetCommandLineConfig()
         self.__node=node
         
     def __enter__(self):
@@ -1519,10 +1606,18 @@ class RobotRaconteurNodeSetup(object):
     
     def __exit__(self, etype, value, traceback):
         self.__node.Shutdown()
+
+    def ReleaseNode(self):
+        if self.__setup is None:
+            return
+        self.__setup.ReleaseNode()
         
 class ClientNodeSetup(RobotRaconteurNodeSetup):
-    def __init__(self, node_name=None, flags=RobotRaconteurPython.RobotRaconteurNodeSetupFlags_CLIENT_DEFAULT, node=None):
-        super(ClientNodeSetup,self).__init__(node_name,0,flags,node)
+    def __init__(self, node_name=None, node=None, argv=None):
+        super(ClientNodeSetup,self).__init__(node_name,0, RobotRaconteurPython.RobotRaconteurNodeSetupFlags_CLIENT_DEFAULT, \
+            RobotRaconteurPython.RobotRaconteurNodeSetupFlags_CLIENT_DEFAULT_ALLOWED_OVERRIDE,node,argv)
+            
+
 
 class UserLogRecordHandlerDirectorPython(RobotRaconteurPython.UserLogRecordHandlerDirector):
     def __init__(self, handler):
@@ -1540,6 +1635,25 @@ class UserLogRecordHandler(RobotRaconteurPython.UserLogRecordHandlerBase):
         self._SetHandler(director,0)
         director.__disown__()
 
+class TapFileReader(object):
+    def __init__(self, fileobj):
+        self._fileobj = fileobj
+
+    def ReadNextMessage(self):
+        len_bytes = self._fileobj.read(8)
+        if (len(len_bytes) < 8):
+            return None
+        message_len = RobotRaconteurPython.MessageLengthFromBytes(len_bytes)
+        message_bytes = len_bytes + self._fileobj.read(message_len - 8)
+        if (len(message_bytes) < message_len):
+            return None
+        m = RobotRaconteurPython.MessageFromBytes(message_bytes)
+        return m
+
+    def UnpackMessageElement(self, el, node=None):
+        if node is None:
+            node = RobotRaconteurPython.RobotRaconteurNode.s
+        return UnpackMessageElement(el, "varvalue value", None, node)
 
 def settrace():
     # Enable debugging in vscode if ptvsd has been loaded

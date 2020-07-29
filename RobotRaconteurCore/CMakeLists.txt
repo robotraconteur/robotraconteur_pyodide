@@ -1,4 +1,3 @@
-
 if(CMAKE_COMPILER_IS_GNUCXX)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fPIC" )
 endif()
@@ -45,6 +44,7 @@ set(RobotRaconteurCore_src
 	src/BrowserWebSocketTransport_private.h 
 	src/DataTypesPacking.cpp
 	src/Logging.cpp
+	src/Taps.cpp
 )
 
 set(RobotRaconteurCore_header
@@ -80,6 +80,7 @@ set(RobotRaconteurCore_header
 	include/RobotRaconteur/DataTypesPacking.h
 	include/RobotRaconteur/ASIOStreamBaseTransport.h
 	include/RobotRaconteur/Logging.h
+	include/Taps.h
 )
 
 link_directories("${Boost_LIBRARY_DIRS}")

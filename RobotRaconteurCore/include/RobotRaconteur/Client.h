@@ -1,7 +1,7 @@
 /** 
  * @file Client.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -327,12 +327,8 @@ namespace RobotRaconteur
 	protected:
 		void ProcessCallbackCall(RR_INTRUSIVE_PTR<MessageEntry> m);
 
-	protected:
-		bool use_message3 = false;
-		bool use_combined_connection = false;
-
-	public:
-		bool UseMessage3();
+	protected:		
+		bool use_combined_connection;
 
 	private:
 		void InitializeInstanceFields();

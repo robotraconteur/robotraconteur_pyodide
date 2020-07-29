@@ -83,6 +83,8 @@ RR_Py_Exception()
 
 %include "TimeSpecPython.i"
 
+%include "TypedPacket.i"
+
 %include "PipeMember.i"
 %include "WireMember.i"
 %include "Generator.i"
@@ -100,6 +102,8 @@ RR_Py_Exception()
 %include "PythonTypeSupport.i"
 
 %include "NodeSetup.i"
+
+%include "BroadcastDownsamplerPython.i"
 
 namespace RobotRaconteur
 {

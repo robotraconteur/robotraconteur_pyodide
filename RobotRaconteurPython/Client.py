@@ -1,4 +1,4 @@
-# Copyright 2011-2019 Wason Technology, LLC
+# Copyright 2011-2020 Wason Technology, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 import RobotRaconteur as RR
 RRN=RR.RobotRaconteurNode.s
 
-browser_websocket_transport=RR.BrowserWebSocketTransport()
+node_setup=RR.ClientNodeSetup(argv=__import__("sys").argv)
+node_setup.ReleaseNode()
 
-RRN.RegisterTransport(browser_websocket_transport)
+browser_websocket_transport=node_setup.browser_websocket_transport

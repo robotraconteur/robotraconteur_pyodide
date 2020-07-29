@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -97,6 +97,13 @@ public:
 
 	bool GetIgnoreInValue();
 	void SetIgnoreInValue(bool ignore);
+
+	int32_t GetInValueLifespan();
+	void SetInValueLifespan(int32_t millis);
+
+	int32_t GetOutValueLifespan();
+	void SetOutValueLifespan(int32_t millis);
+
 
     MemberDefinition_Direction Direction();
 

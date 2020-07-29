@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class RRBaseArray : public MessageElementData
 public:
 	virtual MessageStringPtr GetTypeString();
 	virtual size_t size()=0;
-	virtual boost::string_ref RRType();
+	//virtual boost::string_ref RRType();
 	virtual void* void_ptr()=0;
 	virtual size_t ElementSize()=0;
 	virtual DataTypes GetTypeID()=0;

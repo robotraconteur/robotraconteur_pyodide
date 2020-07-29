@@ -1,7 +1,7 @@
 /** 
  * @file RobotRaconteur.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -45,3 +45,5 @@
 #include "RobotRaconteur/NodeSetup.h"
 #include "RobotRaconteur/BrowserWebSocketTransport.h"
 #include "RobotRaconteur/Logging.h"
+#include "RobotRaconteur/IntraTransport.h"
+#include "RobotRaconteur/BroadcastDownsampler.h"

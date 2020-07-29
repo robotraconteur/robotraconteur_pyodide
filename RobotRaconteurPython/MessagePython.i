@@ -32,3 +32,42 @@
   
   $input = SWIG_NewPointerObj((void*)(new $1_basetype(*(const $1_ltype)&$1)), $descriptor, SWIG_POINTER_OWN | 0);
 %}
+
+%include <pybuffer.i>
+
+%pybuffer_binary(const uint8_t* bytes, size_t bytes_len);
+%inline {
+boost::intrusive_ptr<RobotRaconteur::Message> MessageFromBytes(const uint8_t* bytes, size_t bytes_len)
+{
+	using namespace RobotRaconteur;
+	ArrayBinaryReader r(bytes, 0, bytes_len);
+	r.Seek(8);
+	uint16_t ver = r.ReadNumber<uint16_t>();
+	r.Seek(0);
+	boost::intrusive_ptr<Message> m = CreateMessage();
+	switch (ver)
+	{
+	case 2:
+		m->Read(r);
+		break;
+	case 4:
+		m->Read4(r);
+		break;
+	default:
+		throw InvalidArgumentException("Invalid message version");
+	}
+	return m;
+}
+size_t MessageLengthFromBytes(const uint8_t* bytes, size_t bytes_len)
+{
+	using namespace RobotRaconteur;
+	ArrayBinaryReader r(bytes, 0, bytes_len);
+	std::string magic = r.ReadString8(4).str().to_string();
+	if (magic != "RRAC")
+		throw ProtocolException("Invalid message magic");
+
+	return r.ReadNumber<uint32_t>();
+}
+
+
+}

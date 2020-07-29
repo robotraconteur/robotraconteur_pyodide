@@ -1,7 +1,7 @@
 /** 
  * @file DataTypes.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -72,7 +72,7 @@ namespace RobotRaconteur
 	 * 
 	 * 128-bit complex float 
 	 */
-	struct cdouble
+	struct ROBOTRACONTEUR_CORE_API cdouble
 	{
 		/** @brief real component */
 		double real;
@@ -94,7 +94,7 @@ namespace RobotRaconteur
 	 * 
 	 * 64-bit complex float 
 	 */
-	struct cfloat
+	struct ROBOTRACONTEUR_CORE_API cfloat
 	{
 		/** @brief real component */
 		float real; 
@@ -117,7 +117,7 @@ namespace RobotRaconteur
 	 * C++ does not have a standard 8 bit representation for boolean. Use
 	 * this struct for booleans with Robot Raconteur messages.	 * 
 	 */
-	struct rr_bool
+	struct ROBOTRACONTEUR_CORE_API rr_bool
 	{
 		/**
 		 * @brief The vaue of the boolean
@@ -136,12 +136,12 @@ namespace RobotRaconteur
 		rr_bool(uint8_t b) : value(b) {}
 	};
 	
-	bool operator== (const cdouble &c1, const cdouble &c2);
-	bool operator!= (const cdouble &c1, const cdouble &c2);
-	bool operator== (const cfloat &c1, const cfloat &c2);
-	bool operator!= (const cfloat &c1, const cfloat &c2);
-	bool operator== (const rr_bool &c1, const rr_bool &c2);
-	bool operator!= (const rr_bool &c1, const rr_bool &c2);
+	ROBOTRACONTEUR_CORE_API bool operator== (const cdouble &c1, const cdouble &c2);
+	ROBOTRACONTEUR_CORE_API bool operator!= (const cdouble &c1, const cdouble &c2);
+	ROBOTRACONTEUR_CORE_API bool operator== (const cfloat &c1, const cfloat &c2);
+	ROBOTRACONTEUR_CORE_API bool operator!= (const cfloat &c1, const cfloat &c2);
+	ROBOTRACONTEUR_CORE_API bool operator== (const rr_bool &c1, const rr_bool &c2);
+	ROBOTRACONTEUR_CORE_API bool operator!= (const rr_bool &c1, const rr_bool &c2);
 	
 	template<typename T, typename U>
 	class rr_cast_support

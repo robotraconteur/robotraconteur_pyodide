@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -89,38 +89,38 @@ public:
 	void AsyncConnectService(const std::string& url, const std::string& username, boost::intrusive_ptr<MessageElementData> credentials, ClientServiceListenerDirector* listener, const std::string& objecttype, int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
 	{
 		
-		boost::shared_ptr<AsyncStubReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStubReturnDirector>,_1,id));
+		boost::shared_ptr<AsyncStubReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStubReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
 	
 		boost::intrusive_ptr<RRMap<std::string,RRValue> > credentials2;
 		if (credentials) credentials2=rr_cast<RRMap<std::string,RRValue> >($self->UnpackMapType<std::string,RRValue>(rr_cast<MessageElementNestedElementList >(credentials)));
 		
 		if (listener==0)
 		{
-			$self->AsyncConnectService(url,username,credentials2,NULL,objecttype,boost::bind(&AsyncStubReturn_handler,_1,_2,sphandler),timeout);
+			$self->AsyncConnectService(url,username,credentials2,NULL,objecttype,boost::bind(&AsyncStubReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 		}
 		else
 		{
 			boost::shared_ptr<ClientServiceListenerDirector> listenerptr=boost::shared_ptr<ClientServiceListenerDirector>(listener);
-			$self->AsyncConnectService(url,username,credentials2,boost::bind(&ClientServiceListenerDirector::OuterCallback,listenerptr,_1,_2,_3),objecttype,boost::bind(&AsyncStubReturn_handler,_1,_2,sphandler),timeout);
+			$self->AsyncConnectService(url,username,credentials2,boost::bind(&ClientServiceListenerDirector::OuterCallback,listenerptr,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),RR_BOOST_PLACEHOLDERS(_3)),objecttype,boost::bind(&AsyncStubReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 		}		
 	}
 
 	void AsyncConnectService(const std::vector<std::string>& url, const std::string& username, boost::intrusive_ptr<MessageElementData> credentials, ClientServiceListenerDirector* listener, const std::string& objecttype, int32_t timeout,  AsyncStubReturnDirector* handler, int32_t id)
 	{
 	
-		boost::shared_ptr<AsyncStubReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStubReturnDirector>,_1,id));
+		boost::shared_ptr<AsyncStubReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStubReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
 	
 		boost::intrusive_ptr<RRMap<std::string,RRValue> > credentials2;
 		if (credentials) credentials2=rr_cast<RRMap<std::string,RRValue> >($self->UnpackMapType<std::string,RRValue>(rr_cast<MessageElementNestedElementList >(credentials)));
 		
 		if (listener==0)
 		{
-			$self->AsyncConnectService(url,username,credentials2,NULL,objecttype,boost::bind(&AsyncStubReturn_handler,_1,_2,sphandler),timeout);
+			$self->AsyncConnectService(url,username,credentials2,NULL,objecttype,boost::bind(&AsyncStubReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 		}
 		else
 		{
 			boost::shared_ptr<ClientServiceListenerDirector> listenerptr=boost::shared_ptr<ClientServiceListenerDirector>(listener);
-			$self->AsyncConnectService(url,username,credentials2,boost::bind(&ClientServiceListenerDirector::OuterCallback,listenerptr,_1,_2,_3),objecttype,boost::bind(&AsyncStubReturn_handler,_1,_2,sphandler),timeout);
+			$self->AsyncConnectService(url,username,credentials2,boost::bind(&ClientServiceListenerDirector::OuterCallback,listenerptr,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),RR_BOOST_PLACEHOLDERS(_3)),objecttype,boost::bind(&AsyncStubReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 		}
 	}
 }
@@ -130,7 +130,7 @@ public:
 %extend {
 	void AsyncDisconnectService(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, AsyncVoidNoErrReturnDirector* handler, int32_t id)
 	{
-		boost::shared_ptr<AsyncVoidNoErrReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>,_1,id));
+		boost::shared_ptr<AsyncVoidNoErrReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
 		self->AsyncDisconnectService(obj,boost::bind(&AsyncVoidNoErrReturn_handler,sphandler));
 	}
 }
@@ -138,6 +138,7 @@ public:
 	static std::string SelectRemoteNodeURL(const std::vector<std::string>& urls);
 
 	RR_MAKE_METHOD_PRIVATE(RegisterServiceType)
+	RR_MAKE_METHOD_PRIVATE(RegisterServiceTypes)
 	RR_MAKE_METHOD_PRIVATE(GetServiceType)
 	RR_MAKE_METHOD_PRIVATE(GetPulledServiceType)
 	
@@ -150,11 +151,11 @@ public:
 		boost::shared_ptr<RobotRaconteur::ServiceDefinition> def2=boost::make_shared<ServiceDefinition>();
 		def2->FromString(def);
 		std::vector<boost::shared_ptr<ServiceDefinition> > defs;
-		std::vector<std::string> names=RobotRaconteurNode::s()->GetRegisteredServiceTypes();
+		std::vector<std::string> names=$self->GetRegisteredServiceTypes();
 		for (std::vector<std::string>::iterator e=names.begin(); e!=names.end(); ++e)
 		{
 			if ((*e)!="RobotRaconteurServiceIndex")
-			defs.push_back(RobotRaconteurNode::s()->GetServiceType(*e)->ServiceDef());
+			defs.push_back($self->GetServiceType(*e)->ServiceDef());
 		}
 		defs.push_back(def2);
 
@@ -162,16 +163,44 @@ public:
 
 		$self->RegisterServiceType(boost::make_shared<WrappedServiceFactory>(def2));
 	}
+
+	void RegisterServiceTypes(const std::vector<std::string>& defs_str)
+	{
+		
+		std::vector<boost::shared_ptr<ServiceDefinition> > defs;
+		std::vector<boost::shared_ptr<ServiceDefinition> > defs2;
+		BOOST_FOREACH(const std::string& def_str, defs_str)
+		{
+			boost::shared_ptr<RobotRaconteur::ServiceDefinition> def2=boost::make_shared<ServiceDefinition>();
+			def2->FromString(def_str);
+			defs.push_back(def2);
+			defs2.push_back(def2);
+		}
+		std::vector<std::string> names=$self->GetRegisteredServiceTypes();
+		for (std::vector<std::string>::iterator e=names.begin(); e!=names.end(); ++e)
+		{
+			if ((*e)!="RobotRaconteurServiceIndex")
+			defs2.push_back($self->GetServiceType(*e)->ServiceDef());
+		}		
+
+		VerifyServiceDefinitions(defs2);
+
+		BOOST_FOREACH(boost::shared_ptr<RobotRaconteur::ServiceDefinition> def, defs)
+		{
+			$self->RegisterServiceType(boost::make_shared<WrappedServiceFactory>(def));
+		}
+	}
+
 #endif
 	
 	void RegisterServiceType(boost::shared_ptr<RobotRaconteur::ServiceDefinition> def)
 	{
 #ifdef SWIGPYTHON
 		std::vector<boost::shared_ptr<ServiceDefinition> > defs;
-		std::vector<std::string> names=RobotRaconteurNode::s()->GetRegisteredServiceTypes();
+		std::vector<std::string> names=$self->GetRegisteredServiceTypes();
 		for (std::vector<std::string>::iterator e=names.begin(); e!=names.end(); ++e)
 		{
-			defs.push_back(RobotRaconteurNode::s()->GetServiceType(*e)->ServiceDef());
+			defs.push_back($self->GetServiceType(*e)->ServiceDef());
 		}
 		defs.push_back(def);
 
@@ -180,15 +209,37 @@ public:
 		$self->RegisterServiceType(boost::make_shared<WrappedServiceFactory>(def));
 	}
 
+	void RegisterServiceTypes(const std::vector<boost::shared_ptr<RobotRaconteur::ServiceDefinition> >& defs)
+	{
+#ifdef SWIGPYTHON
+		std::vector<boost::shared_ptr<ServiceDefinition> > defs2;
+		std::vector<std::string> names=$self->GetRegisteredServiceTypes();
+		for (std::vector<std::string>::iterator e=names.begin(); e!=names.end(); ++e)
+		{
+			defs2.push_back($self->GetServiceType(*e)->ServiceDef());
+		}
+		BOOST_FOREACH(boost::shared_ptr<RobotRaconteur::ServiceDefinition> def, defs)
+		{
+			defs2.push_back(def);
+		}
+
+		VerifyServiceDefinitions(defs2);
+#endif
+		BOOST_FOREACH(boost::shared_ptr<RobotRaconteur::ServiceDefinition> def, defs)
+		{
+			$self->RegisterServiceType(boost::make_shared<WrappedServiceFactory>(def));
+		}
+	}
+
 
 	boost::shared_ptr<RobotRaconteur::ServiceDefinition> GetServiceType(const std::string& servicename)
 	{
-		return rr_cast<WrappedServiceFactory>(RobotRaconteurNode::s()->GetServiceType(servicename))->ServiceDef();
+		return rr_cast<WrappedServiceFactory>($self->GetServiceType(servicename))->ServiceDef();
 	}
 
 	boost::shared_ptr<RobotRaconteur::ServiceDefinition> GetPulledServiceType(boost::shared_ptr<RRObject> obj,const std::string& servicename)
 	{
-		return rr_cast<WrappedServiceFactory>(RobotRaconteurNode::s()->GetPulledServiceType(obj,servicename))->ServiceDef();
+		return rr_cast<WrappedServiceFactory>($self->GetPulledServiceType(obj,servicename))->ServiceDef();
 	}
 }
 
@@ -229,17 +280,21 @@ public:
 
 	void AsyncRequestObjectLock(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, RobotRaconteurObjectLockFlags flags, int32_t timeout, AsyncStringReturnDirector* handler, int32_t id)
 	{
-		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,_1,id));
-		return $self->AsyncRequestObjectLock(obj,flags,boost::bind(&AsyncStringReturn_handler,_1,_2,sphandler),timeout);
+		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		return $self->AsyncRequestObjectLock(obj,flags,boost::bind(&AsyncStringReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 	void AsyncReleaseObjectLock(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, int32_t timeout, AsyncStringReturnDirector* handler, int32_t id)
 	{
-		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,_1,id));
-		return $self->AsyncReleaseObjectLock(obj,boost::bind(&AsyncStringReturn_handler,_1,_2,sphandler),timeout);
+		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		return $self->AsyncReleaseObjectLock(obj,boost::bind(&AsyncStringReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 }
 	
 	RR_MAKE_METHOD_PRIVATE(GetServiceAttributes)
+	RR_MAKE_METHOD_PRIVATE(GetServiceNodeID)
+	RR_MAKE_METHOD_PRIVATE(GetServiceNodeName)
+	RR_MAKE_METHOD_PRIVATE(GetServiceName)
+
 	
 %extend
 {
@@ -250,6 +305,21 @@ public:
 			boost::intrusive_ptr<MessageElementNestedElementList > mmap=$self->PackMapType<std::string,RRValue>(map);
 			return CreateMessageElement("value",mmap);
 		}
+
+	NodeID GetServiceNodeID(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
+	{		
+		return $self->GetServiceNodeID(obj);		
+	}
+
+	std::string GetServiceNodeName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
+	{		
+		return $self->GetServiceNodeName(obj);		
+	}
+
+	std::string GetServiceName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
+	{		
+		return $self->GetServiceName(obj);		
+	}
 
 }
 
@@ -271,14 +341,14 @@ public:
 %extend {
 	void AsyncFindObjectType(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, const std::string& n, int32_t timeout, AsyncStringReturnDirector* handler, int32_t id)
 	{
-		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,_1,id));
-		return $self->AsyncFindObjectType(obj,n,boost::bind(&AsyncStringReturn_handler,_1,_2,sphandler),timeout);
+		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		return $self->AsyncFindObjectType(obj,n,boost::bind(&AsyncStringReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 	void AsyncFindObjectType(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj, const std::string& n, const std::string &i, int32_t timeout, AsyncStringReturnDirector* handler, int32_t id)
 	{
-		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,_1,id));
-		return $self->AsyncFindObjectType(obj,n,i,boost::bind(&AsyncStringReturn_handler,_1,_2,sphandler),timeout);
+		boost::shared_ptr<AsyncStringReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStringReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		return $self->AsyncFindObjectType(obj,n,i,boost::bind(&AsyncStringReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
 	}
 
 }
@@ -289,8 +359,8 @@ public:
 %extend {
 	void SetExceptionHandler(AsyncVoidReturnDirector* handler, int32_t id)
 	{
-		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>,_1,id));
-		$self->SetExceptionHandler(boost::bind(&WrappedExceptionHandler,_1,sphandler));
+		RR_SHARED_PTR<AsyncVoidReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		$self->SetExceptionHandler(boost::bind(&WrappedExceptionHandler,RR_BOOST_PLACEHOLDERS(_1),sphandler));
 	}
 	
 	void ClearExceptionHandler()
@@ -305,8 +375,8 @@ public:
 %extend {	
 	boost::shared_ptr<RobotRaconteur::Timer> CreateTimer(const boost::posix_time::time_duration& period, bool oneshot, AsyncTimerEventReturnDirector* handler, int32_t id)
 	{		
-		boost::shared_ptr<AsyncTimerEventReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncTimerEventReturnDirector>,_1,id));
-		return $self->CreateTimer(period,boost::bind(&TimerHandlerFunc,_1,sphandler),oneshot);
+		boost::shared_ptr<AsyncTimerEventReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncTimerEventReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		return $self->CreateTimer(period,boost::bind(&TimerHandlerFunc,RR_BOOST_PLACEHOLDERS(_1),sphandler),oneshot);
 	}
 }
 
@@ -347,6 +417,7 @@ RR_MAKE_METHOD_PRIVATE(AsyncSleep)
 	boost::shared_ptr<RobotRaconteur::LogRecordHandler> GetLogRecordHandler();
 	void SetLogRecordHandler(boost::shared_ptr<RobotRaconteur::LogRecordHandler> handler);
 
+	void CheckConnection(uint32_t client);
 
 
 };

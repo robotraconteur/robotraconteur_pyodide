@@ -32,6 +32,6 @@ The Robot Raconteur core library is Apache 2.0 licensed.
 
 "Robot Raconteur" and the Robot Raconteur logo are registered trademarks of Wason Technology, LLC. All rights reserved.
 
-Robot Raconteur is patent pending.
+Robot Raconteur is covered United States Patent No. 10536560
 
-Robot Raconteur is developed by Dr. John Wason, Wason Technology, LLC
+Robot Raconteur is developed by John Wason, PhD, Wason Technology, LLC

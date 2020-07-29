@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ namespace RobotRaconteur
 		AbortOperationException err("Generator abort requested");
 		RobotRaconteurExceptionUtil::ExceptionToMessageEntry(err, m);
 		m->AddElement("index", ScalarToRRArray(id));
-		GetStub()->AsyncProcessRequest(m, boost::bind(handler, _2), timeout);
+		GetStub()->AsyncProcessRequest(m, boost::bind(handler, RR_BOOST_PLACEHOLDERS(_2)), timeout);
 	}
 	
 	void GeneratorClientBase::AsyncClose(boost::function<void(RR_SHARED_PTR<RobotRaconteurException> err)> handler, int32_t timeout)
@@ -58,7 +58,7 @@ namespace RobotRaconteur
 		StopIterationException err("");
 		RobotRaconteurExceptionUtil::ExceptionToMessageEntry(err, m);
 		m->AddElement("index", ScalarToRRArray(id));
-		GetStub()->AsyncProcessRequest(m, boost::bind(handler, _2), timeout);
+		GetStub()->AsyncProcessRequest(m, boost::bind(handler, RR_BOOST_PLACEHOLDERS(_2)), timeout);
 	}
 
 	std::string GeneratorClientBase::GetMemberName()
@@ -77,7 +77,7 @@ namespace RobotRaconteur
 			m->elements.push_back(v);
 		}
 		RR_WEAK_PTR<RobotRaconteurNode> node = GetStub()->RRGetNode();
-		GetStub()->AsyncProcessRequest(m, boost::bind(&GeneratorClientBase::AsyncNextBase1,_1,_2,handler,node));
+		GetStub()->AsyncProcessRequest(m, boost::bind(&GeneratorClientBase::AsyncNextBase1,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),handler,node));
 		
 	}
 

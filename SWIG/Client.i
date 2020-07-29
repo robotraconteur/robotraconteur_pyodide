@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ public:
 	virtual void RRClose();
 	
 	boost::shared_ptr<RobotRaconteur::ServiceEntryDefinition> RR_objecttype;
-	virtual boost::string_ref RRType();
+	//virtual boost::string_ref RRType();
 	//WrappedServiceStubDirector* RR_Director;
 		
 	void SetRRDirector(WrappedServiceStubDirector* director, int32_t id);

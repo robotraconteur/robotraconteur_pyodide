@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -99,9 +99,9 @@ public:
 	virtual void AddWebSocketAllowedOrigin(const std::string& origin);
 	virtual void RemoveWebSocketAllowedOrigin(const std::string& origin);
 	
-	RR_PROPERTY(DisableMessage3)
-	virtual bool GetDisableMessage3();
-	virtual void SetDisableMessage3(bool d);
+	RR_PROPERTY(DisableMessage4)
+	virtual bool GetDisableMessage4();
+	virtual void SetDisableMessage4(bool d);
 
 	RR_PROPERTY(DisableStringTable)
 	virtual bool GetDisableStringTable();

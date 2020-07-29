@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -151,7 +151,7 @@ namespace RobotRaconteur
 
 			if (timeout != RR_TIMEOUT_INFINITE)
 			{
-				timeout_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&Discovery_updatediscoverednodes::timeout_timer_callback, shared_from_this(), _1), true);
+				timeout_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&Discovery_updatediscoverednodes::timeout_timer_callback, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1)), true);
 				timeout_timer->Start();
 			}
 
@@ -169,7 +169,7 @@ namespace RobotRaconteur
 					try
 					{
 						ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Discovery, -1, "Begin GetDetectedNodes for transport " << e->GetUrlSchemeString());
-						boost::function<void(RR_SHARED_PTR<std::vector<NodeDiscoveryInfo> >)> h = boost::bind(&Discovery_updatediscoverednodes::getdetectednodes_callback, shared_from_this(), _1, key);
+						boost::function<void(RR_SHARED_PTR<std::vector<NodeDiscoveryInfo> >)> h = boost::bind(&Discovery_updatediscoverednodes::getdetectednodes_callback, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), key);
 						e->AsyncGetDetectedNodes(schemes, h, timeout1);
 					}
 					catch (std::exception& exp) 
@@ -488,7 +488,7 @@ namespace RobotRaconteur
 
 						RR_SHARED_PTR<ServiceStub> client3 = rr_cast<ServiceStub>(client);
 						RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> rr_req = RobotRaconteur::CreateMessageEntry(RobotRaconteur::MessageEntryType_FunctionCallReq, "GetLocalNodeServices");
-						client3->AsyncProcessRequest(rr_req, boost::bind(&Discovery_findservicebytype::serviceinfo_callback, shared_from_this(), _1, _2, client3, url, key2), 5000);
+						client3->AsyncProcessRequest(rr_req, boost::bind(&Discovery_findservicebytype::serviceinfo_callback, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), client3, url, key2), 5000);
 
 
 						active.push_back(key2);
@@ -564,7 +564,7 @@ namespace RobotRaconteur
 						key = active_count;
 
 						ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Discovery, -1, "FindServiceByType connecting to node using candidate URLs " << boost::join(e,", "));
-						node->AsyncConnectService(e, "", (RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> >()), NULL, "", boost::bind(&Discovery_findservicebytype::connect_callback, shared_from_this(), _1, _2, e.front(), key), timeout);
+						node->AsyncConnectService(e, "", (RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> >()), NULL, "", boost::bind(&Discovery_findservicebytype::connect_callback, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), e.front(), key), timeout);
 
 						active.push_back(key);
 					}
@@ -588,7 +588,7 @@ namespace RobotRaconteur
 			this->servicetype = RR_MOVE(servicetype.to_string());
 			if (timeout != RR_TIMEOUT_INFINITE)
 			{
-				timeout_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&Discovery_findservicebytype::timeout_timer_callback, shared_from_this(), _1), true);
+				timeout_timer = node->CreateTimer(boost::posix_time::milliseconds(timeout), boost::bind(&Discovery_findservicebytype::timeout_timer_callback, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1)), true);
 
 				//timeout_timer->Start();
 
@@ -633,7 +633,7 @@ namespace RobotRaconteur
 				//Restart the process 3 times
 				backoff = n->GetRandomInt(0, 500);
 				RR_SHARED_PTR<Timer> t = n->CreateTimer(boost::posix_time::milliseconds(backoff),
-					boost::bind(&Discovery_updateserviceinfo::backoff_timer_handler, shared_from_this(), _1),
+					boost::bind(&Discovery_updateserviceinfo::backoff_timer_handler, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1)),
 					true);
 				t->Start();
 
@@ -811,7 +811,7 @@ namespace RobotRaconteur
 				}
 
 				RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> rr_req = RobotRaconteur::CreateMessageEntry(RobotRaconteur::MessageEntryType_FunctionCallReq, "GetLocalNodeServices");
-				client3->AsyncProcessRequest(rr_req, boost::bind(&Discovery_updateserviceinfo::serviceinfo_handler, shared_from_this(), _1, _2),5000);
+				client3->AsyncProcessRequest(rr_req, boost::bind(&Discovery_updateserviceinfo::serviceinfo_handler, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2)),5000);
 			}
 			catch (RobotRaconteurException& err)
 			{
@@ -854,7 +854,7 @@ namespace RobotRaconteur
 				ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Discovery, -1, "UpdateServiceInfo connecting to remote node " << this->remote_nodeid.ToString()
 					<< " using candidate URLs " << boost::join(urls,", "));
 				n->AsyncConnectService(urls, "", RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> >(), NULL, "",
-					boost::bind(&Discovery_updateserviceinfo::connect_handler, shared_from_this(), _1, _2), 15000);
+					boost::bind(&Discovery_updateserviceinfo::connect_handler, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2)), 15000);
 			}
 			catch (RobotRaconteurException& err)
 			{
@@ -886,7 +886,7 @@ namespace RobotRaconteur
 
 			backoff = n->GetRandomInt(100, 600) + extra_backoff;
 			RR_SHARED_PTR<Timer> t = n->CreateTimer(boost::posix_time::milliseconds(backoff),
-				boost::bind(&Discovery_updateserviceinfo::backoff_timer_handler, shared_from_this(), _1),
+				boost::bind(&Discovery_updateserviceinfo::backoff_timer_handler, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1)),
 				true);
 			t->Start();
 
@@ -1021,7 +1021,7 @@ namespace RobotRaconteur
 					if (!subscriptions.empty())
 					{
 						ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Discovery, -1, "Node detected NodeID " << info.NodeID.ToString() << " updating service info");
-						update->AsyncUpdateServiceInfo(storage, info2->ServiceStateNonce, boost::bind(&Discovery::EndUpdateServiceInfo, shared_from_this(), _1, _2, _3, _4));
+						update->AsyncUpdateServiceInfo(storage, info2->ServiceStateNonce, boost::bind(&Discovery::EndUpdateServiceInfo, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), RR_BOOST_PLACEHOLDERS(_4)));
 					}
 					return;
 				}
@@ -1198,7 +1198,7 @@ namespace RobotRaconteur
 
 			RR_SHARED_PTR<Discovery_updateserviceinfo> update = RR_MAKE_SHARED<Discovery_updateserviceinfo>(node);
 			storage->updater = update;
-			update->AsyncUpdateServiceInfo(storage, storage->info->ServiceStateNonce, boost::bind(&Discovery::EndUpdateServiceInfo, shared_from_this(), _1, _2, _3, _4), backoff);
+			update->AsyncUpdateServiceInfo(storage, storage->info->ServiceStateNonce, boost::bind(&Discovery::EndUpdateServiceInfo, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), RR_BOOST_PLACEHOLDERS(_4)), backoff);
 		}
 
 		void Discovery::AsyncUpdateDetectedNodes(const std::vector<std::string>& schemes, boost::function<void()>& handler, int32_t timeout)
@@ -1599,7 +1599,14 @@ namespace RobotRaconteur
 			return n;
 		}
 
-		RR_SHARED_PTR<ServiceSubscription> Discovery::SubscribeService(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter)
+		RR_SHARED_PTR<ServiceSubscription> Discovery::SubscribeService(const std::vector<std::string>& url, boost::string_ref username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials,  boost::string_ref objecttype)
+		{
+			RR_SHARED_PTR<ServiceSubscription> s = RR_MAKE_SHARED<ServiceSubscription>(shared_from_this());
+			s->InitServiceURL(url,username,credentials,objecttype);
+			return s;
+		}		
+
+		RR_SHARED_PTR<ServiceSubscription> Discovery::SubscribeServiceByType(const std::vector<std::string>& service_types, RR_SHARED_PTR<ServiceSubscriptionFilter> filter)
 		{
 			RR_SHARED_PTR<ServiceSubscription> s = RR_MAKE_SHARED<ServiceSubscription>(shared_from_this());
 			DoSubscribe(service_types, filter, s);

@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@
 %shared_ptr(RobotRaconteur::UsingDefinition)
 %shared_ptr(RobotRaconteur::ConstantDefinition)
 %shared_ptr(RobotRaconteur::EnumDefinition)
+%shared_ptr(RobotRaconteur::ExceptionDefinition)
 
 
 %template(vectorptr_typedefinition) std::vector<boost::shared_ptr<RobotRaconteur::TypeDefinition> >;
@@ -37,6 +38,8 @@
 %template(vector_constantdefinition_structfield) std::vector<RobotRaconteur::ConstantDefinition_StructField>;
 %template(vector_enumdefinitionvalues) std::vector<RobotRaconteur::EnumDefinitionValue>;
 %template(vector_usingdefinition) std::vector<boost::shared_ptr<RobotRaconteur::UsingDefinition> >;
+%template(vectorptr_exceptiondefinition) std::vector<boost::shared_ptr<RobotRaconteur::ExceptionDefinition> >;
+%template(vectorptr_servicedefinition) std::vector<boost::shared_ptr<RobotRaconteur::ServiceDefinition> >;
 
 namespace RobotRaconteur
 {
@@ -95,12 +98,13 @@ public:
 	std::vector<boost::shared_ptr<RobotRaconteur::ServiceEntryDefinition> > Objects;
 	std::vector<std::string> Options;
 	std::vector<std::string> Imports;
-	std::vector<std::string> Exceptions;
+	std::vector<boost::shared_ptr<RobotRaconteur::ExceptionDefinition> > Exceptions;
 	std::vector<boost::shared_ptr<RobotRaconteur::UsingDefinition> > Using;
 	std::vector<boost::shared_ptr<RobotRaconteur::ConstantDefinition> > Constants;
 	std::vector<boost::shared_ptr<RobotRaconteur::EnumDefinition> > Enums;
 	RobotRaconteurVersion StdVer;
 	ServiceDefinitionParseInfo ParseInfo;
+	std::string DocString;
     RR_PUBLIC_OVERRIDE_METHOD(ToString)
 	virtual std::string ToString();
 	void FromString(const std::string &s, const ServiceDefinitionParseInfo* parse_info = NULL);
@@ -121,6 +125,7 @@ public:
 	std::vector<std::string> Options;
 	std::vector<boost::shared_ptr<RobotRaconteur::ConstantDefinition> > Constants;
 	ServiceDefinitionParseInfo ParseInfo;
+	std::string DocString;
 	ServiceEntryDefinition(boost::shared_ptr<RobotRaconteur::ServiceDefinition> def);
     RR_PUBLIC_OVERRIDE_METHOD(ToString)
 	virtual std::string ToString();
@@ -154,6 +159,7 @@ class MemberDefinition
 {
 public:
 	std::string Name;
+	std::string DocString;
 	
 	MemberDefinition(boost::shared_ptr<RobotRaconteur::ServiceEntryDefinition> ServiceEntry);
 
@@ -361,6 +367,7 @@ class  UsingDefinition
 		virtual ~ConstantDefinition();
 
 		std::string Name;
+		std::string DocString;
 
 		boost::shared_ptr<RobotRaconteur::TypeDefinition> Type;
 
@@ -420,6 +427,7 @@ class  UsingDefinition
 		virtual ~EnumDefinition();
 
 		std::string Name;
+		std::string DocString;
 		std::vector<RobotRaconteur::EnumDefinitionValue> Values;
 
 		ServiceDefinitionParseInfo ParseInfo;
@@ -454,9 +462,42 @@ class  UsingDefinition
 		EnumDefinitionValue();
 
 		std::string Name;
+		std::string DocString;
 		int32_t Value;
 		bool ImplicitValue;
 		bool HexValue;
+	};
+
+	class  ExceptionDefinition
+	{
+	public:
+		virtual ~ExceptionDefinition();
+
+		std::string Name;
+		std::string DocString;		
+
+		ServiceDefinitionParseInfo ParseInfo;
+
+		RR_PROPERTY(Service)
+		%extend	{
+		boost::shared_ptr<RobotRaconteur::ServiceDefinition> GetService()
+		{
+			return $self->service.lock();
+		}
+	
+		void SetService(boost::shared_ptr<RobotRaconteur::ServiceDefinition> value)
+		{
+			$self->service=value;
+		}	
+		}		
+
+		ExceptionDefinition(boost::shared_ptr<RobotRaconteur::ServiceDefinition> service);		
+
+		RR_PUBLIC_OVERRIDE_METHOD(ToString)
+		std::string ToString();		
+		void FromString(const std::string& s, const ServiceDefinitionParseInfo* parse_info = NULL);
+
+		void Reset();
 	};
 }
 

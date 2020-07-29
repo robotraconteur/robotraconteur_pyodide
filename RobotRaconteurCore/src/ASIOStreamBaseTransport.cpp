@@ -1,4 +1,4 @@
-// Copyright 2011-2019 Wason Technology, LLC
+// Copyright 2011-2020 Wason Technology, LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,11 +80,10 @@ namespace RobotRaconteur
 	send_large_transfer_authorized = false;
 	recv_large_transfer_authorized = false;
 
-	send_version3=(false);
 	
-	server = false;
+	use_string_table4 = false
 
-	disable_message3 = false;	
+	disable_message4 = false;
 	disable_async_io = false;
 
 	async_reader = AsyncMessageReader::CreateInstance();
@@ -98,7 +97,8 @@ namespace RobotRaconteur
 	async_send_version = 0;
 
 	active_capabilities_message2_basic = 0;
-	active_capabilities_message3_basic = 0;
+	active_capabilities_message4_basic = 0;
+	
 }
 
 
@@ -122,7 +122,7 @@ void ASIOStreamBaseTransport::AsyncAttachStream(bool server, const NodeID& targe
 		{
 			RR_SHARED_PTR<AsyncAttachStream_args> args=RR_MAKE_SHARED<AsyncAttachStream_args>(target_nodeid, target_nodename);
 
-			boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> cb = boost::bind(&ASIOStreamBaseTransport::AsyncAttachStream1, RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()), _1, _2, callback);
+			boost::function<void(RR_SHARED_PTR<RRObject>, RR_SHARED_PTR<RobotRaconteurException>)> cb = boost::bind(&ASIOStreamBaseTransport::AsyncAttachStream1, RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), callback);
 			AsyncStreamOp("CreateConnection", args, cb);
 
 		}
@@ -226,11 +226,11 @@ void ASIOStreamBaseTransport::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 	ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Begin sending message");
 
 	// Clear flags that should not be sent from the node layer
-	if (m->header->MessageFlags & MessageFlags_TRANSPORT_SPECIFIC) m->header->TransportSpecific.clear();
-	m->header->MessageFlags &= ~(MessageFlags_SUBSTREAM_SEQUENCE_NUMBER | MessageFlags_TRANSPORT_SPECIFIC);
+	//if (m->header->MessageFlags & MessageFlags_TRANSPORT_SPECIFIC) m->header->TransportSpecific.clear();
+	//m->header->MessageFlags &= ~(MessageFlags_SUBSTREAM_SEQUENCE_NUMBER | MessageFlags_TRANSPORT_SPECIFIC);
 	// End clear flags
 
-	bool send_3 = send_version3;
+	bool send_4 = send_version4;
 	
 	//TODO: find more elegant solution for this
 	if (m->entries.size() == 1)
@@ -240,19 +240,19 @@ void ASIOStreamBaseTransport::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 		{
 			if (m->entries[0]->MemberName == "CreateConnection")
 			{
-				send_3 = false;
+				send_4 = false;
 			}
 		}
 	}
 	
 	size_t message_size; 
-	if (!send_3)
+	if (!send_4)
 	{
 		message_size = m->ComputeSize();
 	}
 	else
 	{
-		message_size = m->ComputeSize3();
+		message_size = m->ComputeSize4();
 	}
 		
 	if (boost::numeric_cast<int32_t>(message_size) > (max_message_size-100)) 
@@ -388,9 +388,10 @@ void ASIOStreamBaseTransport::BeginSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 	ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Begin sending message to stream");
 
 	size_t message_size = 0;
-	bool send_3=send_version3;	
+	bool send_4=send_version4;
 	
-	//Don't use version 3 for special requests
+	
+	//Don't use version 4 for special requests
 
 	//TODO: find more elegant solution for this
 	if (m->entries.size() == 1)
@@ -400,12 +401,12 @@ void ASIOStreamBaseTransport::BeginSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 		{
 			if (m->entries[0]->MemberName == "CreateConnection")
 			{
-				send_3 = false;
+				send_4 = false;
 			}
 		}
 	}
 
-	if (!send_3)
+	if (!send_4)
 	{
 		message_size = m->ComputeSize();
 
@@ -441,19 +442,19 @@ void ASIOStreamBaseTransport::BeginSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 			{
 				if (!(m->entries.size() == 1 && m->entries[0]->EntryType < 500))
 				{
-					m->header->MessageFlags &= ~(MessageFlags_ROUTING_INFO | MessageFlags_ENDPOINT_INFO | MessageFlags_MESSAGE_ID);
+					m->header->MessageFlags &= ~(MessageFlags_ROUTING_INFO | MessageFlags_ENDPOINT_INFO);
 				}
 			}
 		}		
 
-		message_size = m->ComputeSize3();
-		
+		message_size = m->ComputeSize4();
+
 		if (!disable_async_io)
 		{
 			sending = true;
 			send_message_size = message_size;
-			async_send_version = 3;
-			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Sending message size " << message_size << " using message version 3 with asyncio");
+			async_send_version = 4;
+			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Sending message size " << message_size << " using message version 4 with asyncio");
 			BeginSendMessage1(m, callback);
 			return;
 		}
@@ -466,8 +467,8 @@ void ASIOStreamBaseTransport::BeginSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 		}		
 
 		ArrayBinaryWriter w(sendbuf.get(), 0, message_size);
-		m->Write3(w, 0);
-		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Sending message size " << message_size << " using message version 3 buffer");
+		m->Write4(w);
+		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Sending message size " << message_size << " using message version 4 buffer");
 
 	}
 
@@ -475,8 +476,8 @@ void ASIOStreamBaseTransport::BeginSendMessage(RR_INTRUSIVE_PTR<Message> m, boos
 	boost::function<void (const boost::system::error_code& error, size_t bytes_transferred)> f=boost::bind(&ASIOStreamBaseTransport::EndSendMessage,
 			shared_from_this(),
 			0,
-			_1,
-			_2, m, message_size, callback, sendbuf);
+			RR_BOOST_PLACEHOLDERS(_1),
+			RR_BOOST_PLACEHOLDERS(_2), m, message_size, callback, sendbuf);
 
 	const_buffers buf;
 	buf.push_back(const_buffer(sendbuf.get(), message_size));
@@ -504,8 +505,8 @@ void ASIOStreamBaseTransport::BeginSendMessage1(RR_INTRUSIVE_PTR<Message> m, boo
 	case 2:
 		async_writer->Write(send_message_size, work_bufs, work_bufs_used, async_send_bufs);
 		break;
-	case 3:
-		async_writer->Write3(send_message_size, work_bufs, work_bufs_used, async_send_bufs);
+	case 4:
+		async_writer->Write4(send_message_size, work_bufs, work_bufs_used, async_send_bufs);
 		break;
 	default:
 		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "Attempt to send invalid message version " << async_send_version);
@@ -564,8 +565,8 @@ void ASIOStreamBaseTransport::EndSendMessage2(const boost::system::error_code& e
 			case 2:
 				async_writer->Write(remaining, work_bufs, work_bufs_used, async_send_bufs);
 				break;
-			case 3:
-				async_writer->Write3(remaining, work_bufs, work_bufs_used, async_send_bufs);
+			case 4:
+				async_writer->Write4(remaining, work_bufs, work_bufs_used, async_send_bufs);
 				break;
 			default:
 				ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "Attempt to send invalid message version " << async_send_version);
@@ -630,8 +631,8 @@ void ASIOStreamBaseTransport::EndSendMessage(size_t startpos, const boost::syste
 			boost::function<void(const boost::system::error_code& error, size_t bytes_transferred)> f = boost::bind(&ASIOStreamBaseTransport::EndSendMessage,
 				shared_from_this(),
 				new_startpos,
-				_1,
-				_2, m, m_len, callback, sendbuf);
+				RR_BOOST_PLACEHOLDERS(_1),
+				RR_BOOST_PLACEHOLDERS(_2), m, m_len, callback, sendbuf);
 
 			const_buffers buf1;
 			buf1.push_back(const_buffer(sendbuf.get() + new_startpos, m_len - new_startpos));
@@ -968,11 +969,10 @@ void ASIOStreamBaseTransport::EndReceiveMessage2(size_t startpos, const boost::s
 
 			RR_INTRUSIVE_PTR<Message> message=CreateMessage();
 
-			if (message_version == 3)
+			if (message_version == 4)
 			{
-				ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Received message deserialize using message 3 buffer");
-				uint16_t message_version_minor;
-				message->Read3(r, message_version_minor);
+				ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Received message deserialize using message 4 buffer");
+				message->Read4(r);
 
 				uint16_t flags = message->header->MessageFlags;
 
@@ -1039,18 +1039,18 @@ void ASIOStreamBaseTransport::EndReceiveMessage3(RR_INTRUSIVE_PTR<Message> messa
 				eret->RequestID = m->entries.at(0)->RequestID;
 				eret->ServicePath = m->entries.at(0)->ServicePath;
 
-				bool send_3 = send_version3;
+				bool send_4 = send_version4;
 
-				if (send_3)
+				if (send_4)
 				{
-					ret->header->MessageFlags &= ~(MessageFlags_ROUTING_INFO | MessageFlags_ENDPOINT_INFO | MessageFlags_MESSAGE_ID);
+					ret->header->MessageFlags &= ~(MessageFlags_ROUTING_INFO | MessageFlags_ENDPOINT_INFO);
 				}						
 
 				RR_SHARED_PTR<ASIOStreamBaseTransport > p=RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this());
 
 				
 				boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind((&ASIOStreamBaseTransport::SimpleAsyncEndSendMessage),
-					RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()), _1
+					RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1)
 				);
 				AsyncSendMessage(ret, h);
 
@@ -1254,8 +1254,8 @@ void ASIOStreamBaseTransport::EndReceiveMessage5(const boost::system::error_code
 				case 2:
 					ret = async_reader->Read(bufs, bufs_read, 0, continue_bufs);
 					break;
-				case 3:
-					ret = async_reader->Read3(bufs, bufs_read, 0, continue_bufs);
+				case 4:
+					ret = async_reader->Read4(bufs, bufs_read, 0, continue_bufs);
 					break;
 				default:
 					ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "Received invalid message version: " << async_recv_version);
@@ -1315,8 +1315,8 @@ void ASIOStreamBaseTransport::EndReceiveMessage5(const boost::system::error_code
 				case 2:
 					ret = async_reader->Read(bufs, bufs_read, b1, continue_bufs);
 					break;
-				case 3:
-					ret = async_reader->Read3(bufs, bufs_read, b1, continue_bufs);
+				case 4:
+					ret = async_reader->Read4(bufs, bufs_read, b1, continue_bufs);
 					break;
 				default:
 					ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "Received invalid message version: " << async_recv_version);
@@ -1337,8 +1337,8 @@ void ASIOStreamBaseTransport::EndReceiveMessage5(const boost::system::error_code
 					case 2:
 						ret = async_reader->Read(bufs, bufs_read, 0, continue_bufs);
 						break;
-					case 3:
-						ret = async_reader->Read3(bufs, bufs_read, 0, continue_bufs);
+					case 4:
+						ret = async_reader->Read4(bufs, bufs_read, 0, continue_bufs);
 						break;
 					default:
 						ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "Received invalid message version: " << async_recv_version);
@@ -1682,7 +1682,7 @@ void ASIOStreamBaseTransport::heartbeat_timer_func(const TimerEvent& e)
 			
 			boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&ASIOStreamBaseTransport::SimpleAsyncEndSendMessage,
 				RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()),
-				_1);
+				RR_BOOST_PLACEHOLDERS(_1));
 			AsyncSendMessage(m, h);
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Heartbeat request sent");
 		}
@@ -1722,7 +1722,7 @@ uint32_t ASIOStreamBaseTransport::StreamCapabilities(boost::string_ref name)
 {
 	if (name == "com.robotraconteur.message.v_max")
 	{
-		return 3;
+		return 4;
 	}
 
 	if (name == "com.robotraconteur.v2")
@@ -1740,17 +1740,17 @@ uint32_t ASIOStreamBaseTransport::StreamCapabilities(boost::string_ref name)
 		return 1;
 	}
 
-	if (name == "com.robotraconteur.message.v3")
+	if (name == "com.robotraconteur.message.v4")
 	{
 		return 1;
 	}
 
-	if (name == "com.robotraconteur.message.v3.minor")
+	if (name == "com.robotraconteur.message.v4.minor")
 	{
 		return 0;
 	}
 
-	if (name == "com.robotraconteur.message.v3.0")
+	if (name == "com.robotraconteur.message.v4.0")
 	{
 		return 1;
 	}
@@ -1760,17 +1760,17 @@ uint32_t ASIOStreamBaseTransport::StreamCapabilities(boost::string_ref name)
 		return 0;
 	}
 
-	if (name == "com.robotraconteur.stringtable.v3")
+	if (name == "com.robotraconteur.stringtable.v4")
 	{
 		return 0;
 	}
 
-	if (name == "com.robotraconteur.stringtable.v3.minor")
+	if (name == "com.robotraconteur.stringtable.v4.minor")
 	{
 		return 0;
 	}
 
-	if (name == "com.robotraconteur.stringtable.v3.0")
+	if (name == "com.robotraconteur.stringtable.v4.0")
 	{
 		return 0;
 	}
@@ -1836,7 +1836,7 @@ void ASIOStreamBaseTransport::BeginCheckStreamCapability(boost::string_ref name,
 
 		boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&ASIOStreamBaseTransport::SimpleAsyncEndSendMessage,
 			RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()),
-			_1);
+			RR_BOOST_PLACEHOLDERS(_1));
 		AsyncSendMessage(m, h);
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Sent CheckStreamCapability \"" << name << "\" request");
 			
@@ -1936,7 +1936,7 @@ void ASIOStreamBaseTransport::CheckStreamCapability_MessageReceived( RR_INTRUSIV
 
 			boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&ASIOStreamBaseTransport::SimpleAsyncEndSendMessage,
 				RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()),
-				_1);
+				RR_BOOST_PLACEHOLDERS(_1));
 			AsyncSendMessage(ret, h);
 		}
 		else if (m->entries.at(0)->EntryType == MessageEntryType_StreamCheckCapabilityRet)
@@ -2044,10 +2044,10 @@ void ASIOStreamBaseTransport::BeginStreamOp(boost::string_ref command, RR_SHARED
 			caps.push_back(TransportCapabilityCode_MESSAGE2_BASIC_PAGE | TransportCapabilityCode_MESSAGE2_BASIC_ENABLE 
 				| TransportCapabilityCode_MESSAGE2_BASIC_CONNECTCOMBINED);
 
-			if (!disable_message3)
+			if (!disable_message4)
 			{
-				caps.push_back(TransportCapabilityCode_MESSAGE3_BASIC_PAGE | TransportCapabilityCode_MESSAGE3_BASIC_ENABLE 
-					| TransportCapabilityCode_MESSAGE3_BASIC_CONNECTCOMBINED);
+				caps.push_back(TransportCapabilityCode_MESSAGE4_BASIC_PAGE | TransportCapabilityCode_MESSAGE4_BASIC_ENABLE 
+					| TransportCapabilityCode_MESSAGE4_BASIC_CONNECTCOMBINED);
 				
 			}
 			mm->AddElement("capabilities", VectorToRRArray<uint32_t>(caps));
@@ -2081,7 +2081,7 @@ void ASIOStreamBaseTransport::BeginStreamOp(boost::string_ref command, RR_SHARED
 		
 		boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&ASIOStreamBaseTransport::SimpleAsyncEndSendMessage,
 			RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()),
-			_1);
+			RR_BOOST_PLACEHOLDERS(_1));
 
 		AsyncSendMessage(m, h);
 
@@ -2194,8 +2194,8 @@ RR_INTRUSIVE_PTR<MessageEntry> ASIOStreamBaseTransport::ProcessStreamOpRequest(R
 			if (request->TryFindElement("capabilities", elem_caps))
 			{
 				uint32_t message2_basic_caps = TransportCapabilityCode_MESSAGE2_BASIC_ENABLE;
-				uint32_t message3_basic_caps = 0;
-				uint32_t message3_string_caps = 0;
+				uint32_t message4_basic_caps = 0;
+				uint32_t message4_string_caps = 0;
 
 				std::vector<uint32_t> ret_caps;
 
@@ -2212,10 +2212,10 @@ RR_INTRUSIVE_PTR<MessageEntry> ASIOStreamBaseTransport::ProcessStreamOpRequest(R
 							| TransportCapabilityCode_MESSAGE2_BASIC_CONNECTCOMBINED));
 					}
 
-					if (cap_page == TransportCapabilityCode_MESSAGE3_BASIC_PAGE)
+					if (cap_page == TransportCapabilityCode_MESSAGE4_BASIC_PAGE)
 					{
-						message3_basic_caps = (cap_value & (TransportCapabilityCode_MESSAGE3_BASIC_ENABLE 
-							| TransportCapabilityCode_MESSAGE3_BASIC_CONNECTCOMBINED));
+						message4_basic_caps = (cap_value & (TransportCapabilityCode_MESSAGE4_BASIC_ENABLE 
+							| TransportCapabilityCode_MESSAGE4_BASIC_CONNECTCOMBINED));
 					}
 				}
 
@@ -2231,12 +2231,12 @@ RR_INTRUSIVE_PTR<MessageEntry> ASIOStreamBaseTransport::ProcessStreamOpRequest(R
 					active_capabilities_message2_basic = message2_basic_caps;
 				}
 
-				if ((message3_basic_caps & TransportCapabilityCode_MESSAGE3_BASIC_ENABLE) && !disable_message3)
+				if ((message4_basic_caps & TransportCapabilityCode_MESSAGE4_BASIC_ENABLE) && !disable_message4)
 				{
-					send_version3 = true;
-					message3_basic_caps |= TransportCapabilityCode_MESSAGE3_BASIC_PAGE;
-					ret_caps.push_back(message3_basic_caps);
-					active_capabilities_message3_basic = message3_basic_caps;					
+					send_version4 = true;
+					message4_basic_caps |= TransportCapabilityCode_MESSAGE4_BASIC_PAGE;
+					ret_caps.push_back(message4_basic_caps);
+					active_capabilities_message4_basic = message4_basic_caps;					
 				}				
 
 				ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "Server transport negotiated capabilities: " << ASIOStreamBaseTransport_log_caps(ret_caps) << " client requested capabilities: " << ASIOStreamBaseTransport_log_caps(ret_caps));
@@ -2320,7 +2320,7 @@ void ASIOStreamBaseTransport::StreamOpMessageReceived(RR_INTRUSIVE_PTR<Message> 
 		{
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, GetLocalEndpoint(), "Sending StreamOp \"" << command << "\" response");
 			mret->entries.push_back(mmret);
-			boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&ASIOStreamBaseTransport::StreamOp_EndSendMessage, RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()), _1);
+			boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)> h = boost::bind(&ASIOStreamBaseTransport::StreamOp_EndSendMessage, RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()), RR_BOOST_PLACEHOLDERS(_1));
 			AsyncSendMessage(mret, h);
 		}
 	}
@@ -2442,8 +2442,8 @@ RR_SHARED_PTR<RRObject> ASIOStreamBaseTransport::UnpackStreamOpResponse(RR_INTRU
 		if (response->TryFindElement("capabilities", elem_caps))
 		{
 			uint32_t message2_basic_caps = TransportCapabilityCode_MESSAGE2_BASIC_ENABLE;
-			uint32_t message3_basic_caps = 0;
-			uint32_t message3_string_caps = 0;
+			uint32_t message4_basic_caps = 0;
+			uint32_t message4_string_caps = 0;
 
 			RR_INTRUSIVE_PTR<RRArray<uint32_t> > caps_array = rr_null_check(elem_caps->CastData<RRArray<uint32_t> >());
 			std::vector<uint32_t> caps_array1 = RRArrayToVector<uint32_t>(caps_array);
@@ -2471,36 +2471,36 @@ RR_SHARED_PTR<RRObject> ASIOStreamBaseTransport::UnpackStreamOpResponse(RR_INTRU
 					message2_basic_caps = cap_value;
 				}
 
-				if (cap_page == TransportCapabilityCode_MESSAGE3_BASIC_PAGE)
+				if (cap_page == TransportCapabilityCode_MESSAGE4_BASIC_PAGE)
 				{
-					if (disable_message3)
+					if (disable_message4)
 					{
 						if (cap_value != 0)
 						{
-							ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "CreateConnection invalid version 3 message caps returned by server");
-							throw ProtocolException("Invalid Message Version 3 capabilities");
+							ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "CreateConnection invalid version 4 message caps returned by server");
+							throw ProtocolException("Invalid Message Version 4 capabilities");
 						}
 					}
 					else
 					{
-						if (!(cap_value & TransportCapabilityCode_MESSAGE3_BASIC_ENABLE))
+						if (!(cap_value & TransportCapabilityCode_MESSAGE4_BASIC_ENABLE))
 						{
 							if (cap_value != 0)
 							{
-								ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "CreateConnection invalid version 3 message caps returned by server");
-								throw ProtocolException("Invalid Message Version 3 capabilities");
+								ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "CreateConnection invalid version 4 message caps returned by server");
+								throw ProtocolException("Invalid Message Version 4 capabilities");
 							}
 						}
 						else
 						{
-							if ((cap_value & ~(TransportCapabilityCode_MESSAGE3_BASIC_ENABLE
-								| TransportCapabilityCode_MESSAGE3_BASIC_CONNECTCOMBINED)) != 0)
+							if ((cap_value & ~(TransportCapabilityCode_MESSAGE4_BASIC_ENABLE
+								| TransportCapabilityCode_MESSAGE4_BASIC_CONNECTCOMBINED)) != 0)
 							{
-								ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "CreateConnection invalid version 3 message caps returned by server");
-								throw ProtocolException("Invalid Message Version 2 capabilities");
+								ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, GetLocalEndpoint(), "CreateConnection invalid version 4 message caps returned by server");
+								throw ProtocolException("Invalid Message Version 4 capabilities");
 							}
 
-							message3_basic_caps = cap_value;
+							message4_basic_caps = cap_value;
 						}
 					}
 
@@ -2511,10 +2511,10 @@ RR_SHARED_PTR<RRObject> ASIOStreamBaseTransport::UnpackStreamOpResponse(RR_INTRU
 
 			active_capabilities_message2_basic = message2_basic_caps | TransportCapabilityCode_MESSAGE2_BASIC_PAGE;
 
-			if (message3_basic_caps)
+			if (message4_basic_caps)
 			{	
-				active_capabilities_message3_basic = message3_basic_caps | TransportCapabilityCode_MESSAGE2_BASIC_PAGE;
-				send_version3=(true);				
+				active_capabilities_message4_basic = message4_basic_caps | TransportCapabilityCode_MESSAGE4_BASIC_PAGE;
+				send_version4=(true);				
 			}
 			else
 			{
@@ -2552,13 +2552,13 @@ bool ASIOStreamBaseTransport::IsLargeTransferAuthorized()
 	return true;
 }
 
-bool ASIOStreamBaseTransport::GetDisableMessage3()
+bool ASIOStreamBaseTransport::GetDisableMessage4()
 {
-	return disable_message3;
+	return disable_message4;
 }
-void ASIOStreamBaseTransport::SetDisableMessage3(bool d)
+void ASIOStreamBaseTransport::SetDisableMessage4(bool d)
 {
-	disable_message3 = d;
+	disable_message4 = d;
 }
 
 bool ASIOStreamBaseTransport::CheckCapabilityActive(uint32_t cap)
@@ -2571,9 +2571,9 @@ bool ASIOStreamBaseTransport::CheckCapabilityActive(uint32_t cap)
 		return (cap_value & (active_capabilities_message2_basic & (~TranspartCapabilityCode_PAGE_MASK))) != 0;
 	}
 
-	if (cap_page == TransportCapabilityCode_MESSAGE3_BASIC_PAGE)
+	if (cap_page == TransportCapabilityCode_MESSAGE4_BASIC_PAGE)
 	{
-		return (cap_value & (active_capabilities_message3_basic & (~TranspartCapabilityCode_PAGE_MASK))) != 0;
+		return (cap_value & (active_capabilities_message4_basic & (~TranspartCapabilityCode_PAGE_MASK))) != 0;
 	}
 
 	return false;

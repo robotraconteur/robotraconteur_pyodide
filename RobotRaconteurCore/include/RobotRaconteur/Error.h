@@ -1,7 +1,7 @@
 ﻿/** 
  * @file Error.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -167,6 +167,8 @@ namespace RobotRaconteur
 		M(ServiceDefinitionException, MessageErrorType_ServiceDefinitionError, "RobotRaconteur.ServiceDefinitionError") \
 		M(OutOfRangeException, MessageErrorType_OutOfRange, "RobotRaconteur.OutOfRange") \
 		M(KeyNotFoundException, MessageErrorType_KeyNotFound, "RobotRaconteur.KeyNotFound") \
+		M(InvalidConfigurationException, MessageErrorType_InvalidConfiguration, "RobotRaconteur.InvalidConfiguration") \
+		M(InvalidStateException, MessageErrorType_InvalidState, "RobotRaconteur.InvalidState") \
 		M2(RobotRaconteurRemoteException, MessageErrorType_RemoteError) \
 		M(RequestTimeoutException, MessageErrorType_RequestTimeout, "RobotRaconteur.RequestTimeout") \
 		M(ReadOnlyMemberException, MessageErrorType_ReadOnlyMember, "RobotRaconteur.ReadOnlyMember") \
@@ -179,7 +181,9 @@ namespace RobotRaconteur
 		M(PermissionDeniedException, MessageErrorType_PermissionDenied, "RobotRaconteur.PermissionDenied") \
 		M(AbortOperationException, MessageErrorType_AbortOperation, "RobotRaconteur.AbortOperation") \
 		M(OperationAbortedException, MessageErrorType_OperationAborted, "RobotRaconteur.OperationAborted") \
-		M(StopIterationException, MessageErrorType_StopIteration, "RobotRaconteur.StopIteration")
+		M(StopIterationException, MessageErrorType_StopIteration, "RobotRaconteur.StopIteration") \
+		M(OperationTimeoutException, MessageErrorType_OperationTimeout, "RobotRaconteur.OperationTimeout") \
+		M(OperationCancelledException, MessageErrorType_OperationCancelled, "RobotRaconteur.OperationCancelled")
 
 
 #define RR_EXCEPTION_DECL_1(exp_cpp_type, exp_code, exp_type_str) \
@@ -898,6 +902,48 @@ namespace RobotRaconteur
 	};
 
 	/**
+	 * @brief Exception thrown when an invalid configuration is specified or encountered
+	 * 
+	 * Error code MessageErrorType_InvalidConfiguration (31)
+	 * 
+	 */
+	class InvalidConfigurationException : public RobotRaconteurException
+	{
+	public:
+		/**
+		 * @brief Construct an InvalidConfiguration exception
+		 * 
+		 * @param message Message for the user
+		 * @param sub_name Optional error sub_name
+		 * @param param_ Optional error param
+		 */
+
+		InvalidConfigurationException(const std::string &message, std::string sub_name = "", RR_INTRUSIVE_PTR<RRValue> param_ = RR_INTRUSIVE_PTR<RRValue>());
+
+	};
+
+	/**
+	 * @brief Exception thrown when an invalid state is specified or encountered
+	 * 
+	 * Error code MessageErrorType_InvalidState (32)
+	 * 
+	 */
+	class InvalidStateException : public RobotRaconteurException
+	{
+	public:
+		/**
+		 * @brief Construct an InvalidState exception
+		 * 
+		 * @param message Message for the user
+		 * @param sub_name Optional error sub_name
+		 * @param param_ Optional error param
+		 */
+
+		InvalidStateException(const std::string &message, std::string sub_name = "", RR_INTRUSIVE_PTR<RRValue> param_ = RR_INTRUSIVE_PTR<RRValue>());
+
+	};
+
+	/**
 	 * @brief Exception thrown when an error occurs on a remote
 	 * member request
 	 * 
@@ -1183,6 +1229,48 @@ namespace RobotRaconteur
 
 	};
 
+	/**
+	 * @brief Exception thrown when an operation does not complete in the expected time
+	 * 
+	 * 
+	 * Error code MessageErrorType_OperationTimeout (110)
+	 * 
+	 */
+	class OperationTimeoutException : public RobotRaconteurException
+	{
+	public:
+		/**
+		 * @brief Construct an OperationTimeoutException
+		 * 
+		 * @param message Message for the user
+		 * @param sub_name Optional error sub_name
+		 * @param param_ Optional error param
+		 */
+		OperationTimeoutException(const std::string &message, std::string sub_name = "", RR_INTRUSIVE_PTR<RRValue> param_ = RR_INTRUSIVE_PTR<RRValue>());
+
+	};
+
+	/**
+	 * @brief Exception thrown when an operation is cancelled before it is started
+	 * 
+	 * 
+	 * Error code MessageErrorType_OperationCancelled (111)
+	 * 
+	 */
+	class OperationCancelledException : public RobotRaconteurException
+	{
+	public:
+		/**
+		 * @brief Construct an OperationCancelledException
+		 * 
+		 * @param message Message for the user
+		 * @param sub_name Optional error sub_name
+		 * @param param_ Optional error param
+		 */
+		OperationCancelledException(const std::string &message, std::string sub_name = "", RR_INTRUSIVE_PTR<RRValue> param_ = RR_INTRUSIVE_PTR<RRValue>());
+
+	};
+
 	#ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
 		/** @brief Convenience alias for ConnectionException shared_ptr */
         using ConnectionExceptionPtr = RR_SHARED_PTR<ConnectionException>();
@@ -1304,7 +1392,15 @@ namespace RobotRaconteur
         using KeyNotFoundExceptionPtr = RR_SHARED_PTR<KeyNotFoundException>();
         /** @brief Convenience alias for KeyNotFoundException const shared_ptr */
         using KeyNotFoundExceptionConstPtr = RR_SHARED_PTR<const KeyNotFoundException>();
-        /** @brief Convenience alias for RobotRaconteurRemoteException shared_ptr */
+		/** @brief Convenience alias for InvalidConfigurationException shared_ptr */
+        using InvalidConfigurationExceptionPtr = RR_SHARED_PTR<InvalidConfigurationException>();
+        /** @brief Convenience alias for InvalidConfigurationException const shared_ptr */
+        using InvalidConfigurationExceptionConstPtr = RR_SHARED_PTR<const InvalidConfigurationException>();
+		/** @brief Convenience alias for InvalidStateException shared_ptr */
+        using InvalidStateExceptionPtr = RR_SHARED_PTR<InvalidStateException>();
+        /** @brief Convenience alias for InvalidStateException const shared_ptr */
+        using InvalidStateExceptionConstPtr = RR_SHARED_PTR<const InvalidStateException>();		
+		/** @brief Convenience alias for RobotRaconteurRemoteException shared_ptr */
         using RobotRaconteurRemoteExceptionPtr = RR_SHARED_PTR<RobotRaconteurRemoteException>();
         /** @brief Convenience alias for RobotRaconteurRemoteException const shared_ptr */
         using RobotRaconteurRemoteExceptionConstPtr = RR_SHARED_PTR<const RobotRaconteurRemoteException>();
@@ -1355,7 +1451,15 @@ namespace RobotRaconteur
         /** @brief Convenience alias for StopIterationException shared_ptr */
         using StopIterationExceptionPtr = RR_SHARED_PTR<StopIterationException>();
         /** @brief Convenience alias for StopIterationException const shared_ptr */
-        using StopIterationExceptionConstPtr = RR_SHARED_PTR<const StopIterationException>();	
+        using StopIterationExceptionConstPtr = RR_SHARED_PTR<const StopIterationException>();
+		/** @brief Convenience alias for OperationTimeoutException shared_ptr */
+        using OperationTimeoutExceptionPtr = RR_SHARED_PTR<OperationTimeoutException>();
+        /** @brief Convenience alias for OperationTimeoutException const shared_ptr */
+        using OperationTimeoutExceptionConstPtr = RR_SHARED_PTR<const OperationTimeoutException>();
+		/** @brief Convenience alias for OperationCancelledException shared_ptr */
+        using OperationCancelledExceptionPtr = RR_SHARED_PTR<OperationCancelledException>();
+        /** @brief Convenience alias for OperationCancelledException const shared_ptr */
+        using OperationCancelledExceptionConstPtr = RR_SHARED_PTR<const OperationCacnelledException>();
 	#endif
 
 #endif // GENERATING_DOCUMENTATION

@@ -1,7 +1,7 @@
 /** 
  * @file Timer.h
  * 
- * @author Dr. John Wason
+ * @author John Wason, PhD
  * 
  * @copyright Copyright 2011-2020 Wason Technology, LLC
  *
@@ -32,29 +32,80 @@
 namespace RobotRaconteur
 {
 
+/**
+ * @brief Timer event structure
+ * 
+ * Contains information about the state of the timer. Passed to the
+ * callback on invocation.
+ * 
+ */
 struct ROBOTRACONTEUR_CORE_API TimerEvent
 {
+	/** @brief true if timer has been stopped */
 	bool stopped;
+	/** @brief The last expected callback invocation time */
 	boost::posix_time::ptime last_expected;
+	/** @brief The real last callback invocation time */
 	boost::posix_time::ptime last_real;
+	/** @brief The current expected invocation time */
 	boost::posix_time::ptime current_expected;
+	/** @brief The current invocation time */
 	boost::posix_time::ptime current_real;
 };
 
+/**
+ * @brief A timer to invoke a callback
+ * 
+ * Timers invoke a callback at a specified rate. The timer
+ * can either be one-short, or repeating.
+ * 
+ * Use RobotRaconteurNode::CreateTimer() to create timers.
+ * 
+ */
 class ROBOTRACONTEUR_CORE_API Timer : private boost::noncopyable
 {
 public:
 
+	/**
+	 * @brief Start the timer
+	 * 
+	 * Must be called after RobotRaconteurNode::CreateTimer()
+	 * 
+	 */
 	virtual void Start()=0;
 
+	/**
+	 * @brief Stop the timer
+	 * 
+	 */
 	virtual void Stop()=0;
 
+	/**
+	 * @brief Get the period of the timer
+	 * 
+	 * @return boost::posix_time::time_duration 
+	 */
 	virtual boost::posix_time::time_duration GetPeriod()=0;
 
+	/**
+	 * @brief Set the period of the timer
+	 * 
+	 * @param period 
+	 */
 	virtual void SetPeriod(const boost::posix_time::time_duration& period)=0;
 	
+	/**
+	 * @brief Check if timer is running
+	 * 
+	 * @return true 
+	 * @return false 
+	 */
 	virtual bool IsRunning()=0;
 
+	/**
+	 * @brief Clear the timer
+	 * 
+	 */
 	virtual void Clear()=0;
 	
 	virtual ~Timer() {}
@@ -113,6 +164,7 @@ public:
 };
 
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
+/** @brief Convenience alias for Timer shared_ptr */
 using TimerPtr = RR_SHARED_PTR<Timer>;
 #endif
 

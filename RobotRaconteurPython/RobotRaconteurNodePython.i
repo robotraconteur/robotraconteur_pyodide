@@ -37,10 +37,20 @@ def s(self):
 def RegisterServiceType(self, d):
 	self._RegisterServiceType(d)
 
+def RegisterServiceTypes(self, d):
+	self._RegisterServiceTypes(d)
+
 def RegisterServiceTypeFromFile(self, file_name):
 	from .RobotRaconteurPythonUtil import ReadServiceDefinitionFile
 	d = ReadServiceDefinitionFile(file_name)
 	self._RegisterServiceType(str(d))
+
+def RegisterServiceTypesFromFiles(self, file_names):
+	from .RobotRaconteurPythonUtil import ReadServiceDefinitionFile
+	d = []
+	for file_name in file_names:
+		d.append(str(ReadServiceDefinitionFile(file_name)))
+	self._RegisterServiceTypes(d)
 	
 def GetServiceType(self, name):
 	return self._GetServiceType(name)
@@ -98,6 +108,15 @@ def AsyncReleaseObjectLock(self,obj,handler,timeout=RR_TIMEOUT_INFINITE):
 def GetServiceAttributes(self,obj):
 	from .RobotRaconteurPythonUtil import UnpackMessageElement
 	return UnpackMessageElement(self._GetServiceAttributes(obj.rrinnerstub),"varvalue{string} value",None,self)
+
+def GetServiceNodeID(self,obj):
+	return self._GetServiceNodeID(obj.rrinnerstub)
+
+def GetServiceNodeName(self,obj):
+	return self._GetServiceNodeName(obj.rrinnerstub)
+
+def GetServiceName(self,obj):
+	return self._GetServiceName(obj.rrinnerstub)
 	
 NodeID = property(lambda self: self._NodeID(), lambda self,nodeid: self._SetNodeID(nodeid))
 NodeName =property(lambda self: self._NodeName(), lambda self,nodename: self._SetNodeName(nodename))
@@ -124,7 +143,8 @@ def GetExceptionType(self, exceptionname, obj=None):
 		d=self.GetServiceType(t[0])
 	else:
 		d=self.GetPulledServiceType(obj,t[0])
-	if (not t[1] in d.Exceptions): raise Exception('Invalid exception type')
+	if (not any(x.Name == t[1] for x in d.Exceptions)): 
+		raise Exception('Invalid exception type')
 	return GetExceptionType(exceptionname)
 		
 def AsyncFindObjectType(self,obj,member,handler,timeout=RR_TIMEOUT_INFINITE):
@@ -169,13 +189,17 @@ def NowUTC(self):
 def Shutdown(self):
 	self._Shutdown()
 
-def SubscribeService(self, service_types, filter_=None):
-	from .RobotRaconteurPythonUtil import SubscribeService
-	return SubscribeService(self, service_types, filter_)
+def SubscribeServiceByType(self, service_types, filter_=None):
+	from .RobotRaconteurPythonUtil import SubscribeServiceByType
+	return SubscribeServiceByType(self, service_types, filter_)
 
 def SubscribeServiceInfo2(self, service_types, filter_=None):
 	from .RobotRaconteurPythonUtil import SubscribeServiceInfo2
 	return SubscribeServiceInfo2(self, service_types, filter_)
+
+def SubscribeService(self,*args):
+	from .RobotRaconteurPythonUtil import SubscribeService
+	return SubscribeService(self, *args)
 
 %}
 
