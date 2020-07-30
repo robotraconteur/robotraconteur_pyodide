@@ -26,7 +26,6 @@
 #include "RobotRaconteur/Logging.h"
 #include "RobotRaconteur/Message.h"
 #include <boost/bind/placeholders.hpp>
-#include <boost/asio.hpp>
 
 namespace RobotRaconteur
 {
@@ -75,11 +74,7 @@ namespace RobotRaconteur
         virtual ~MessageTap() {}
     };
 
-    namespace detail
-    {
-        class LocalMessageTapImpl;
-    }
-
+    
     /**
      * @brief Local message tap
      * 
@@ -96,7 +91,7 @@ namespace RobotRaconteur
      */
     class ROBOTRACONTEUR_CORE_API LocalMessageTap : public MessageTap
     {
-        RR_WEAK_PTR<detail::LocalMessageTapImpl> tap_impl;
+        
         std::string tap_name;        
     public:
         /**

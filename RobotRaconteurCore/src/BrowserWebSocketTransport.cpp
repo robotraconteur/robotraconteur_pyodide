@@ -21,10 +21,10 @@ BrowserWebSocketTransport::BrowserWebSocketTransport(RR_SHARED_PTR<RobotRaconteu
 	this->node=node;
 	this->heartbeat_period=10000;
 
-#ifndef ROBOTRACONTEUR_DISABLE_MESSAGE3
-	disable_message3 = false;
+#ifndef ROBOTRACONTEUR_DISABLE_MESSAGE4
+	disable_message4 = false;
 #else
-	disable_message3 = true;
+	disable_message4 = true;
 #endif
 #ifndef ROBOTRACONTEUR_DISABLE_STRINGTABLE
 	disable_string_table = false;
@@ -213,14 +213,14 @@ void BrowserWebSocketTransport::SetDefaultHeartbeatPeriod(int32_t milliseconds)
 	heartbeat_period=milliseconds;
 }
 
-bool BrowserWebSocketTransport::GetDisableMessage3()
+bool BrowserWebSocketTransport::GetDisableMessage4()
 {
-    return disable_message3;
+    return disable_message4;
 }
 
-void BrowserWebSocketTransport::SetDisableMessage3(bool d)
+void BrowserWebSocketTransport::SetDisableMessage4(bool d)
 {
-    disable_message3 = d;
+    disable_message4 = d;
 }
 
 bool BrowserWebSocketTransport::GetDisableStringTable()
@@ -273,8 +273,7 @@ BrowserWebSocketTransportConnection::BrowserWebSocketTransportConnection(RR_SHAR
     this->url=url;
     this->m_LocalEndpoint=local_endpoint;
 
-    this->disable_message3 = parent->GetDisableMessage3();
-	this->disable_async_io = parent->GetDisableAsyncMessageIO();
+    this->disable_async_io = parent->GetDisableAsyncMessageIO();
 
     this->ReceiveTimeout=parent->GetDefaultReceiveTimeout();
 	this->HeartbeatPeriod=parent->GetDefaultHeartbeatPeriod();

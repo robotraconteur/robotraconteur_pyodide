@@ -2199,13 +2199,6 @@ namespace RobotRaconteur
 
 	}
 
-	bool ClientContext::UseMessage3()
-	{
-		bool f = false;
-		use_message3=false;
-		return f;
-	}
-
 	void ClientContext::InitializeInstanceFields()
 	{
 

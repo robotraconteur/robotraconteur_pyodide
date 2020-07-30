@@ -1597,7 +1597,7 @@ class RobotRaconteurNodeSetup(object):
                 argv = []        
             self.__setup=RobotRaconteurPython.WrappedRobotRaconteurNodeSetup(node,node_name,tcp_port,flags, allowed_overrides, \
                 RobotRaconteurPython.vectorstring(argv))
-        self.browser_websocket_transport=self.__setup.GetBrowserWebsocketTransport()
+        self.browser_websocket_transport=self.__setup.GetBrowserWebSocketTransport()
         self.command_line_config = self.__setup.GetCommandLineConfig()
         self.__node=node
         

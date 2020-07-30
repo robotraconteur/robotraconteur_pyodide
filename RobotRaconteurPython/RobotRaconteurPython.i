@@ -103,7 +103,6 @@ RR_Py_Exception()
 
 %include "NodeSetup.i"
 
-%include "BroadcastDownsamplerPython.i"
 
 namespace RobotRaconteur
 {

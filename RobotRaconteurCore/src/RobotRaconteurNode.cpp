@@ -735,8 +735,8 @@ void RobotRaconteurNode::AsyncConnectService(const std::vector<std::string> &url
 
 	if (url.empty())
 	{
-		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_this, Node, -1, "\"" << name << "\" is an invalid service name");
-		throw InvalidArgumentException("\"" + name + "\" is an invalid service name");
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_sp(), Node, -1, "No urls specified for ConnectService");
+		throw InvalidArgumentException("URL vector must not be empty for AsyncConnectService");
 	}
 
 	std::vector<RR_SHARED_PTR<Transport> > atransports;
@@ -1552,7 +1552,6 @@ RobotRaconteur_LogLevel RobotRaconteurNode::SetLogLevelFromEnvVariable(const std
 	char* loglevel_c = std::getenv(env_variable_name.c_str());
 	if (!loglevel_c) return RobotRaconteur_LogLevel_Warning;
 	std::string loglevel(loglevel_c);
-	lock.unlock();
 	return SetLogLevelFromString(loglevel);
 }
 

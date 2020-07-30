@@ -65,8 +65,8 @@ namespace RobotRaconteur
             virtual int32_t GetDefaultHeartbeatPeriod();
             virtual void SetDefaultHeartbeatPeriod(int32_t milliseconds);
 
-            virtual bool GetDisableMessage3();
-            virtual void SetDisableMessage3(bool d);
+            virtual bool GetDisableMessage4();
+            virtual void SetDisableMessage4(bool d);
 
             virtual bool GetDisableStringTable();
             virtual void SetDisableStringTable(bool d);
@@ -83,7 +83,7 @@ namespace RobotRaconteur
             int32_t heartbeat_period;
             int32_t default_connect_timeout;
             int32_t default_receive_timeout;            
-            bool disable_message3;
+            bool disable_message4;
             bool disable_string_table;
             bool disable_async_message_io;
     };    

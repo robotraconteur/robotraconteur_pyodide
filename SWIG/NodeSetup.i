@@ -51,7 +51,7 @@ namespace RobotRaconteur
 		//RobotRaconteurNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
 		//	const std::string& node_name, uint16_t tcp_port, uint32_t flags);
 		
-		boost::shared_ptr<RobotRaconteur::BrowserWebsacketTransport> GetBrowserWebsocketTransport();
+		boost::shared_ptr<RobotRaconteur::BrowserWebSocketTransport> GetBrowserWebSocketTransport();
 		boost::shared_ptr<RobotRaconteur::CommandLineConfigParser> GetCommandLineConfig();
 
 		void ReleaseNode();

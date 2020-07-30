@@ -1258,7 +1258,6 @@ namespace RobotRaconteur
 		this->node = parent->node;
 		this->membername = RR_MOVE(membername.to_string());
 		this->servicepath = RR_MOVE(servicepath.to_string());
-		this->wire_value_changed_semaphore = RR_MAKE_SHARED<detail::async_signal_pool_semaphore>(parent->node.lock());
 		this->in_value_lifespan = -1;
 	}
 
@@ -1279,7 +1278,10 @@ namespace RobotRaconteur
 			boost::replace_first(service_path1, "*", stub->GetContext()->GetServiceName());
 		}
 
-		return rr_cast<ServiceStub>(stub->GetContext()->FindObjRef(service_path1));		
+		// TODO: Use AsyncFindObjRef
+		throw InvalidOperationException("Service path subscriptions not supported in browser");
+
+		//return rr_cast<ServiceStub>(stub->GetContext()->FindObjRef(service_path1));		
 	}
 
 	void WireSubscriptionBase::ClientConnected(RR_SHARED_PTR<RRObject> client)

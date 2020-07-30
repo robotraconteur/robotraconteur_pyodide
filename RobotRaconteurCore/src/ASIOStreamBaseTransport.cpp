@@ -80,9 +80,6 @@ namespace RobotRaconteur
 	send_large_transfer_authorized = false;
 	recv_large_transfer_authorized = false;
 
-	
-	use_string_table4 = false
-
 	disable_message4 = false;
 	disable_async_io = false;
 
