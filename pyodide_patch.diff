@@ -1,5 +1,5 @@
 diff --git a/Makefile b/Makefile
-index 518f604..29653c8 100644
+index 518f604..626d4c4 100644
 --- a/Makefile
 +++ b/Makefile
 @@ -16,7 +16,7 @@ SHELL := /bin/bash
@@ -16,7 +16,7 @@ index 518f604..29653c8 100644
    $(LZ4LIB) \
    -s "BINARYEN_METHOD='native-wasm'" \
 -  -s TOTAL_MEMORY=1073741824 \
-+  -s TOTAL_MEMORY=512MB \
++  -s TOTAL_MEMORY=128MB \
    -s ALLOW_MEMORY_GROWTH=1 \
  	-s MAIN_MODULE=1 \
  	-s EMULATED_FUNCTION_POINTERS=1 \
@@ -48,7 +48,7 @@ index 518f604..29653c8 100644
  all: build/pyodide.asm.js \
  	build/pyodide.asm.data \
  	build/pyodide.js \
-@@ -71,11 +83,21 @@ all: build/pyodide.asm.js \
+@@ -71,11 +83,22 @@ all: build/pyodide.asm.js \
    build/webworker_dev.js
  
  
@@ -68,10 +68,11 @@ index 518f604..29653c8 100644
 +	  $(BOOST_LIB_DIR)/libboost_regex.bc \
 +	  $(BOOST_LIB_DIR)/libboost_chrono.bc \
 +	  $(BOOST_LIB_DIR)/libboost_random.bc \
++	  $(BOOST_LIB_DIR)/libboost_program_options.bc \
  	  $(LDFLAGS) -s FORCE_FILESYSTEM=1
  	rm build/pyodide.asm.html
  
-@@ -84,7 +106,7 @@ env:
+@@ -84,7 +107,7 @@ env:
  	env
  
  
@@ -80,7 +81,7 @@ index 518f604..29653c8 100644
  	( \
  		cd build; \
  		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
-@@ -94,13 +116,13 @@ build/pyodide.asm.data: root/.built
+@@ -94,13 +117,13 @@ build/pyodide.asm.data: root/.built
  
  build/pyodide_dev.js: src/pyodide.js
  	cp $< $@
