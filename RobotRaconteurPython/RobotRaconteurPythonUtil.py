@@ -1672,17 +1672,27 @@ class WebFuture(object):
         self.complete_handler=None
         self.exception_handler=None
         self.ret=None
+        self.early_ret=None
+        self.early_exp=None
 
     def handler(self, arg, exp):
         if (exp is not None):
             if (self.exception_handler is not None):
                 self.exception_handler(exp)
+            else:
+                self.early_exp = exp
         else:
             self.ret=arg
             if (self.complete_handler is not None):
                 self.complete_handler(arg)
+            else:
+                self.early_ret = arg
 
     def __await__(self):
+        if self.early_ret is not None:
+            return self.early_ret
+        if self.early_exp is not None:
+            raise self.early_exp
         yield self
         return self.ret
 

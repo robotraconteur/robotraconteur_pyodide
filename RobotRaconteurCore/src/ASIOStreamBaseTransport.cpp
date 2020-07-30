@@ -80,7 +80,7 @@ namespace RobotRaconteur
 	send_large_transfer_authorized = false;
 	recv_large_transfer_authorized = false;
 
-	disable_message4 = false;
+	disable_message4 = true;
 	disable_async_io = false;
 
 	async_reader = AsyncMessageReader::CreateInstance();
@@ -95,6 +95,9 @@ namespace RobotRaconteur
 
 	active_capabilities_message2_basic = 0;
 	active_capabilities_message4_basic = 0;
+
+	send_version4 = false;
+
 	
 }
 
