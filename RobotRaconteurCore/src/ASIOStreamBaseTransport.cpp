@@ -81,7 +81,7 @@ namespace RobotRaconteur
 	recv_large_transfer_authorized = false;
 
 	disable_message4 = true;
-	disable_async_io = false;
+	disable_async_io = true;
 
 	async_reader = AsyncMessageReader::CreateInstance();
 
