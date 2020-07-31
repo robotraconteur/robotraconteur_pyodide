@@ -7,7 +7,7 @@ import pathlib
 
 TEST_PATH = os.path.dirname(os.path.abspath(__file__)) + "/test"
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__)) + "/serve_root"
-BUILD_PATH = os.environ["HOME"] + '/pyodide/build'
+BUILD_PATH = '/src/build'
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):

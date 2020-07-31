@@ -1,8 +1,8 @@
 diff --git a/Makefile b/Makefile
-index 518f604..626d4c4 100644
+index f7d5961..7beead7 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -16,7 +16,7 @@ SHELL := /bin/bash
+@@ -21,7 +21,7 @@ SHELL := /bin/bash
  CC=emcc
  CXX=em++
  OPTFLAGS=-O3
@@ -11,68 +11,69 @@ index 518f604..626d4c4 100644
  CXXFLAGS=$(CFLAGS) -std=c++14
  
  
-@@ -26,7 +26,7 @@ LDFLAGS=\
+@@ -31,7 +31,7 @@ LDFLAGS=\
  	$(CPYTHONROOT)/installs/python-$(PYVERSION)/lib/libpython$(PYMINOR).a \
-   $(LZ4LIB) \
-   -s "BINARYEN_METHOD='native-wasm'" \
--  -s TOTAL_MEMORY=1073741824 \
-+  -s TOTAL_MEMORY=128MB \
-   -s ALLOW_MEMORY_GROWTH=1 \
+ 	$(LZ4LIB) \
+ 	-s "BINARYEN_METHOD='native-wasm'" \
+-	-s TOTAL_MEMORY=10485760 \
++	-s TOTAL_MEMORY=128MB \
+ 	-s ALLOW_MEMORY_GROWTH=1 \
  	-s MAIN_MODULE=1 \
  	-s EMULATED_FUNCTION_POINTERS=1 \
-@@ -45,7 +45,13 @@ LDFLAGS=\
-   --memory-init-file 0 \
-   -s "BINARYEN_TRAP_MODE='clamp'" \
-   -s TEXTDECODER=0 \
--  -s LZ4=1
-+  -s LZ4=1 \
-+  -s DISABLE_EXCEPTION_CATCHING=0 \
-+  -s EXCEPTION_DEBUG=0 \
-+  -s WEBSOCKET_DEBUG=0 \
-+  -s ASSERTIONS=0 \
-+  --profiling \
-+  -lwebsocket.js
+@@ -50,7 +50,13 @@ LDFLAGS=\
+ 	--memory-init-file 0 \
+ 	-s "BINARYEN_TRAP_MODE='clamp'" \
+ 	-s TEXTDECODER=0 \
+-	-s LZ4=1
++	-s LZ4=1 \
++	-s DISABLE_EXCEPTION_CATCHING=0 \
++	-s EXCEPTION_DEBUG=0 \
++	-s WEBSOCKET_DEBUG=0 \
++	-s ASSERTIONS=0 \
++	--profiling \
++	-lwebsocket.js
  
- SIX_ROOT=six/six-1.11.0/build/lib
+ SIX_ROOT=packages/six/six-1.11.0/build/lib
  SIX_LIBS=$(SIX_ROOT)/six.py
-@@ -58,6 +64,12 @@ PARSO_LIBS=$(PARSO_ROOT)/__init__.py
+@@ -63,6 +69,12 @@ PARSO_LIBS=$(PARSO_ROOT)/__init__.py
  
  SITEPACKAGES=root/lib/python$(PYMINOR)/site-packages
  
-+BOOST_DIR=$(HOME)/robotraconteur_pyodide/robotraconteur/build_boost/boost_1_71_0
++BOOST_DIR=/rr_src/build_boost/boost_1_71_0
 +BOOST_LIB_DIR=$(BOOST_DIR)/stage/lib
 +
-+RR_PYTHON_DIR=$(HOME)/robotraconteur_pyodide/robotraconteur/build/out/Python
-+RR_LIB_DIR=$(HOME)/robotraconteur_pyodide/robotraconteur/build/out/lib
++RR_PYTHON_DIR=/rr_src/build/out/Python
++RR_LIB_DIR=/rr_src/build/out/lib
 +
- all: build/pyodide.asm.js \
+ all: check \
+ 	build/pyodide.asm.js \
  	build/pyodide.asm.data \
- 	build/pyodide.js \
-@@ -71,11 +83,22 @@ all: build/pyodide.asm.js \
-   build/webworker_dev.js
+@@ -78,12 +90,23 @@ all: check \
+ 	echo -e "\nSUCCESS!"
  
  
 -build/pyodide.asm.js: src/main.bc src/jsimport.bc src/jsproxy.bc src/js2python.bc \
 +build/pyodide.asm.js: src/main.bc $(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
 +		$(RR_LIB_DIR)/libRobotRaconteurCore.a \
-+        src/jsimport.bc src/jsproxy.bc src/js2python.bc \
++		src/jsimport.bc src/jsproxy.bc src/js2python.bc \
  		src/pyimport.bc src/pyproxy.bc src/python2js.bc src/python2js_buffer.bc \
  		src/runpython.bc src/hiwire.bc
+ 	date +"[%F %T] Building pyodide.asm.js..."
  	[ -d build ] || mkdir build
  	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.html $(filter %.bc,$^) \
-+	  $(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
-+	  $(RR_LIB_DIR)/libRobotRaconteurCore.a \
-+	  $(BOOST_LIB_DIR)/libboost_date_time.bc \
-+	  $(BOOST_LIB_DIR)/libboost_filesystem.bc \
-+	  $(BOOST_LIB_DIR)/libboost_system.bc \
-+	  $(BOOST_LIB_DIR)/libboost_regex.bc \
-+	  $(BOOST_LIB_DIR)/libboost_chrono.bc \
-+	  $(BOOST_LIB_DIR)/libboost_random.bc \
-+	  $(BOOST_LIB_DIR)/libboost_program_options.bc \
- 	  $(LDFLAGS) -s FORCE_FILESYSTEM=1
++		$(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
++		$(RR_LIB_DIR)/libRobotRaconteurCore.a \
++		$(BOOST_LIB_DIR)/libboost_date_time.bc \
++		$(BOOST_LIB_DIR)/libboost_filesystem.bc \
++		$(BOOST_LIB_DIR)/libboost_system.bc \
++		$(BOOST_LIB_DIR)/libboost_regex.bc \
++		$(BOOST_LIB_DIR)/libboost_chrono.bc \
++		$(BOOST_LIB_DIR)/libboost_random.bc \
++		$(BOOST_LIB_DIR)/libboost_program_options.bc \
+ 		$(LDFLAGS) -s FORCE_FILESYSTEM=1
  	rm build/pyodide.asm.html
- 
-@@ -84,7 +107,7 @@ env:
+ 	date +"[%F %T] done building pyodide.asm.js."
+@@ -93,7 +116,7 @@ env:
  	env
  
  
@@ -81,38 +82,37 @@ index 518f604..626d4c4 100644
  	( \
  		cd build; \
  		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
-@@ -94,13 +117,13 @@ build/pyodide.asm.data: root/.built
+@@ -103,13 +126,13 @@ build/pyodide.asm.data: root/.built
  
  build/pyodide_dev.js: src/pyodide.js
  	cp $< $@
--	sed -i -e "s#{{DEPLOY}}##g" $@
+-	sed -i -e "s#{{DEPLOY}}#./#g" $@
 +	sed -i -e "s#{{DEPLOY}}#/build/#g" $@
  	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
  
  
  build/pyodide.js: src/pyodide.js
  	cp $< $@
--	sed -i -e 's#{{DEPLOY}}#https://pyodide.cdn.iodide.io/#g' $@
+-	sed -i -e 's#{{DEPLOY}}#https://pyodide-cdn2.iodide.io/v0.15.0/full/#g' $@
 +	sed -i -e 's#{{DEPLOY}}#https://robotraconteur.github.io/robotraconteur_pyodide/#g' $@
  
  	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
  
 diff --git a/Makefile.envs b/Makefile.envs
-index 6b4820c..b7be45f 100644
+index 2fb9ec4..78bd4d3 100644
 --- a/Makefile.envs
 +++ b/Makefile.envs
-@@ -28,4 +28,5 @@ export SIDE_LDFLAGS=\
-   -s "BINARYEN_TRAP_MODE='clamp'" \
+@@ -29,4 +29,5 @@ export SIDE_LDFLAGS=\
    --memory-init-file 0 \
    -s LINKABLE=1 \
--  -s EXPORT_ALL=1
-+  -s EXPORT_ALL=1 \
-+  -s DISABLE_EXCEPTION_CATCHING=0
+   -s EXPORT_ALL=1 \
++  -s DISABLE_EXCEPTION_CATCHING=0 \
+   -s ERROR_ON_MISSING_LIBRARIES=0
 diff --git a/cpython/Makefile b/cpython/Makefile
-index 553a46f..cfeebe9 100644
+index 8fa194f..a57dc51 100644
 --- a/cpython/Makefile
 +++ b/cpython/Makefile
-@@ -124,8 +124,8 @@ $(BUILD)/Makefile: $(BUILD)/.patched $(ZLIBBUILD)/.patched $(SQLITEBUILD)/libsql
+@@ -123,8 +123,8 @@ $(BUILD)/Makefile: $(BUILD)/.patched $(ZLIBBUILD)/.patched $(SQLITEBUILD)/libsql
  		cd $(BUILD); \
  		CONFIG_SITE=./config.site READELF=true LD_RUN_PATH="$(SQLITEBUILD):$(BZIP2BUILD)" emconfigure \
  		  ./configure \
@@ -123,63 +123,15 @@ index 553a46f..cfeebe9 100644
  			  --without-pymalloc \
  			  --disable-shared \
  			  --disable-ipv6 \
-diff --git a/emsdk/Makefile b/emsdk/Makefile
-index 60667eb..4d434de 100644
---- a/emsdk/Makefile
-+++ b/emsdk/Makefile
-@@ -9,7 +9,7 @@ all: emsdk/.complete
- emsdk/.complete:
- 	if [ -d emsdk ]; then rm -rf emsdk; fi
- 	git clone https://github.com/juj/emsdk.git
--	sed -i -e "s#CPU_CORES = max(multiprocessing.cpu_count()-1, 1)#CPU_CORES = 3#g" emsdk/emsdk
-+#	sed -i -e "s#CPU_CORES = max(multiprocessing.cpu_count()-1, 1)#CPU_CORES = 3#g" emsdk/emsdk
- 	( \
- 		cd emsdk && \
- 		./emsdk install --build=Release sdk-tag-$(EMSCRIPTEN_VERSION)-64bit binaryen-tag-$(EMSCRIPTEN_VERSION)-64bit && \
-diff --git a/emsdk/patches/robotraconteur_websocket_protocol.patch b/emsdk/patches/robotraconteur_websocket_protocol.patch
-new file mode 100644
-index 0000000..9751bdd
---- /dev/null
-+++ b/emsdk/patches/robotraconteur_websocket_protocol.patch
-@@ -0,0 +1,12 @@
-+--- a/emsdk/emscripten/tag-1.38.30/src/library_websocket.js
-++++ b/emsdk/emscripten/tag-1.38.30/src/library_websocket.js
-+@@ -272,7 +272,7 @@
-+ 
-+     // TODO: protocols
-+     // TODO: createOnMainThread
-+-    var socket = new WebSocket(url);
-++    var socket = new WebSocket(url,"robotraconteur.robotraconteur.com");
-+     socket.binaryType = 'arraybuffer';
-+     // TODO: While strictly not necessary, this ID would be good to be unique across all threads to avoid confusion.
-+     var socketId = WS.sockets.length;
-+     
-\ No newline at end of file
-diff --git a/emsdk/patches/websocket_h_extern_c_fix.patch b/emsdk/patches/websocket_h_extern_c_fix.patch
-new file mode 100644
-index 0000000..02c0919
---- /dev/null
-+++ b/emsdk/patches/websocket_h_extern_c_fix.patch
-@@ -0,0 +1,10 @@
-+--- a/emsdk/emscripten/tag-1.38.30/system/include/emscripten/websocket.h
-++++ b/emsdk/emscripten/tag-1.38.30/system/include/emscripten/websocket.h
-+@@ -113,3 +113,7 @@
-+ // even after the pthread quits, although be warned that if the target thread that was registered to handle events for a given WebSocket quits, then those
-+ // events will stop from being delivered altogether.
-+ void emscripten_websocket_deinitialize(void);
-++
-++#ifdef __cplusplus
-++} // ~extern "C"
-++#endif
 diff --git a/packages/matplotlib/src/wasm_backend.py b/packages/matplotlib/src/wasm_backend.py
-index f60ffe7..f2ea807 100644
+index 5125e48..7afcc77 100644
 --- a/packages/matplotlib/src/wasm_backend.py
 +++ b/packages/matplotlib/src/wasm_backend.py
-@@ -107,7 +107,9 @@ class FigureCanvasWasm(backend_agg.FigureCanvasAgg):
-             from js import iodide
-             return iodide.output.element('div')
+@@ -109,7 +109,9 @@ class FigureCanvasWasm(backend_agg.FigureCanvasAgg):
+ 
+             return iodide.output.element("div")
          except ImportError:
--            return document.createElement('div')
+-            return document.createElement("div")
 +            div = document.createElement('div')
 +            document.body.appendChild(div)
 +            return div
@@ -187,32 +139,42 @@ index f60ffe7..f2ea807 100644
      def show(self):
          # If we've already shown this canvas elsewhere, don't create a new one,
 diff --git a/pyodide_build/common.py b/pyodide_build/common.py
-index 52c77f4..970927c 100644
+index de955a3..0579ddf 100644
 --- a/pyodide_build/common.py
 +++ b/pyodide_build/common.py
-@@ -4,7 +4,10 @@ from pathlib import Path
- ROOTDIR = Path(__file__).parents[1].resolve() / 'tools'
- HOSTPYTHON = ROOTDIR / '..' / 'cpython' / 'build' / '3.7.0' / 'host'
- TARGETPYTHON = ROOTDIR / '..' / 'cpython' / 'installs' / 'python-3.7.0'
--DEFAULTCFLAGS = ''
-+DEFAULTCFLAGS = ' '.join([
+@@ -5,7 +5,10 @@ from typing import Optional, Set
+ ROOTDIR = Path(__file__).parents[1].resolve() / "tools"
+ HOSTPYTHON = ROOTDIR / ".." / "cpython" / "build" / "3.8.2" / "host"
+ TARGETPYTHON = ROOTDIR / ".." / "cpython" / "installs" / "python-3.8.2"
+-DEFAULTCFLAGS = ""
++DEFAULTCFLAGS = " ".join([
 +    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
 +    '-s', 'EXCEPTION_DEBUG=0'
 +])
- DEFAULTLDFLAGS = ' '.join([
-     '-O3',
-     '-s', "BINARYEN_METHOD='native-wasm'",
-@@ -13,7 +16,9 @@ DEFAULTLDFLAGS = ' '.join([
-     '-s', 'EMULATE_FUNCTION_POINTER_CASTS=1',
-     '-s', 'SIDE_MODULE=1',
-     '-s', 'WASM=1',
--    '--memory-init-file', '0'
-+    '--memory-init-file', '0',
-+    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
-+    '-s', 'EXCEPTION_DEBUG=0'
-     ])
+ DEFAULTLDFLAGS = " ".join(
+     [
+         "-O3",
+@@ -22,6 +25,8 @@ DEFAULTLDFLAGS = " ".join(
+         "WASM=1",
+         "--memory-init-file",
+         "0",
++        '-s', 'DISABLE_EXCEPTION_CATCHING=0',
++        '-s', 'EXCEPTION_DEBUG=0'
+     ]
+ )
  
- 
+diff --git a/run_docker b/run_docker
+index 2d40ff2..43e84ff 100755
+--- a/run_docker
++++ b/run_docker
+@@ -8,6 +8,7 @@ exec docker run \
+     -p $PYODIDE_SYSTEM_PORT:$PYODIDE_DOCKER_PORT \
+     -it --rm \
+     -v $PWD:/src \
++    -v /home/wasonj/pyodide/robotraconteur_pyodide:/rr_src \
+     --user root -e NB_UID=$UID -e NB_GID=$GID \
+     ${PYODIDE_DOCKER_IMAGE} \
+     /bin/bash
 diff --git a/src/main.c b/src/main.c
 index 1861b94..7058489 100644
 --- a/src/main.c

@@ -2,7 +2,7 @@
 
 set -e
 
-PYODIDE_ROOT=$HOME/pyodide
+PYODIDE_ROOT=/src
 PYODIDE_PACKAGE_ABI=1
 
 BOOST_VERSION=1.71.0
@@ -49,7 +49,7 @@ if [ -f $CURRENT_DIR/build/CMakeCache.txt ]; then
 	rm $CURRENT_DIR/build/CMakeCache.txt
 fi
 
-(cd $CURRENT_DIR/build && cmake .. -DCMAKE_TOOLCHAIN_FILE=$PYODIDE_ROOT/emsdk/emsdk/emscripten/tag-1.38.30/cmake/Modules/Platform/Emscripten.cmake -DBUILD_PYTHON=ON -DBOOST_INCLUDEDIR=$BOOST_BUILD_DIR \
+(cd $CURRENT_DIR/build && cmake .. -DCMAKE_TOOLCHAIN_FILE=$PYODIDE_ROOT/emsdk/emsdk/emscripten/tag-1.38.31/cmake/Modules/Platform/Emscripten.cmake -DBUILD_PYTHON=ON -DBOOST_INCLUDEDIR=$BOOST_BUILD_DIR \
 -DBOOST_LIBRARYDIR=$BOOST_BUILD_DIR/stage/lib -DBoost_ADDITIONAL_VERSIONS="1.71;1.71.0" \
 -DBoost_DATE_TIME_LIBRARY_RELEASE=$BOOST_LIB_DIR/libboost_date_time.bc -DBoost_DATE_TIME_LIBRARY_DEBUG=$BOOST_LIB_DIR/libboost_date_time.bc \
 -DBoost_FILESYSTEM_LIBRARY_RELEASE=$BOOST_LIB_DIR/libboost_filesystem.bc -DBoost_FILESYSTEM_LIBRARY_DEBUG=$BOOST_LIB_DIR/libboost_filesystem.bc \
@@ -58,18 +58,19 @@ fi
 -DBoost_CHRONO_LIBRARY_RELEASE=$BOOST_LIB_DIR/libboost_chrono.bc -DBoost_CHRONO_LIBRARY_DEBUG=$BOOST_LIB_DIR/libboost_crono.bc \
 -DBoost_RANDOM_LIBRARY_RELEASE=$BOOST_LIB_DIR/libboost_random.bc -DBoost_RANDOM_LIBRARY_DEBUG=$BOOST_LIB_DIR/libboost_random.bc \
 -DBoost_PROGRAM_OPTIONS_LIBRARY_RELEASE=$BOOST_LIB_DIR/libboost_program_options.bc -DBoost_PROGRAM_OPTIONS_LIBRARY_DEBUG=$BOOST_LIB_DIR/libboost_program_options.bc \
--DPYTHON_EXECUTABLE=$PYODIDE_ROOT/cpython/build/3.7.0/host/bin/python3 \
--DPYTHON_LIBRARY=$PYODIDE_ROOT/cpython/installs/python-3.7.0/lib/libpython3.7.a \
--DPYTHON_INCLUDE_DIR=$PYODIDE_ROOT/cpython/installs/python-3.7.0/include/python3.7 \
+-DPYTHON_EXECUTABLE=$PYODIDE_ROOT/cpython/build/3.8.2/host/bin/python3 \
+-DPYTHON_LIBRARY=$PYODIDE_ROOT/cpython/installs/python-3.8.2/lib/libpython3.8.a \
+-DPYTHON_INCLUDE_DIR=$PYODIDE_ROOT/cpython/installs/python-3.8.2/include/python3.8 \
 -DCMAKE_SHARED_LINKER_FLAGS="$SIDE_LDFLAGS" \
 -DCMAKE_MODULE_LINKER_FLAGS="$SIDE_LDFLAGS" \
 -DCMAKE_CXX_FLAGS="$SIDE_C_FLAGS" \
 -DCMAKE_C_FLAGS="$SIDE_C_FLAGS" \
+-DNUMPY_INCLUDE_DIR=/src/packages/numpy/build/numpy-1.15.4/install/lib/python3.8/site-packages/numpy/core/include/ \
 )
 
 ( cd $CURRENT_DIR/build && make VERBOSE=1 -j1 )
 
-PYODIDE_RR_DIR=$PYODIDE_ROOT/root/lib/python3.7/site-packages/RobotRaconteur
+PYODIDE_RR_DIR=$PYODIDE_ROOT/root/lib/python3.8/site-packages/RobotRaconteur
 
 mkdir -p $PYODIDE_RR_DIR
 
