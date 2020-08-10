@@ -792,6 +792,24 @@ std::map<std::string, RR_INTRUSIVE_PTR<RRValue> > RobotRaconteurNode::GetService
 	return stub->GetContext()->GetAttributes();
 }
 
+RobotRaconteur::NodeID RobotRaconteurNode::GetServiceNodeID(RR_SHARED_PTR<RRObject> obj)
+{
+	RR_SHARED_PTR<ServiceStub> stub = rr_cast<ServiceStub>(obj);
+	return stub->GetContext()->GetRemoteNodeID();
+}
+
+std::string RobotRaconteurNode::GetServiceNodeName(RR_SHARED_PTR<RRObject> obj)
+{
+	RR_SHARED_PTR<ServiceStub> stub = rr_cast<ServiceStub>(obj);
+	return stub->GetContext()->GetRemoteNodeName();
+}
+
+std::string RobotRaconteurNode::GetServiceName(RR_SHARED_PTR<RRObject> obj)
+{
+	RR_SHARED_PTR<ServiceStub> stub = rr_cast<ServiceStub>(obj);
+	return stub->GetContext()->GetServiceName();
+}
+
 uint32_t RobotRaconteurNode::RegisterEndpoint(RR_SHARED_PTR<Endpoint> e)
 {
 	
