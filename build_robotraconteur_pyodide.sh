@@ -66,6 +66,7 @@ fi
 -DCMAKE_CXX_FLAGS="$SIDE_C_FLAGS" \
 -DCMAKE_C_FLAGS="$SIDE_C_FLAGS" \
 -DNUMPY_INCLUDE_DIR=/src/packages/numpy/build/numpy-1.15.4/install/lib/python3.8/site-packages/numpy/core/include/ \
+-DSWIG_EXECUTABLE=/swig/install/bin/swig
 )
 
 ( cd $CURRENT_DIR/build && make VERBOSE=1 -j1 )
