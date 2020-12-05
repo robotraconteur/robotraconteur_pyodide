@@ -50,6 +50,10 @@ public:
 	RR_PROPERTY(DisableAsyncMessageIO)
 	virtual bool GetDisableAsyncMessageIO();
 	virtual void SetDisableAsyncMessageIO(bool d);
+
+	RR_PROPERTY(MaxMessageSize)
+	int32_t GetMaxMessageSize();	
+	void SetMaxMessageSize(int32_t size);
 	
 };
 }

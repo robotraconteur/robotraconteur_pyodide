@@ -73,6 +73,9 @@ namespace RobotRaconteur
 
             virtual bool GetDisableAsyncMessageIO();
             virtual void SetDisableAsyncMessageIO(bool d);
+            
+            virtual int32_t GetMaxMessageSize();            
+            virtual void SetMaxMessageSize(int32_t size);
 
         protected:
 
@@ -86,5 +89,6 @@ namespace RobotRaconteur
             bool disable_message4;
             bool disable_string_table;
             bool disable_async_message_io;
+            int32_t max_message_size;
     };    
 }

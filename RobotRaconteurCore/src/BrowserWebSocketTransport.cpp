@@ -33,6 +33,7 @@ BrowserWebSocketTransport::BrowserWebSocketTransport(RR_SHARED_PTR<RobotRaconteu
 #endif
 	disable_async_message_io = true;
 	closed = false;
+    max_message_size = 12 *1024 *1024;
 
 }
 
@@ -94,6 +95,24 @@ void BrowserWebSocketTransport::SetDefaultConnectTimeout(int32_t milliseconds)
 {
 	if (!(milliseconds>0)) throw InvalidArgumentException("Timeout must be positive");
 	default_connect_timeout=milliseconds;
+}
+
+int32_t BrowserWebSocketTransport::GetMaxMessageSize()
+{
+	return max_message_size;
+}
+
+void BrowserWebSocketTransport::SetMaxMessageSize(int32_t size)
+{
+	if (size < 16 * 1024 || size > 100 * 1024 * 1024) 
+	{
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Transport, -1, "Invalid MaxMessageSize: " << size);
+		throw InvalidArgumentException("Invalid maximum message size");
+	}
+	
+	max_message_size = size;
+
+	ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Transport, -1, "MaxMessageSize set to " << size << " bytes");
 }
 
 std::string BrowserWebSocketTransport::GetUrlSchemeString() const
@@ -277,6 +296,7 @@ BrowserWebSocketTransportConnection::BrowserWebSocketTransportConnection(RR_SHAR
 
     this->ReceiveTimeout=parent->GetDefaultReceiveTimeout();
 	this->HeartbeatPeriod=parent->GetDefaultHeartbeatPeriod();
+    this->max_message_size = parent->GetMaxMessageSize();
 }
 
 EM_BOOL websocket_open_callback_func(int eventType, const EmscriptenWebSocketOpenEvent *websocketEvent, void *userData)

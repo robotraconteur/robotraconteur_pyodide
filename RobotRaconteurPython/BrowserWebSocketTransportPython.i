@@ -44,5 +44,13 @@
 
 			:rtype: bool
 			""")
+	MaxMessageSize = property(lambda self: self._GetMaxMessageSize(), lambda self, size: self._SetMaxMessageSize(size),
+		doc = """
+		Set the maximum serialized message size
+
+		Default: 10 MB
+
+		:rtype: int
+		""")
 %}
 }
