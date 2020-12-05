@@ -239,7 +239,7 @@ namespace RobotRaconteur
 		if (err)
 		{
 			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Client, GetLocalEndpoint(), path, "", "Error during FindObjRef: " << err->what());
-			detail::InvokeHandlerWithException(node, handler, err);
+			AsyncFindObjRef3(RR_SHARED_PTR<RRObject>(), err, path, handler);
 			return;
 		}
 		else
@@ -289,7 +289,8 @@ namespace RobotRaconteur
 			catch (std::exception& err)
 			{
 				ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Client, GetLocalEndpoint(), path, "", "Error during FindObjRef: " << err.what());
-				detail::InvokeHandlerWithException(node, handler, err, MessageErrorType_ServiceError);
+				RR_SHARED_PTR<RobotRaconteurException> err1 = RobotRaconteurExceptionUtil::ExceptionToSharedPtr(err, MessageErrorType_ServiceError);
+				AsyncFindObjRef3(RR_SHARED_PTR<RRObject>(), err1, path, handler);
 			}
 		}
 	}
@@ -300,7 +301,7 @@ namespace RobotRaconteur
 		if (err)
 		{
 			ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Client, GetLocalEndpoint(), path, "", "Error during FindObjRef: " << err->what());
-			detail::InvokeHandlerWithException(node, handler, err);
+			AsyncFindObjRef3(RR_SHARED_PTR<RRObject>(), err, path, handler);
 			return;
 		}
 		else
@@ -398,13 +399,14 @@ namespace RobotRaconteur
 				}
 
 				RR_SHARED_PTR<RRObject> ret = RR_STATIC_POINTER_CAST<RRObject>(stub);
-				detail::InvokeHandler(node, handler, ret);
+				AsyncFindObjRef3(ret, RR_SHARED_PTR<RobotRaconteurException>(), path, handler);
 				
 			}			
 			catch (std::exception& err2)
 			{
 				ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Client, GetLocalEndpoint(), path, "", "Error during FindObjRef: " << err2.what());
-				detail::InvokeHandlerWithException(node, handler, err2, MessageErrorType_ServiceError);
+				RR_SHARED_PTR<RobotRaconteurException> err1 = RobotRaconteurExceptionUtil::ExceptionToSharedPtr(err2, MessageErrorType_ServiceError);
+				AsyncFindObjRef3(RR_SHARED_PTR<RRObject>(), err1, path, handler);
 			}
 		}
 
@@ -436,8 +438,14 @@ namespace RobotRaconteur
 			}
 		}
 		catch (std::exception&) {}
-
-		detail::InvokeHandler(node,handler,ret);
+		if (err)
+		{
+			detail::InvokeHandlerWithException(node,handler,err);
+		}	
+		else
+		{
+			detail::InvokeHandler(node,handler,ret);
+		}
 	}
 
 	void ClientContext::AsyncFindObjectType(boost::string_ref path, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<std::string>, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
@@ -658,7 +666,7 @@ namespace RobotRaconteur
 
 		mm->entries.push_back(m);
 
-		//LastMessageSentTime = GetNode()->NowUTC();
+		//LastMessageSentTime = GetNode()->NowNodeTime();
 
 		std::vector<std::string> v;
 		boost::string_ref metadata1 = m->MetaData.str();
@@ -681,7 +689,7 @@ namespace RobotRaconteur
 		if (!GetConnected()) return;
 
 
-		SetLastMessageReceivedTime(GetNode()->NowUTC());
+		SetLastMessageReceivedTime(GetNode()->NowNodeTime());
 
 		if (m->entries.size() >= 1)
 		{
@@ -954,6 +962,17 @@ namespace RobotRaconteur
 					{
 					}
 
+				}
+
+				try
+				{
+					RR_SHARED_PTR<std::string> service_path_sp = RR_MAKE_SHARED<std::string>(path.str().to_string());
+					ClientServiceListener(shared_from_this(), ClientServiceListenerEventType_ServicePathReleased, service_path_sp);
+				}
+				catch (std::exception& exp)
+				{
+					ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Client, GetLocalEndpoint(), "Client listener callback raised exception: " << exp.what());
+					RobotRaconteurNode::TryHandleException(node, &exp);
 				}
 
 			}
@@ -1705,9 +1724,16 @@ namespace RobotRaconteur
 				{
 					e(RR_INTRUSIVE_PTR<MessageEntry>(), RR_MAKE_SHARED<ConnectionException>("Connection closed"));
 				}
-				catch (std::exception& exp)
+				catch (std::exception& exp)					
 				{
-					ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Client, GetLocalEndpoint(), m->ServicePath, m->MemberName, "Error handling AsyncProcessRequest connection closed: " << exp.what());
+					if (m)
+					{
+						ROBOTRACONTEUR_LOG_DEBUG_COMPONENT_PATH(node, Client, GetLocalEndpoint(), m->ServicePath, m->MemberName, "Error handling AsyncProcessRequest connection closed: " << exp.what());
+					}
+					else
+					{
+						ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Client, GetLocalEndpoint(), "Error handling AsyncProcessRequest connection closed: " << exp.what());
+					}
 					RobotRaconteurNode::TryHandleException(node, &exp);
 				}
 			}
@@ -1887,9 +1913,9 @@ namespace RobotRaconteur
 	void ClientContext::AsyncPullServiceDefinitionAndImports(boost::string_ref servicetype, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<PullServiceDefinitionAndImportsReturn>, RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Client, GetLocalEndpoint(), "Begin AsyncPullServiceDefinitionAndImports for type \"" << servicetype << "\"");
-		boost::posix_time::ptime timeout_time = GetNode()->NowUTC() + boost::posix_time::milliseconds(timeout);
+		boost::posix_time::ptime timeout_time = GetNode()->NowNodeTime() + boost::posix_time::milliseconds(timeout);
 
-		AsyncPullServiceDefinition(servicetype, boost::bind(&ClientContext::AsyncPullServiceDefinitionAndImports1, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), servicetype.to_string(), RR_SHARED_PTR<PullServiceDefinitionAndImportsReturn>(), handler, timeout_time), boost::numeric_cast<uint32_t>((timeout_time - GetNode()->NowUTC()).total_milliseconds()));
+		AsyncPullServiceDefinition(servicetype, boost::bind(&ClientContext::AsyncPullServiceDefinitionAndImports1, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), servicetype.to_string(), RR_SHARED_PTR<PullServiceDefinitionAndImportsReturn>(), handler, timeout_time), boost::numeric_cast<uint32_t>((timeout_time - GetNode()->NowNodeTime()).total_milliseconds()));
 	}
 
 	void ClientContext::AsyncPullServiceDefinitionAndImports1(RR_SHARED_PTR<PullServiceDefinitionReturn> pull_ret, RR_SHARED_PTR<RobotRaconteurException> err, const std::string& servicetype, RR_SHARED_PTR<PullServiceDefinitionAndImportsReturn> current, boost::function<void(RR_SHARED_PTR<PullServiceDefinitionAndImportsReturn>, RR_SHARED_PTR<RobotRaconteurException>)>& handler, boost::posix_time::ptime timeout_time)
@@ -1939,7 +1965,7 @@ namespace RobotRaconteur
 				}
 				else
 				{
-					AsyncPullServiceDefinition(*needed_defs.begin(), boost::bind(&ClientContext::AsyncPullServiceDefinitionAndImports1, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), std::string(servicetype), current, handler, timeout_time), boost::numeric_cast<uint32_t>((timeout_time - GetNode()->NowUTC()).total_milliseconds()));
+					AsyncPullServiceDefinition(*needed_defs.begin(), boost::bind(&ClientContext::AsyncPullServiceDefinitionAndImports1, shared_from_this(), RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), std::string(servicetype), current, handler, timeout_time), boost::numeric_cast<uint32_t>((timeout_time - GetNode()->NowNodeTime()).total_milliseconds()));
 					return;
 				}
 			}			
@@ -2125,7 +2151,7 @@ namespace RobotRaconteur
 			t = GetLastMessageReceivedTime();
 		}
 
-		if ((GetNode()->NowUTC() - t).total_milliseconds() > GetNode()->GetEndpointInactivityTimeout())
+		if ((GetNode()->NowNodeTime() - t).total_milliseconds() > GetNode()->GetEndpointInactivityTimeout())
 		{
 			//This may result in a rare segfault so we can't automatically delete
 			//Close();
@@ -2142,7 +2168,7 @@ namespace RobotRaconteur
 
 		if (GetRemoteEndpoint() != 0)
 		{
-			if ((GetNode()->NowUTC() - GetLastMessageSentTime()).total_milliseconds() > 60000)
+			if ((GetNode()->NowNodeTime() - GetLastMessageSentTime()).total_milliseconds() > 60000)
 			{
 				ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Client, GetLocalEndpoint(), "Client sending keep alive request");
 				try
@@ -2207,7 +2233,7 @@ namespace RobotRaconteur
 
 		m_UserAuthenticated = false;
 		use_pulled_types = false;
-		//LastMessageSentTime = GetNode()->NowUTC();		
+		//LastMessageSentTime = GetNode()->NowNodeTime();		
 	}
 
 	void ClientContext::TransportConnectionClosed(uint32_t endpoint)

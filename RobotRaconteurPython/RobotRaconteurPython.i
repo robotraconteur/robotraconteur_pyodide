@@ -4,6 +4,9 @@
 
 %include "CommonInclude.i"
 
+%include "PythonNondynamic.i"
+%include "PythonDocstring.i"
+
 //%include "pyabc.i"
 %{
 #include "PythonTypeSupport.h"
@@ -114,6 +117,15 @@ public:
 	static bool IsRunning();	
 };
 
+}
+
+namespace RobotRaconteur
+{
+extern bool PythonTracebackPrintExc;
+}
+
+%init {
+	RobotRaconteur::InitPythonTracebackPrintExc();
 }
 
 %pythoncode %{

@@ -22,6 +22,8 @@
  */
 
 #include "RobotRaconteur/RobotRaconteurNode.h"
+#include <boost/bind/placeholders.hpp>
+
 #include <list>
 #include <boost/bind/protect.hpp>
 #include <boost/shared_array.hpp>

@@ -87,6 +87,9 @@ namespace RobotRaconteur
 
 #define DIRECTOR_DELETE(var) { if(var) {delete var; var=NULL;}}
 
+extern bool PythonTracebackPrintExc;
+void InitPythonTracebackPrintExc();
+
 #else
 #define DIRECTOR_CALL(dirtype,command) { \
 \
@@ -245,6 +248,11 @@ namespace RobotRaconteur
 		HandlerErrorInfo(const RobotRaconteurException& exp);
 		HandlerErrorInfo(boost::shared_ptr<RobotRaconteurException> exp);
 		HandlerErrorInfo(boost::intrusive_ptr<MessageEntry> m);
+		HandlerErrorInfo(uint32_t error_code, const std::string& errorname, const std::string& errormessage, 
+			const std::string& errorsubname = "", boost::intrusive_ptr<RobotRaconteur::MessageElement> param_ = NULL);
+		
+		void ToMessageEntry(RR_INTRUSIVE_PTR<MessageEntry> m) const;
+		RR_SHARED_PTR<RobotRaconteurException> ToException() const;
 	};
 
 	class AsyncRequestDirector
@@ -632,6 +640,7 @@ namespace RobotRaconteur
 		static void AsyncAbort_handler(RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncVoidReturnDirector> handler);
 	};
 
+	class WrappedServiceSkelAsyncAdapter;
 	class WrappedGeneratorServerDirector
 	{
 	public:
@@ -641,10 +650,10 @@ namespace RobotRaconteur
 		}
 		virtual ~WrappedGeneratorServerDirector() {}
 
-		virtual RR_INTRUSIVE_PTR<MessageElement> Next(RR_INTRUSIVE_PTR<MessageElement> m) { return RR_INTRUSIVE_PTR<MessageElement>(); }
+		virtual RR_INTRUSIVE_PTR<MessageElement> Next(RR_INTRUSIVE_PTR<MessageElement> m, boost::shared_ptr<WrappedServiceSkelAsyncAdapter> async_adapter) { return RR_INTRUSIVE_PTR<MessageElement>(); }
 
-		virtual void Abort() {}
-		virtual void Close() {}
+		virtual void Abort(boost::shared_ptr<WrappedServiceSkelAsyncAdapter> async_adapter) {}
+		virtual void Close(boost::shared_ptr<WrappedServiceSkelAsyncAdapter> async_adapter) {}
 
 		int32_t objectheapid;
 	};
@@ -806,12 +815,20 @@ namespace RobotRaconteur
 	public:
 		virtual void ClientConnected(boost::shared_ptr<WrappedServiceSubscription> subscription, const ServiceSubscriptionClientID& id, boost::shared_ptr<WrappedServiceStub> client) = 0;
 		virtual void ClientDisconnected(boost::shared_ptr<WrappedServiceSubscription> subscription, const ServiceSubscriptionClientID& id, boost::shared_ptr<WrappedServiceStub> client) = 0;
+		virtual void ClientConnectFailed(boost::shared_ptr<RobotRaconteur::WrappedServiceSubscription> subscription, const ServiceSubscriptionClientID& id, const std::vector<std::string>& url, HandlerErrorInfo& error) = 0;
 		
 		virtual ~WrappedServiceSubscriptionDirector() {}
 	};
 
 	class WrappedWireSubscription;
 	class WrappedPipeSubscription;
+
+	class WrappedServiceSubscription_TryDefaultClientRes
+	{
+	public:
+		bool res;
+		RR_SHARED_PTR<WrappedServiceStub> client;
+	};
 
 	class WrappedServiceSubscription : public RR_ENABLE_SHARED_FROM_THIS<WrappedServiceSubscription>
 	{
@@ -835,6 +852,10 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<WrappedServiceStub> GetDefaultClient();
 
+		WrappedServiceSubscription_TryDefaultClientRes TryGetDefaultClient();
+
+		void AsyncGetDefaultClient(int32_t timeout, AsyncStubReturnDirector* handler, int32_t id);
+
 		void SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id);
 		
 	protected:
@@ -845,8 +866,10 @@ namespace RobotRaconteur
 
 		static void ClientConnected(RR_WEAK_PTR<WrappedServiceSubscription> this_, RR_SHARED_PTR<ServiceSubscription> subscription, const ServiceSubscriptionClientID& id, RR_SHARED_PTR<RRObject> client);
 		static void ClientDisconnected(RR_WEAK_PTR<WrappedServiceSubscription> this_, RR_SHARED_PTR<ServiceSubscription> subscription, const ServiceSubscriptionClientID& id, RR_SHARED_PTR<RRObject> client);
+		static void ClientConnectFailed(RR_WEAK_PTR<WrappedServiceSubscription> this_, boost::shared_ptr<ServiceSubscription> subscription, const ServiceSubscriptionClientID& id, const std::vector<std::string>& url, RR_SHARED_PTR<RobotRaconteurException> err);
 		void ClientConnected1(RR_SHARED_PTR<ServiceSubscription>& subscription, const ServiceSubscriptionClientID& id, RR_SHARED_PTR<RRObject>& client);
 		void ClientDisconnected1(RR_SHARED_PTR<ServiceSubscription>& subscription, const ServiceSubscriptionClientID& id, RR_SHARED_PTR<RRObject>& client);
+		void ClientConnectFailed1(boost::shared_ptr<ServiceSubscription> subscription, const ServiceSubscriptionClientID& id, const std::vector<std::string>& url, RR_SHARED_PTR<RobotRaconteurException> err);
 
 	};
 

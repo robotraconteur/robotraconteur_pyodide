@@ -43,6 +43,7 @@
 #include <boost/bind/protect.hpp>
 #include <boost/random.hpp>
 #include <boost/random/random_device.hpp>
+#include <boost/chrono.hpp>
 
 #ifdef ROBOTRACONTEUR_WINDOWS
 
@@ -1005,7 +1006,6 @@ namespace RobotRaconteur
 		void DeleteEndpoint(RR_SHARED_PTR<Endpoint> e);
 
 		/**
-		 * @internal
 		 * 
 		 * @brief Check that the TransportConnection associated with an endpoint
 		 * is connected
@@ -1419,7 +1419,7 @@ namespace RobotRaconteur
 		 * 
 		 * @param obj The object with the desired `objref`
 		 * @param objref The name of the `objref` member
-		 * @param handler A handler function to receive the object reference or an exception
+		 * @param handler A handler function to receive the object type or an exception
 		 * @param timeout Timeout is milliseconds, or RR_TIMEOUT_INFINITE for no timeout
 		 */
 		void AsyncFindObjectType(RR_SHARED_PTR<RRObject> obj, boost::string_ref objref, boost::function<void (RR_SHARED_PTR<std::string>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout=RR_TIMEOUT_INFINITE);
@@ -1432,7 +1432,7 @@ namespace RobotRaconteur
 		 * @param obj The object with the desired `objref`
 		 * @param objref The name of the `objref` member
 		 * @param index The index for the `objref`, convert int to string for int32 index type
-		 * @param handler A handler function to receive the object reference or an exception
+		 * @param handler A handler function to receive the object type or an exception
 		 * @param timeout Timeout is milliseconds, or RR_TIMEOUT_INFINITE for no timeout
 		 */
 		void AsyncFindObjectType(RR_SHARED_PTR<RRObject> obj, boost::string_ref objref, boost::string_ref index, boost::function<void (RR_SHARED_PTR<std::string>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout=RR_TIMEOUT_INFINITE);
@@ -1548,11 +1548,65 @@ namespace RobotRaconteur
 		 */
 		virtual boost::posix_time::ptime NowUTC();
 
+		/**
+		 * @brief The current node time as a TimeSpec
+		 * 
+		 * The current node time as a TimeSpec. See NowNodeTime()
+		 * 
+		 * @return TimeSpec The current node time as a TimeSpec
+		 */
+		virtual TimeSpec NowTimeSpec();
+
+
+		/**
+		 * @brief The current node time
+		 * 
+		 * UTC time is not monotonic, due to the introduction of leap-seconds, and the possibility
+		 * of the system clock being updated by the user. For a real-time systems, 
+		 * this is unaccetpable and can lead to system instability. The "node time" used by Robot Raconteur
+		 * is synchronized to UTC at startup, and is then steadily increasing from that initial time.
+		 * It will ignore changes to the system clock, and will also ignore corrections like leap
+		 * seconds.
+		 * 
+		 * @return boost::posix_time::ptime The current node time
+		 */
+		virtual boost::posix_time::ptime NowNodeTime();
+
+		/**
+		 * @brief The sync time of the node
+		 * 
+		 * The node synchronizes it's clock with the system time in UTC
+		 * when the node is initialized. After this time, a steady
+		 * clock is used. This prevents the clock from jumping
+		 * forward and back in time. It will no longer be updated
+		 * by changes in the system time.
+		 * 
+		 * If an external high precision clock source like PTP is available, 
+		 * that clock will be used in place of the system and steady clock.
+		 * 
+		 * @return boost::posix_time::ptime The node sync time in UTC
+		 */
+		virtual boost::posix_time::ptime NodeSyncTimeUTC();
+
+		/**
+		 * @brief The sync time of the node as a TimeSpec
+		 * 
+		 * See NodeSyncTimeUTC()
+		 * 
+		 * @return TimeSpec The node sync time as a TimeSpec
+		 */
+		virtual TimeSpec NodeSyncTimeSpec();
+
 	protected:
 
 		/** @internal @brief The tranport providing simulation time, or null if using system time */
 		RR_WEAK_PTR<ITransportTimeProvider> time_provider;
 
+		/** @internal @brief The sync time for the node clock **/
+		boost::posix_time::ptime node_sync_time;
+		TimeSpec node_sync_timespec;
+		boost::chrono::steady_clock::time_point node_internal_start_time;
+		
 	public:
 
 		/**

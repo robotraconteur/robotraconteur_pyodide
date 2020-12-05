@@ -2328,6 +2328,18 @@ namespace RobotRaconteur
 
 	public:
 
+		/**
+		 * @brief Construct a RRNamedArray object
+		 * 
+		 * Must be stored in a boost::intrusive_ptr
+		 * 
+		 * The RRNamedArray creates a memory view of the provided numeric
+		 * array parameter rr_array. The reference count is increased, so the
+		 * array will not be destroyed if the caller releases its smart pointers.
+		 * 
+		 * 
+		 * @param rr_array The array to use for storage
+		 */
 		RRNamedArray(RR_INTRUSIVE_PTR<RRArray<typename RRPrimUtil<T>::ElementArrayType> > rr_array)
 		{
 			if (!rr_array) throw NullValueException("Numeric array for namedarray must not be null");
@@ -2766,21 +2778,6 @@ namespace RobotRaconteur
 		 * @param nanoseconds Nanoseconds since epoch
 		 */
 		TimeSpec(int64_t seconds, int32_t nanoseconds);
-
-		/**
-		 * @brief Current UTC time using default RobotRaconteurNode time provider
-		 * 
-		 * @return TimeSpec The current UTC time
-		 */
-		static TimeSpec Now();
-
-		/**
-		 * @brief Current UTC time using the specified node time provider
-		 * 
-		 * @param node The node to use for the time provider
-		 * @return TimeSpec The current UTC time
-		 */
-		static TimeSpec Now(RR_SHARED_PTR<RobotRaconteurNode> node);
 
 	public:
 		/** @brief equality comparison */

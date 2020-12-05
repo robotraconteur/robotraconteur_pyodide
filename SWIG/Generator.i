@@ -18,6 +18,8 @@
 %feature("director") RobotRaconteur::WrappedGeneratorServerDirector;
 %feature("director") RobotRaconteur::AsyncGeneratorClientReturnDirector;
 
+%shared_ptr(RobotRaconteur::WrappedServiceSkelAsyncAdapter);
+
 namespace RobotRaconteur
 {
 	%nodefaultctor WrappedGeneratorClient;

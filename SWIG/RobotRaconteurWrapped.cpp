@@ -1273,6 +1273,19 @@ namespace RobotRaconteur
 		return rr_cast<WrappedServiceStub>(subscription->GetDefaultClient<RRObject>());
 	}
 
+	WrappedServiceSubscription_TryDefaultClientRes WrappedServiceSubscription::TryGetDefaultClient()
+	{
+		WrappedServiceSubscription_TryDefaultClientRes o;
+		o.res = subscription->TryGetDefaultClient<WrappedServiceStub>(o.client);
+		return o;
+	}
+	
+	void WrappedServiceSubscription::AsyncGetDefaultClient(int32_t timeout, AsyncStubReturnDirector* handler, int32_t id)
+	{
+		boost::shared_ptr<AsyncStubReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncStubReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
+		subscription->AsyncGetDefaultClient<RRObject>(boost::bind(&AsyncStubReturn_handler,RR_BOOST_PLACEHOLDERS(_1),RR_BOOST_PLACEHOLDERS(_2),sphandler),timeout);
+	}
+
 	void WrappedServiceSubscription::SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id)
 	{
 		
@@ -1283,6 +1296,7 @@ namespace RobotRaconteur
 			RR_WEAK_PTR<WrappedServiceSubscription> weak_this=shared_from_this();
 			subscription->AddClientConnectListener(boost::bind(&WrappedServiceSubscription::ClientConnected, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
 			subscription->AddClientDisconnectListener(boost::bind(&WrappedServiceSubscription::ClientDisconnected, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
+			subscription->AddClientConnectFailedListener(boost::bind(&WrappedServiceSubscription::ClientConnectFailed, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3), RR_BOOST_PLACEHOLDERS(_4)));
 		}
 	}
 
@@ -1299,6 +1313,13 @@ namespace RobotRaconteur
 		this1->ClientDisconnected1(subscription, id, client);
 	}
 
+	void WrappedServiceSubscription::ClientConnectFailed(RR_WEAK_PTR<WrappedServiceSubscription> this_, boost::shared_ptr<ServiceSubscription> subscription, const ServiceSubscriptionClientID& id, const std::vector<std::string>& url, RR_SHARED_PTR<RobotRaconteurException> err)
+	{
+		RR_SHARED_PTR<WrappedServiceSubscription> this1 = this_.lock();
+		if (!this1) return;
+		this1->ClientConnectFailed1(subscription, id, url, err);
+	}
+
 	void WrappedServiceSubscription::ClientConnected1(RR_SHARED_PTR<ServiceSubscription>& subscription, const ServiceSubscriptionClientID& id, RR_SHARED_PTR<RRObject>& client)
 	{
 		RR_SHARED_PTR<WrappedServiceSubscription> s = shared_from_this();
@@ -1310,6 +1331,13 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<WrappedServiceSubscription> s = shared_from_this();
 		RR_SHARED_PTR<WrappedServiceStub> client2 = RR_DYNAMIC_POINTER_CAST<WrappedServiceStub>(client);
 		DIRECTOR_CALL3(WrappedServiceSubscriptionDirector, RR_Director->ClientDisconnected(s, id, client2));
+	}
+
+	void WrappedServiceSubscription::ClientConnectFailed1(boost::shared_ptr<ServiceSubscription> subscription, const ServiceSubscriptionClientID& id, const std::vector<std::string>& url, RR_SHARED_PTR<RobotRaconteurException> err)
+	{
+		RR_SHARED_PTR<WrappedServiceSubscription> s = shared_from_this();
+		HandlerErrorInfo err2(err);
+		DIRECTOR_CALL3(WrappedServiceSubscriptionDirector, RR_Director->ClientConnectFailed(s, id, url, err2));
 	}
 
 	WrappedWireSubscription::WrappedWireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, const std::string& servicepath)
@@ -1682,6 +1710,66 @@ namespace RobotRaconteur
 		}
 	}
 
+	HandlerErrorInfo::HandlerErrorInfo(uint32_t error_code, const std::string& errorname, const std::string& errormessage, 
+			const std::string& errorsubname, boost::intrusive_ptr<RobotRaconteur::MessageElement> param_)
+	{
+		this->error_code = error_code;
+		this->errorname = errorname;
+		this->errormessage = errormessage;
+		this->errorsubname = errorsubname;
+		this->param_ = param_;
+	}
+
+	void HandlerErrorInfo::ToMessageEntry(RR_INTRUSIVE_PTR<MessageEntry> m) const
+	{
+		m->elements.clear();
+		m->Error = (MessageErrorType)error_code;
+		m->AddElement("errorname", stringToRRArray(errorname));
+		m->AddElement("errorstring", stringToRRArray(errormessage));
+		if (!errorsubname.empty())
+		{
+			m->AddElement("errorsubname", stringToRRArray(errorsubname));
+		}
+
+		if (param_)
+		{				
+			try
+			{
+				param_->ElementName = "errorparam";
+				m->elements.push_back(param_);
+			}
+			catch (std::exception&)
+			{
+				//TODO: Log Error
+			}				
+		}
+	}
+
+	RR_SHARED_PTR<RobotRaconteurException> HandlerErrorInfo::ToException() const
+	{
+		if (error_code == 0)
+		{
+			return RR_SHARED_PTR<RobotRaconteurException>();
+		}
+
+		RR_INTRUSIVE_PTR<RRValue> err1;
+		if (param_)
+		{
+			try
+			{
+				err1 = detail::packing::UnpackVarType(param_,NULL);
+			}
+			catch (std::exception&)
+			{
+				//TODO: Log Error
+			}
+		}
+
+		RR_SHARED_PTR<RobotRaconteurException> err = RR_MAKE_SHARED<RobotRaconteurException>((MessageErrorType)error_code, errorname, errormessage, errorsubname,err1);
+		
+		return err;
+	}
+
 	void UserLogRecordHandlerBase::SetHandler(UserLogRecordHandlerDirector* director, int32_t id)
 	{
 		if (!director)
@@ -1709,5 +1797,27 @@ namespace RobotRaconteur
 			std::cerr << "Error handling log record in wrapped language: " << err.what() << std::endl;
 		}
 	}
+
+#ifdef RR_PYTHON
+	bool PythonTracebackPrintExc = false;
+	void InitPythonTracebackPrintExc()
+	{
+		PythonTracebackPrintExc = false;
+		const char* p_cstr = std::getenv("ROBOTRACONTEUR_PYTHON_TRACEBACK_PRINT_EXC");
+		if (!p_cstr)
+		{
+			return;
+		}
+
+		std::string p(p_cstr);
+		boost::to_lower(p);
+		boost::trim(p);
+		if (p == "true" || p == "on" || p == "1")
+		{
+			PythonTracebackPrintExc = true;
+			return;
+		}
+	}
+#endif
 
 }

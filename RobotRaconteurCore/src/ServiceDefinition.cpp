@@ -571,7 +571,7 @@ namespace RobotRaconteur
 				case 2:
 				{
 					if (entry_key_max >= 2)
-						throw ServiceDefinitionParseException("service name must be first after service name", working_info);
+						throw ServiceDefinitionParseException("stdver must be first after service name", working_info);
 					stdver_version.FromString(to_ref(r_entry_match_remaining), &working_info);
 					stdver_found = true;
 					if (stdver_version < RobotRaconteurVersion(0, 9))
@@ -3897,7 +3897,7 @@ namespace RobotRaconteur
 
 	
 
-	rrimplements get_implements(RR_SHARED_PTR<ServiceEntryDefinition> obj, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> >& defs, std::string rootobj="")
+	rrimplements get_implements(RR_SHARED_PTR<ServiceEntryDefinition> obj, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> >& defs, ServiceDefinitionParseInfo& parse_info, std::string rootobj="")
 	{
 		rrimplements out;
 		out.obj=obj;
@@ -3919,11 +3919,11 @@ namespace RobotRaconteur
 					}
 				}
 
-				if (!obj2) throw ServiceDefinitionVerifyException("Object \"" + def->Name + "." + e + " not found to implement",obj->ParseInfo);
+				if (!obj2) throw ServiceDefinitionVerifyException("Object \"" + def->Name + "." + e + " not found to implement in " + out.name, parse_info);
 
-				if (rootobj== (def->Name + "." + obj2->Name)) throw ServiceDefinitionVerifyException("Recursive implements between \"" + rootobj + "\" and \"" + def->Name + "." + obj2->Name + "\"", obj->ParseInfo);
+				if (rootobj== (def->Name + "." + obj2->Name)) throw ServiceDefinitionVerifyException("Recursive implements between \"" + rootobj + "\" and \"" + def->Name + "." + obj2->Name + "\"", parse_info);
 
-				rrimplements imp2=get_implements(obj2,def,defs,rootobj);
+				rrimplements imp2=get_implements(obj2,def,defs,parse_info,rootobj);
 				out.implements.push_back(imp2);
 			}
 			else
@@ -3942,7 +3942,7 @@ namespace RobotRaconteur
 				}
 
 			
-				if (!def2) throw ServiceDefinitionVerifyException("Service definition \"" + e + "\" not found to implement", obj->ParseInfo);
+				if (!def2) throw ServiceDefinitionVerifyException("Service definition \"" + s1.get<0>() + "\" not found to implement in " + out.name, parse_info);
 
 				RR_SHARED_PTR<ServiceEntryDefinition> obj2;
 				BOOST_FOREACH (RR_SHARED_PTR<ServiceEntryDefinition>& ee2,def2->Objects)
@@ -3954,11 +3954,11 @@ namespace RobotRaconteur
 					}
 				}
 
-				if (!obj2) throw ServiceDefinitionVerifyException("Object \"" + e + "\" not found to implement", obj->ParseInfo);
+				if (!obj2) throw ServiceDefinitionVerifyException("Object \"" + e + "\" not found to implement", parse_info);
 
-				if (rootobj== (def2->Name + "." + obj2->Name)) throw ServiceDefinitionVerifyException("Recursive implements between \"" + rootobj + "\" and \"" + def2->Name + "." + obj2->Name + "\"", obj->ParseInfo);
+				if (rootobj== (def2->Name + "." + obj2->Name)) throw ServiceDefinitionVerifyException("Recursive implements between \"" + rootobj + "\" and \"" + def2->Name + "." + obj2->Name + "\"", parse_info);
 
-				rrimplements imp2=get_implements(obj2,def2,defs,rootobj);
+				rrimplements imp2=get_implements(obj2,def2,defs,parse_info,rootobj);
 				out.implements.push_back(imp2);
 			}
 			
@@ -3983,7 +3983,7 @@ namespace RobotRaconteur
 
 				if (!found)
 				{
-					throw ServiceDefinitionVerifyException("Object \"" + out.name + "\" does not implement inherited type \"" + r2.name + "\"", obj->ParseInfo);
+					throw ServiceDefinitionVerifyException("Object \"" + out.name + "\" does not implement inherited type \"" + r2.name + "\"", parse_info);
 				}
 			}
 		}
@@ -4208,7 +4208,7 @@ namespace RobotRaconteur
 			membernames.push_back(membername);
 		}
 
-		rrimplements r=get_implements(obj,def,defs);
+		rrimplements r=get_implements(obj,def,defs,obj->ParseInfo);
 
 		BOOST_FOREACH (rrimplements& e, r.implements)
 		{
@@ -4264,7 +4264,7 @@ namespace RobotRaconteur
 		}
 	}
 
-	void VerifyStructure_common(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > defs, std::vector<ServiceDefinitionParseException>& warnings, DataTypes entry_type)
+	void VerifyStructure_common(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > imported_defs, std::vector<RR_SHARED_PTR<ServiceDefinition> > all_defs, std::vector<ServiceDefinitionParseException>& warnings, DataTypes entry_type)
 	{
 		if (strut->EntryType != entry_type) throw ServiceDefinitionVerifyException("Invalid EntryType in \"" + strut->Name + "\"", strut->ParseInfo);
 		
@@ -4297,7 +4297,7 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<PropertyDefinition> p=RR_DYNAMIC_POINTER_CAST<PropertyDefinition>(e);
 			if (!p) throw ServiceDefinitionVerifyException("Structure \"" + strut->Name + "\" must only contain fields", e->ParseInfo);
 
-			std::string membername = VerifyMember(p, def, defs, warnings);
+			std::string membername = VerifyMember(p, def, imported_defs, warnings);
 
 			if (entry_type == DataTypes_pod_t)
 			{
@@ -4309,10 +4309,10 @@ namespace RobotRaconteur
 
 				if (t->Type == DataTypes_namedtype_t)
 				{
-					RR_SHARED_PTR<NamedTypeDefinition> tt = VerifyResolveNamedType(t,defs);
+					RR_SHARED_PTR<NamedTypeDefinition> tt = VerifyResolveNamedType(t,imported_defs);
 					if (tt->RRDataType() != DataTypes_pod_t && tt->RRDataType() != DataTypes_namedarray_t)
 					{
-						throw ServiceDefinitionVerifyException("Pods must only contain numeric, custruct, pod types", e->ParseInfo);
+						throw ServiceDefinitionVerifyException("Pods must only contain numeric, namedarray, pod types", e->ParseInfo);
 					}
 				}
 
@@ -4338,7 +4338,7 @@ namespace RobotRaconteur
 
 				if (t->Type == DataTypes_namedtype_t)
 				{
-					RR_SHARED_PTR<NamedTypeDefinition> tt = VerifyResolveNamedType(t,defs);
+					RR_SHARED_PTR<NamedTypeDefinition> tt = VerifyResolveNamedType(t,imported_defs);
 					if (tt->RRDataType() != DataTypes_namedarray_t)
 					{
 						throw ServiceDefinitionVerifyException("NamedArrays must only contain numeric and namedarray types: " + e->Name, e->ParseInfo);
@@ -4371,14 +4371,16 @@ namespace RobotRaconteur
 		if (entry_type == DataTypes_pod_t)
 		{
 			std::set<std::string> n;
-			VerifyStructure_check_recursion(strut, defs, n, DataTypes_pod_t);
+			VerifyStructure_check_recursion(strut, all_defs, n, DataTypes_pod_t);
 		}
 
 		if (entry_type == DataTypes_namedarray_t)
 		{
+			std::set<std::string> n;
+			//VerifyStructure_check_recursion(strut, defs, n, DataTypes_namedarray_t);
 			try
-			{
-				GetNamedArrayElementTypeAndCount(strut, defs);
+			{				
+				GetNamedArrayElementTypeAndCount(strut, all_defs);
 			}
 			catch (RobotRaconteurException& e)
 			{
@@ -4388,19 +4390,19 @@ namespace RobotRaconteur
 
 	}
 
-	void VerifyStructure(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > defs, std::vector<ServiceDefinitionParseException>& warnings)
+	void VerifyStructure(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > imported_defs, std::vector<RR_SHARED_PTR<ServiceDefinition> > all_defs, std::vector<ServiceDefinitionParseException>& warnings)
 	{
-		VerifyStructure_common(strut, def, defs, warnings, DataTypes_structure_t);
+		VerifyStructure_common(strut, def, imported_defs, all_defs, warnings, DataTypes_structure_t);
 	}
 
-	void VerifyPod(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > defs, std::vector<ServiceDefinitionParseException>& warnings)
+	void VerifyPod(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > imported_defs, std::vector<RR_SHARED_PTR<ServiceDefinition> > all_defs, std::vector<ServiceDefinitionParseException>& warnings)
 	{
-		VerifyStructure_common(strut, def, defs, warnings, DataTypes_pod_t);
+		VerifyStructure_common(strut, def, imported_defs, all_defs, warnings, DataTypes_pod_t);
 	}
 
-	void VerifyNamedArray(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > defs, std::vector<ServiceDefinitionParseException>& warnings)
+	void VerifyNamedArray(RR_SHARED_PTR<ServiceEntryDefinition> strut, RR_SHARED_PTR<ServiceDefinition> def, std::vector<RR_SHARED_PTR<ServiceDefinition> > imported_defs, std::vector<RR_SHARED_PTR<ServiceDefinition> > all_defs, std::vector<ServiceDefinitionParseException>& warnings)
 	{
-		VerifyStructure_common(strut, def, defs, warnings, DataTypes_namedarray_t);
+		VerifyStructure_common(strut, def, imported_defs, all_defs, warnings, DataTypes_namedarray_t);
 	}
 
 
@@ -4554,7 +4556,7 @@ namespace RobotRaconteur
 			BOOST_FOREACH(RR_SHARED_PTR<ServiceEntryDefinition> ee, e->Structures)
 			{
 				
-				VerifyStructure(ee,e,importeddefs, warnings);
+				VerifyStructure(ee,e,importeddefs, def, warnings);
 
 				std::string name=ee->Name;
 				if (boost::range::find(names, name)!=names.end()) throw ServiceDefinitionVerifyException("Service definition \"" + e->Name + "\" contains multiple high level names \"" + name + "\"", ee->ParseInfo);
@@ -4565,7 +4567,7 @@ namespace RobotRaconteur
 			BOOST_FOREACH(RR_SHARED_PTR<ServiceEntryDefinition> ee, e->Pods)
 			{
 
-				VerifyPod(ee, e, importeddefs, warnings);
+				VerifyPod(ee, e, importeddefs, def, warnings);
 
 				std::string name = ee->Name;
 				if (boost::range::find(names, name) != names.end()) throw ServiceDefinitionVerifyException("Service definition \"" + e->Name + "\" contains multiple high level names \"" + name + "\"", ee->ParseInfo);
@@ -4576,7 +4578,7 @@ namespace RobotRaconteur
 			BOOST_FOREACH(RR_SHARED_PTR<ServiceEntryDefinition> ee, e->NamedArrays)
 			{
 
-				VerifyNamedArray(ee, e, importeddefs, warnings);
+				VerifyNamedArray(ee, e, importeddefs, def, warnings);
 
 				std::string name = ee->Name;
 				if (boost::range::find(names, name) != names.end()) throw ServiceDefinitionVerifyException("Service definition \"" + e->Name + "\" contains multiple high level names \"" + name + "\"", ee->ParseInfo);

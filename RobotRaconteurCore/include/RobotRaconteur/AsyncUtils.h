@@ -21,6 +21,8 @@
  * limitations under the License.
  */
 
+#include <boost/bind/placeholders.hpp>
+
 #include <boost/scope_exit.hpp>
 
 #include "RobotRaconteur/Error.h"
@@ -299,7 +301,7 @@ namespace RobotRaconteur
 		void PostHandlerWithException(RR_WEAK_PTR<RobotRaconteurNode> node, typename boost::function<void(T, RR_SHARED_PTR<RobotRaconteurException>)>& handler, RR_SHARED_PTR<RobotRaconteurException> exp, bool shutdown_op = false, bool throw_on_released = true)
 		{
 			typename boost::initialized<T> default_value;
-			boost::function<void()> h = boost::bind(handler, default_value, RR_SHARED_PTR<RobotRaconteurException>());
+			boost::function<void()> h = boost::bind(handler, default_value, exp);
 			InvokeHandler_DoPost(node, h, shutdown_op, throw_on_released);			
 		}
 

@@ -83,7 +83,7 @@ namespace RobotRaconteur
 			ev.last_expected=last_time;
 			ev.last_real=actual_last_time;
 			ev.current_expected=last_time+period;
-			ev.current_real=n->NowUTC();
+			ev.current_real=n->NowNodeTime();
 			h=handler;
 
 			if (oneshot)
@@ -146,9 +146,7 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
 		if (!n) throw InvalidOperationException("Node released");
 
-		if (n->is_shutdown) throw InvalidOperationException("Node shutdown");
-
-		start_time=n->NowUTC();
+		start_time=n->NowNodeTime();
 		last_time=start_time;
 		actual_last_time=last_time;
 

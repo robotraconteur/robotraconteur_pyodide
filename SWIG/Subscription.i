@@ -113,8 +113,16 @@ namespace RobotRaconteur
 	public:
 		virtual void ClientConnected(boost::shared_ptr<RobotRaconteur::WrappedServiceSubscription> subscription, const ServiceSubscriptionClientID& id, boost::shared_ptr<WrappedServiceStub> client) = 0;
 		virtual void ClientDisconnected(boost::shared_ptr<RobotRaconteur::WrappedServiceSubscription> subscription, const ServiceSubscriptionClientID& id, boost::shared_ptr<WrappedServiceStub> client) = 0;
+		virtual void ClientConnectFailed(boost::shared_ptr<RobotRaconteur::WrappedServiceSubscription> subscription, const ServiceSubscriptionClientID& id, const std::vector<std::string>& url, HandlerErrorInfo& error) = 0;
 		
 		virtual ~WrappedServiceSubscriptionDirector() {}
+	};
+
+	class WrappedServiceSubscription_TryDefaultClientRes
+	{
+	public:
+		bool res;
+		boost::shared_ptr<RobotRaconteur::WrappedServiceStub> client;
 	};
 
 	class WrappedWireSubscription;
@@ -140,6 +148,10 @@ namespace RobotRaconteur
 		boost::shared_ptr<WrappedPipeSubscription> SubscribePipe(const std::string& membername, const std::string& servicepath, int32_t max_recv_packets = -1);
 
 		boost::shared_ptr<WrappedServiceStub> GetDefaultClient();
+
+		WrappedServiceSubscription_TryDefaultClientRes TryGetDefaultClient();
+
+		void AsyncGetDefaultClient(int32_t timeout, AsyncStubReturnDirector* handler, int32_t id);
 
 		void SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id);
 			

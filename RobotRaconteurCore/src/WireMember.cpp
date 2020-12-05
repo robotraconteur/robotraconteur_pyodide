@@ -129,7 +129,7 @@ namespace RobotRaconteur
 					lasttime_recv = timespec;
 					if (n)
 					{
-						lasttime_recv_local = n->NowUTC();
+						lasttime_recv_local = n->NowNodeTime();
 					}					
 					inval_valid = true;
 					
@@ -207,7 +207,7 @@ namespace RobotRaconteur
 				return true;
 			}
 
-			if (recv_time + boost::posix_time::milliseconds(lifespan) < n->NowUTC())
+			if (recv_time + boost::posix_time::milliseconds(lifespan) < n->NowNodeTime())
 			{
 				return true;
 			}
@@ -268,7 +268,7 @@ namespace RobotRaconteur
 		try		
 		{
 			
-			TimeSpec time = TimeSpec::Now();
+			TimeSpec time = n->NowTimeSpec();
 			if (time <= lasttime_send)
 			{
 				time=lasttime_send;
@@ -280,10 +280,9 @@ namespace RobotRaconteur
 			
 			GetParent()->SendWirePacket(value, time, endpoint);
 			
-			
 			outval = value;
 			lasttime_send = time;
-			lasttime_send_local = n->NowUTC();
+			lasttime_send_local = n->NowNodeTime();
 			outval_valid = true;
 			
 			
@@ -728,7 +727,7 @@ namespace RobotRaconteur
 	void WireClientBase::AsyncPokeOutValueBase(const RR_INTRUSIVE_PTR<RRValue>& value, RR_MOVE_ARG(boost::function<void(RR_SHARED_PTR<RobotRaconteurException>)>) handler, int32_t timeout)
 	{
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Member, endpoint, service_path, m_MemberName, "Requesting PokeOutValue");
-		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(value, TimeSpec::Now());
+		RR_INTRUSIVE_PTR<MessageEntry> m = PackPacket(value, GetNode()->NowTimeSpec());
 		m->EntryType = MessageEntryType_WirePokeOutValueReq;
 		m->MetaData.reset();
 		GetStub()->AsyncProcessRequest(m, boost::bind(&WireClientBase_AsyncPokeValueBaseEnd, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), handler), timeout);

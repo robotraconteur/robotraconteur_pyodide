@@ -32,10 +32,18 @@ public:
 	
 	void OuterCallback(boost::shared_ptr<RobotRaconteur::ClientContext> c,ClientServiceListenerEventType code,boost::shared_ptr<void> p)
 	{
-		
-		DIRECTOR_CALL2(Callback(code));
+		if (code == ClientServiceListenerEventType_ServicePathReleased)
+		{
+			std::string p1 = *RR_STATIC_POINTER_CAST<std::string>(p);
+			DIRECTOR_CALL2(Callback2(code,p1));
+		}
+		else
+		{		
+			DIRECTOR_CALL2(Callback(code));
+		}
 	}
 	virtual void Callback(int32_t code) {};
+	virtual void Callback2(int32_t code, const std::string& p) {};
 		
 	virtual ~ClientServiceListenerDirector()
 	{
@@ -269,6 +277,18 @@ public:
 	RR_MAKE_METHOD_PRIVATE(NowUTC)
 	boost::posix_time::ptime NowUTC();
 
+	RR_MAKE_METHOD_PRIVATE(NowTimeSpec)
+	TimeSpec NowTimeSpec();
+
+	RR_MAKE_METHOD_PRIVATE(NowNodeTime)
+	boost::posix_time::ptime NowNodeTime();
+
+	RR_MAKE_METHOD_PRIVATE(NodeSyncTimeUTC)
+	boost::posix_time::ptime NodeSyncTimeUTC();
+
+	RR_MAKE_METHOD_PRIVATE(NodeSyncTimeSpec)
+	TimeSpec NodeSyncTimeSpec();
+
 
 	
 
@@ -294,6 +314,7 @@ public:
 	RR_MAKE_METHOD_PRIVATE(GetServiceNodeID)
 	RR_MAKE_METHOD_PRIVATE(GetServiceNodeName)
 	RR_MAKE_METHOD_PRIVATE(GetServiceName)
+	RR_MAKE_METHOD_PRIVATE(GetObjectServicePath)
 
 	
 %extend
@@ -310,6 +331,23 @@ public:
 	{		
 		return $self->GetServiceNodeID(obj);		
 	}
+
+	std::string GetServiceNodeName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
+	{		
+		return $self->GetServiceNodeName(obj);		
+	}
+
+	std::string GetServiceName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
+	{		
+		return $self->GetServiceName(obj);		
+	}
+
+	std::string GetObjectServicePath(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
+	{		
+		return $self->GetObjectServicePath(obj);		
+	}
+
+}
 
 	std::string GetServiceNodeName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
 	{		
@@ -388,7 +426,7 @@ public:
 {
 	void PostToThreadPool(AsyncVoidNoErrReturnDirector* handler, int32_t id)
 	{
-		boost::shared_ptr<AsyncVoidNoErrReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>,_1,id));
+		boost::shared_ptr<AsyncVoidNoErrReturnDirector> sphandler(handler,boost::bind(&ReleaseDirector<AsyncVoidNoErrReturnDirector>,RR_BOOST_PLACEHOLDERS(_1),id));
 		$self->Post(boost::bind(&AsyncVoidNoErrReturn_handler,sphandler));
 	}
 
@@ -413,6 +451,7 @@ RR_MAKE_METHOD_PRIVATE(AsyncSleep)
 	void LogRecord(const RRLogRecord& record);
 	RobotRaconteur_LogLevel GetLogLevel();
 	void SetLogLevel(RobotRaconteur_LogLevel level);
+	RobotRaconteur_LogLevel SetLogLevelFromString(const std::string& level);
 	RobotRaconteur_LogLevel SetLogLevelFromEnvVariable(const std::string& env_variable_name = "ROBOTRACONTEUR_LOG_LEVEL");
 	boost::shared_ptr<RobotRaconteur::LogRecordHandler> GetLogRecordHandler();
 	void SetLogRecordHandler(boost::shared_ptr<RobotRaconteur::LogRecordHandler> handler);

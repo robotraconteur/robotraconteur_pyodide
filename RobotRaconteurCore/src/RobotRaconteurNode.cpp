@@ -72,6 +72,10 @@ void RobotRaconteurNode::Init()
 		random_generator = RR_MAKE_SHARED<boost::random::random_device>();
 	}
 
+	node_sync_time = boost::posix_time::microsec_clock::universal_time();
+	node_internal_start_time = boost::chrono::steady_clock::now();
+	node_sync_timespec = ptimeToTimeSpec(node_sync_time);
+
 	instance_is_init=true;
 
 	//Deal with possible race in boost::filesystem::path
@@ -165,13 +169,13 @@ void RobotRaconteurNode::SetNodeID(const RobotRaconteur::NodeID& id)
 	if (NodeID_set)
 	{
 		
-		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_sp(), Node, -1, "RobotRaconteurNode attempt to set NodeID when already set");
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_this, Node, -1, "RobotRaconteurNode attempt to set NodeID when already set");
 	 	throw InvalidOperationException("NodeID already set");
 	}
 	m_NodeID=id;
 	NodeID_set=true;
 	
-	ROBOTRACONTEUR_LOG_INFO_COMPONENT(weak_sp(), Node, -1, "RobotRaconteurNode NodeID set to UUID " << m_NodeID.ToString());
+	ROBOTRACONTEUR_LOG_INFO_COMPONENT(weak_this, Node, -1, "RobotRaconteurNode NodeID set to UUID " << m_NodeID.ToString());
 }
 
 void RobotRaconteurNode::SetNodeName(boost::string_ref name)
@@ -191,14 +195,14 @@ void RobotRaconteurNode::SetNodeName(boost::string_ref name)
 	if (NodeName_set)
 	{
 		
-		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_sp(), Node, -1, "RobotRaconteurNode attempt to set NodeName when already set");
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_this, Node, -1, "RobotRaconteurNode attempt to set NodeName when already set");
 		throw InvalidOperationException("NodeName already set");
 	}
 	m_NodeName = RR_MOVE(name.to_string());
 	NodeName_set=true;
 
 	
-	ROBOTRACONTEUR_LOG_INFO_COMPONENT(weak_sp(), Node, -1, "RobotRaconteurNode NodeName set to \"" << m_NodeName << "\"");
+	ROBOTRACONTEUR_LOG_INFO_COMPONENT(weak_this, Node, -1, "RobotRaconteurNode NodeName set to \"" << m_NodeName << "\"");
 }
 
 RR_SHARED_PTR<ServiceFactory> RobotRaconteurNode::GetServiceType(boost::string_ref servicename)
@@ -520,7 +524,7 @@ void RobotRaconteurNode::AsyncSendMessage(RR_INTRUSIVE_PTR<Message> m, boost::fu
 			tap->RecordMessage(m);
 		}
 	}
-
+	
 	RR_SHARED_PTR<Endpoint> e;
 	{
 		RR_UNORDERED_MAP<uint32_t, RR_SHARED_PTR<Endpoint> >::iterator e1 = endpoints.find(m->header->SenderEndpoint);
@@ -871,7 +875,7 @@ void RobotRaconteurNode::DeleteEndpoint(RR_SHARED_PTR<Endpoint> e)
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(weak_sp(), Node, e->GetLocalEndpoint(), "Error closing transport connection for deleted endpoint: " << exp.what());
 	}
 
-	ROBOTRACONTEUR_LOG_TRACE_COMPONENT(weak_sp(), Node, e->GetLocalEndpoint(), "Endpoint deleted");
+	ROBOTRACONTEUR_LOG_TRACE_COMPONENT(weak_this, Node, e->GetLocalEndpoint(), "Endpoint deleted");
 }
 
 void RobotRaconteurNode::CheckConnection(uint32_t endpoint)
@@ -914,7 +918,7 @@ void RobotRaconteurNode::NodeDetected(const NodeDiscoveryInfo& info)
 {
 	if (!m_Discovery)
 	{
-		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_sp(), Node, -1, "Node not init");
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_this, Node, -1, "Node not init");
 	 	throw InvalidOperationException("Node not init");
 	}
 	m_Discovery->NodeDetected(info);
@@ -931,7 +935,7 @@ void RobotRaconteurNode::NodeAnnouncePacketReceived(boost::string_ref packet)
 {
 	if (!m_Discovery)
 	{
-		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_sp(), Node, -1, "Node not init");
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_this, Node, -1, "Node not init");
 	 	throw InvalidOperationException("Node not init");
 	}
 	m_Discovery->NodeAnnouncePacketReceived(packet);
@@ -1098,7 +1102,7 @@ void RobotRaconteurNode::AsyncFindServiceByType(boost::string_ref servicetype, c
 {
 	if (!m_Discovery)
 	{
-		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_sp(), Node, -1, "Node not init");
+		ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(weak_this, Node, -1, "Node not init");
 	 	throw InvalidOperationException("Node not init");
 	}
 	m_Discovery->AsyncFindServiceByType(servicetype, transportschemes, handler, timeout);
@@ -1153,7 +1157,7 @@ void RobotRaconteurNode::PeriodicCleanupTask(const TimerEvent& err)
 	if (err.stopped) return;
 
 	{
-		boost::posix_time::ptime now=NowUTC();
+		boost::posix_time::ptime now=NowNodeTime();
 		
 		std::vector<RR_SHARED_PTR<Endpoint> > e;
 		
@@ -1373,7 +1377,75 @@ boost::posix_time::ptime RobotRaconteurNode::NowUTC()
 	}
 }
 
+TimeSpec RobotRaconteurNode::NowTimeSpec()
+{
+	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
 
+	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
+
+	if (t)
+	{
+		return t->NowTimeSpec();
+	}
+	else
+	{
+		boost::chrono::nanoseconds node_time = boost::chrono::duration_cast<boost::chrono::nanoseconds>(boost::chrono::steady_clock::now() - node_internal_start_time);
+		TimeSpec ts1 = node_sync_timespec;
+		ts1.seconds += node_time.count() / 1000000000;
+		ts1.nanoseconds += node_time.count() % 1000000000;
+		ts1.cleanup_nanosecs();
+		return ts1;
+	}
+}
+
+boost::posix_time::ptime RobotRaconteurNode::NowNodeTime()
+{
+	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
+
+	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
+
+	if (t)
+	{
+		return t->NowNodeTime();
+	}
+	else
+	{
+		boost::chrono::microseconds node_time = boost::chrono::duration_cast<boost::chrono::microseconds>(boost::chrono::steady_clock::now() - node_internal_start_time);
+		return node_sync_time + boost::posix_time::microseconds(node_time.count());
+	}
+}
+
+boost::posix_time::ptime RobotRaconteurNode::NodeSyncTimeUTC()
+{
+	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
+
+	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
+
+	if (t)
+	{
+		return t->NodeSyncTimeUTC();
+	}
+	else
+	{
+		return node_sync_time;
+	}
+}
+
+TimeSpec RobotRaconteurNode::NodeSyncTimeSpec()
+{
+	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
+
+	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
+
+	if (t)
+	{
+		return t->NodeSyncTimeSpec();
+	}
+	else
+	{
+		return node_sync_timespec;
+	}
+}
 
 RR_SHARED_PTR<Timer> RobotRaconteurNode::CreateTimer(const boost::posix_time::time_duration& period, boost::function<void (const TimerEvent&)> handler, bool oneshot)
 {

@@ -58,43 +58,94 @@ namespace RobotRaconteur
 	template <typename T>
 	class PipeSubscription;
 
+	/**
+	 * @brief Subscription filter node information
+	 * 
+	 * Specify a node by NodeID and/or NodeName. Also allows specifying
+	 * username and password.
+	 * 
+	 * When using username and credentials, secure transports and specified NodeID should
+	 * be used. Using username and credentials without a transport that verifies the
+	 * NodeID could result in credentials being leaked.
+	 */
 	class ROBOTRACONTEUR_CORE_API ServiceSubscriptionFilterNode
 	{
 	public:
+		/** The NodeID to match. All zero NodeID will match any NodeID. **/
 		::RobotRaconteur::NodeID NodeID;
+		/** The NodeName to match. Emtpy NodeName will match any NodeName. **/
 		std::string NodeName;
+		/** The username to use for authentication. Should only be used with secure transports and verified NodeID **/
 		std::string Username;
+		/** The credentials to use for authentication. Should only be used with secure transports and verified NodeID **/
 		RR_INTRUSIVE_PTR<RRMap<std::string, RRValue> > Credentials;
 	};
 
+	/**
+	 * @brief Subscription filter
+	 * 
+	 * The subscription filter is used with RobotRaconteurNode::SubscribeServiceByType() and 
+	 * RobotRaconteurNode::SubscribeServiceInfo2() to decide which services should
+	 * be connected. Detected services that match the service type are checked against
+	 * the filter before connecting.
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API ServiceSubscriptionFilter
 	{
 	public:
+		/** Vector of nodes that should be connected. Empty means match any node. **/
 		std::vector<RR_SHARED_PTR<ServiceSubscriptionFilterNode> > Nodes;
+		/** Vector service names that should be connected. Empty means match any service name. **/
 		std::vector<std::string> ServiceNames;
+		/** Vector of transport schemes. Empty means match any transport scheme. **/
 		std::vector<std::string> TransportSchemes;
+		/** A user specified predicate function. If nullptr, the predicate is not checked. **/
 		boost::function<bool(const ServiceInfo2&) > Predicate;
+		/** The maximum number of connections the subscription will create. Zero means unlimited connections. **/
 		uint32_t MaxConnections;
 	};
 
+	/**
+	 * @brief ClientID for use with ServiceSubscription
+	 * 
+	 * The ServiceSubscriptionClientID stores the NodeID
+	 * and ServiceName of a connected service.
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API ServiceSubscriptionClientID
 	{
 	public:
 
+		/** The NodeID of the connected service **/
 		::RobotRaconteur::NodeID NodeID;
+		/** The ServiceName of the connected service **/
 		std::string ServiceName;
 
+		/**
+		 * @brief Construct a ServiceSubscriptionClientID
+		 * 
+		 * @param nodeid The NodeID
+		 * @param service_name The Service Name
+		 */
 		ServiceSubscriptionClientID(const ::RobotRaconteur::NodeID& nodeid, boost::string_ref service_name);
 
+		/**
+		 * @brief Construct an empty ServiceSubscriptionClientID
+		 * 
+		 */
 		ServiceSubscriptionClientID();
 
+		/** Equality operator **/
 		bool operator == (const ServiceSubscriptionClientID &id2) const;
 
+		/** Inequality operator **/
 		bool operator != (const ServiceSubscriptionClientID &id2) const;
 
+		/** Less-than operator **/
 		bool operator <(const ServiceSubscriptionClientID& id2) const;
 	};
 
+	size_t hash_value(const ServiceSubscriptionClientID& id);
 
 	class IServiceSubscription
 	{
@@ -112,6 +163,16 @@ namespace RobotRaconteur
 
 	};
 
+	/**
+	 * @brief Subscription for information about detected services 
+	 * 
+	 * Created using RobotRaconteurNode::SubscribeServiceInfo2()
+	 * 
+	 * The ServiceInfo2Subscription class is used to track services with a specific service type as they are
+	 * detected on the local network and when they are lost. The currently detected services can also
+	 * be retrieved. The service information is returned using the ServiceInfo2 structure.
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API ServiceInfo2Subscription : public IServiceSubscription, public RR_ENABLE_SHARED_FROM_THIS<ServiceInfo2Subscription>, private boost::noncopyable
 	{
 	public:
@@ -120,11 +181,52 @@ namespace RobotRaconteur
 
 		typedef boost::signals2::connection event_connection;
 
+		/**
+		 * @brief Returns a map of detected services.
+		 * 
+		 * The returned map contains the detected nodes as ServiceInfo2. The map
+		 * is keyed with ServiceSubscriptionClientID.
+		 * 
+		 * This function does not block.
+		 * 
+		 * @return std::map<ServiceSubscriptionClientID, ServiceInfo2 > The detected services.
+		 */
 		std::map<ServiceSubscriptionClientID, ServiceInfo2 > GetDetectedServiceInfo2();
 
+		/**
+		 * @brief Add a listener callback that is invoked when a service is detected
+		 * 
+		 * The callback should have the signature:
+		 * 
+		 *    void cb(ServiceInfo2SubscriptionPtr subscription, const ServiceSubscriptionClientID& client_id, const ServiceInfo2& service_info)
+		 * 
+		 * The returned event_connection can be used to modify or close the Boost.Signals2 connection.
+		 * 
+		 * @param handler The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
 		event_connection AddServiceDetectedListener(boost::function<void(RR_SHARED_PTR<ServiceInfo2Subscription>, const ServiceSubscriptionClientID&, const ServiceInfo2&)> handler);
+
+		/**
+		 * @brief Add a listener callback that is invoked when a service is lost
+		 * 
+		 * The callback should have the signature:
+		 * 
+		 *    void cb(ServiceInfo2SubscriptionPtr subscription, const ServiceSubscriptionClientID& client_id, const ServiceInfo2& service_info)
+		 * 
+		 * The returned event_connection can be used to modify or close the Boost.Signals2 connection.
+		 * 
+		 * @param handler The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
 		event_connection AddServiceLostListener(boost::function<void(RR_SHARED_PTR<ServiceInfo2Subscription>, const ServiceSubscriptionClientID&, const ServiceInfo2&)> handler);
 
+		/**
+		 * @brief Close the subscription
+		 * 
+		 * Closes the subscription. Subscriptions are automatically closed when the node is shut down.
+		 * 
+		 */
 		virtual void Close();
 
 	protected:
@@ -158,6 +260,50 @@ namespace RobotRaconteur
 
 	};
 
+	namespace detail
+	{
+		template<typename T>
+		void AsyncGetDefaultClient_handler_adapter(boost::function<void(RR_SHARED_PTR<T>,RR_SHARED_PTR<RobotRaconteurException>)>& handler, RR_SHARED_PTR<RRObject> obj, RR_SHARED_PTR<RobotRaconteurException> err)
+		{
+			if (err)
+			{
+				handler(RR_SHARED_PTR<T>(), err);
+				return;
+			}
+
+			RR_SHARED_PTR<T> obj1 = RR_DYNAMIC_POINTER_CAST<T>(obj);
+			if (!obj1)
+			{
+				handler(RR_SHARED_PTR<T>(),RR_MAKE_SHARED<ConnectionException>("Cannot cast client to requested type"));
+				return;
+			}
+
+			handler(obj1, RR_SHARED_PTR<RobotRaconteurException>());
+		}
+	}
+
+	/**
+	 * @brief Subscription that automatically connects services and manages lifecycle of connected services
+	 * 
+	 * Created using RobotRaconteurNode::SubscribeService() or RobotRaconteurNode::SubscribeServiceByType(). The ServiceSubscription
+	 * class is used to automatically create and manage connections based on connection criteria. RobotRaconteurNode::SubscribeService()
+	 * is used to create a robust connection to a service with a specific URL. RobotRaconteurNode::SubscribeServiceByType() is used
+	 * to connect to services with a specified type, filtered with a ServiceSubscriptionFilter. Subscriptions will create connections
+	 * to matching services, and will retry the connection if it fails or the connection is lost. This behavior allows subscriptions
+	 * to be used to create robust connections. The retry delay for connections can be modified using SetConnectRetryDelay()
+	 * and GetConnectRetryDelay().
+	 * 
+	 * The currently connected clients can be retrieved using the GetConnectedClients() function. A single "default client" can be
+	 * retrieved using the GetDefaultClient() function or TryGetDefaultClient() functions. Listeners for client connect and 
+	 * disconnect events can be added  using the AddClientConnectListener() and AddClientDisconnectListener() functions. If 
+	 * the user wants to claim a client, the ClaimClient() and ReleaseClient() functions will be used. Claimed clients will 
+	 * no longer have their lifecycle managed by the subscription.
+	 * 
+	 * Subscriptions can be used to create `pipe` and `wire` subscriptions. These member subscriptions aggregate
+	 * the packets and values being received from all services. They can also act as a "reverse broadcaster" to 
+	 * send packets and values to all services that are actively connected. See PipeSubscription and WireSubscription.
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API ServiceSubscription : public IServiceSubscription, public RR_ENABLE_SHARED_FROM_THIS<ServiceSubscription>, private boost::noncopyable
 	{
 	public:
@@ -169,20 +315,128 @@ namespace RobotRaconteur
 		friend class detail::ServiceSubscription_custom_member_subscribers;
 
 		typedef boost::signals2::connection event_connection;
-				
+			
+		/**
+		 * @brief Returns a map of connected clients
+		 * 
+		 * The returned map contains the connect clients. The map
+		 * is keyed with ServiceSubscriptionClientID.
+		 * 
+		 * Clients must be cast to a type, similar to the client returned by
+		 * RobotRaconteurNode::ConnectService().
+		 * 
+		 * Clients can be "claimed" using ClaimClient(). Once claimed, the subscription
+		 * will stop managing the lifecycle of the client.
+		 * 
+		 * This function does not block.
+		 * 
+		 * @return std::map<ServiceSubscriptionClientID, ServiceInfo2 > The detected services.
+		 */
 		std::map<ServiceSubscriptionClientID, RR_SHARED_PTR<RRObject> > GetConnectedClients();
 
+		/**
+		 * @brief Add a listener callback that is invoked when a client is connected
+		 * 
+		 * The callback should have the signature:
+		 * 
+		 *    void cb(ServiceSubscriptionPtr subscription, const ServiceSubscriptionClientID& client_id, RRObjectPtr client)
+		 * 
+		 * The returned event_connection can be used to modify or close the Boost.Signals2 connection.
+		 * 
+		 * @param handler The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
 		event_connection AddClientConnectListener(boost::function<void(RR_SHARED_PTR<ServiceSubscription>, const ServiceSubscriptionClientID&, RR_SHARED_PTR<RRObject>)> handler);
+
+		/**
+		 * @brief Add a listener callback that is invoked when a client is disconnected
+		 * 
+		 * The callback should have the signature:
+		 * 
+		 *    void cb(ServiceSubscriptionPtr subscription, const ServiceSubscriptionClientID& client_id, RRObjectPtr client)
+		 * 
+		 * The returned event_connection can be used to modify or close the Boost.Signals2 connection.
+		 * 
+		 * @param handler The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
 		event_connection AddClientDisconnectListener(boost::function<void(RR_SHARED_PTR<ServiceSubscription>, const ServiceSubscriptionClientID&, RR_SHARED_PTR<RRObject>)> handler);
 
+		/**
+		 * @brief Add a listener callback that is invoked when a client connection attempt fails
+		 *
+		 * The callback should have the signature:
+		 * 
+		 *    void cb(ServiceSubscriptionPtr subscription, const ServiceSubscriptionClientID& client_id, const std::vector<std::string>& url, RobotRaconteurExceptionPtr err)
+		 * 
+		 * The returned event_connection can be used to modify or close the Boost.Signals2 connection.
+		 * 
+		 * @param handler The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
+		event_connection AddClientConnectFailedListener(boost::function<void(RR_SHARED_PTR<ServiceSubscription>, const ServiceSubscriptionClientID&, const std::vector<std::string>&, RR_SHARED_PTR<RobotRaconteurException>)> handler);
+
+		/**
+		 * @brief Close the subscription
+		 * 
+		 * Close the subscription. Subscriptions are automatically closed when the node is shut down.
+		 * 
+		 */
 		virtual void Close();
 
+		/**
+		 * @brief Claim a client that was connected by the subscription
+		 * 
+		 * The subscription class will automatically manage the lifecycle of the connected clients. The clients
+		 * will be automatically disconnected and/or reconnected as necessary. If the user wants to disable
+		 * this behavior for a specific client connection, the client connection can be "claimed".
+		 * 
+		 * @param client The client to be claimed
+		 */
 		virtual void ClaimClient(RR_SHARED_PTR<RRObject> client);
+
+		/**
+		 * @brief Release a client previously clamed with ClaimClient()
+		 * 
+		 * Lifecycle management is returned to the subscription
+		 * 
+		 * @param client The client to release claim
+		 */
 		virtual void ReleaseClient(RR_SHARED_PTR<RRObject> client);
 
+		/**
+		 * @brief Get the connect retry delay in milliseconds
+		 * 
+		 * Default is 2.5 seconds
+		 * 
+		 * @return uint32_t The retry delay in milliseconds
+		 */
 		uint32_t GetConnectRetryDelay();
+
+		/**
+		 * @brief Set the connect retry delay in milliseconds
+		 * 
+		 * Default is 2.5 seconds
+		 * 
+		 * @param delay_milliseconds The delay in milliseconds
+		 */
 		void SetConnectRetryDelay(uint32_t delay_milliseconds);
 
+		/**
+		 * @brief Creates a wire subscription
+		 * 
+		 * Wire subscriptions aggregate the value received from the connected services. It can also act as a 
+		 * "reverse broadcaster" to send values to clients. See WireSubscription.
+		 * 
+		 * The optional service path may be an empty string to use the root object in the service. The first level of the
+		 * service path may be "*" to match any service name. For instance, the service path "*.sub_obj" will match
+		 * any service name, and use the "sub_obj" objref.
+		 * 
+		 * @tparam T The type of the wire value. This must be specified since the subscription doesn't know the wire value type
+		 * @param membername The member name of the wire
+		 * @param servicepath The service path of the object owning the wire member
+		 * @return RR_SHARED_PTR<WireSubscription<T> > The wire subscription
+		 */
 		template <typename T>
 		RR_SHARED_PTR<WireSubscription<T> > SubscribeWire(boost::string_ref membername, boost::string_ref servicepath = "")
 		{
@@ -191,6 +445,21 @@ namespace RobotRaconteur
 			return o;
 		}
 
+		/**
+		 * @brief Creates a pipe subscription
+		 * 
+		 * Pipe subscriptions aggregate the packets received from the connected services. It can also act as a 
+		 * "reverse broadcaster" to send packets to clients. See PipeSubscription.
+		 * 
+		 * The optional service path may be an empty string to use the root object in the service. The first level of the
+		 * service path may be "*" to match any service name. For instance, the service path "*.sub_obj" will match
+		 * any service name, and use the "sub_obj" objref.
+		 * 
+		 * @tparam T The type of the pipe packets. This must be specified since the subscription does not know the pipe packet type
+		 * @param membername The member name of the pipe
+		 * @param servicepath The service path of the object owning the pipe member
+		 * @return RR_SHARED_PTR<PipeSubscription<T> > The pipe subscription
+		 */
 		template <typename T>
 		RR_SHARED_PTR<PipeSubscription<T> > SubscribePipe(boost::string_ref membername, boost::string_ref servicepath = "", uint32_t max_recv_packets=std::numeric_limits<uint32_t>::max())
 		{
@@ -199,12 +468,38 @@ namespace RobotRaconteur
 			return o;
 		}
 
+		/**
+		 * @brief Get the "default client" connection
+		 * 
+		 * The "default client" is the "first" client returned from the connected clients map. This is effectively
+		 * default, and is only useful if only a single client connection is expected. This is normally true
+		 * for RobotRaconteurNode::SubscribeService()
+		 * 
+		 * Clients using GetDefaultClient() should not store a reference to the client. It should instead
+		 * call GetDefaultClient() right before using the client to make sure the most recenty connection
+		 * is being used. If possible, SubscribePipe() or SubscribeWire() should be used so the lifecycle
+		 * of pipes and wires can be managed automatically.
+		 * 
+		 * @tparam T The type of the client object
+		 * @return RR_SHARED_PTR<T> The client connection
+		 */
 		template <typename T>
 		RR_SHARED_PTR<T> GetDefaultClient()
 		{
 			return rr_cast<T>(GetDefaultClientBase());
 		}
 
+		/**
+		 * @brief Try getting the "default client" connection
+		 * 
+		 * Same as GetDefaultClient(), but returns a bool success instead of throwing
+		 * exceptions on failure.
+		 * 
+		 * @tparam T The type of the client object
+		 * @param client_out [out] The client connection
+		 * @return true client_out is valid
+		 * @return false client_out is invalid, no client is not currently connected
+		 */
 		template <typename T>
 		bool TryGetDefaultClient(RR_SHARED_PTR<T>& client_out)
 		{
@@ -219,6 +514,23 @@ namespace RobotRaconteur
 
 			client_out = c1;
 			return true;
+		}
+
+		
+
+		/**
+		 * @brief Asynchronously get the default client, with optional timeout
+		 * 
+		 * Same as GetDefaultClientWait(), but returns asynchronously.
+		 * 
+		 * @tparam T The type of the client object
+		 * @param handler The handler to call when default client is available, or times out
+		 * @param timeout Timeout in milliseconds, or RR_TIMEOUT_INFINITE for no timeout
+		 */
+		template<typename T>
+		void AsyncGetDefaultClient(boost::function<void(RR_SHARED_PTR<T>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout = RR_TIMEOUT_INFINITE)
+		{
+			AsyncGetDefaultClientBase(boost::bind(&detail::AsyncGetDefaultClient_handler_adapter<T>, handler, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2)), timeout);
 		}
 
 	protected:
@@ -237,6 +549,7 @@ namespace RobotRaconteur
 
 		boost::signals2::signal<void(RR_SHARED_PTR<ServiceSubscription>, const ServiceSubscriptionClientID&, RR_SHARED_PTR<RRObject>)> connect_listeners;
 		boost::signals2::signal<void(RR_SHARED_PTR<ServiceSubscription>, const ServiceSubscriptionClientID&, RR_SHARED_PTR<RRObject>)> disconnect_listeners;
+		boost::signals2::signal<void(RR_SHARED_PTR<ServiceSubscription>, const ServiceSubscriptionClientID&, const std::vector<std::string>&, RR_SHARED_PTR<RobotRaconteurException>)> connect_failed_listeners;
 
 		boost::unordered_set<RR_SHARED_PTR<WireSubscriptionBase> > wire_subscriptions;
 		boost::unordered_set<RR_SHARED_PTR<PipeSubscriptionBase> > pipe_subscriptions;
@@ -255,7 +568,7 @@ namespace RobotRaconteur
 		virtual void NodeUpdated(RR_SHARED_PTR<detail::Discovery_nodestorage> storage);
 		virtual void NodeLost(RR_SHARED_PTR<detail::Discovery_nodestorage> storage);
 
-		void ClientConnected(RR_SHARED_PTR<RRObject> c, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<detail::ServiceSubscription_client> c2);
+		void ClientConnected(RR_SHARED_PTR<RRObject> c, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<detail::ServiceSubscription_client> c2, const std::vector<std::string>& url);
 		void ConnectRetry(RR_SHARED_PTR<detail::ServiceSubscription_client> c2);
 		void ConnectRetry2(RR_SHARED_PTR<detail::ServiceSubscription_client> c2);
 
@@ -263,6 +576,7 @@ namespace RobotRaconteur
 
 		void fire_ClientConnectListeners(const ServiceSubscriptionClientID& noden, RR_SHARED_PTR<RRObject> client);
 		void fire_ClientDisconnectListeners(const ServiceSubscriptionClientID& noden, RR_SHARED_PTR<RRObject> client);
+		void fire_ClientConnectFailedListeners(const ServiceSubscriptionClientID& noden, const std::vector<std::string>& url, RR_SHARED_PTR<RobotRaconteurException> err);
 
 		void SubscribeWire1(RR_SHARED_PTR<WireSubscriptionBase> s);
 		void SubscribePipe1(RR_SHARED_PTR<PipeSubscriptionBase> s);
@@ -272,8 +586,17 @@ namespace RobotRaconteur
 
 		RR_SHARED_PTR<RRObject> GetDefaultClientBase();
 		bool TryGetDefaultClientBase(RR_SHARED_PTR<RRObject>& client_out);
+
+		
+		void AsyncGetDefaultClientBase(boost::function<void(RR_SHARED_PTR<RRObject>,RR_SHARED_PTR<RobotRaconteurException>)> handler, int32_t timeout = RR_TIMEOUT_INFINITE);
 	};
 
+	/**
+	 * @brief Base class for WireSubscription
+	 * 
+	 * Base class for templated WireSubscription
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API WireSubscriptionBase : public RR_ENABLE_SHARED_FROM_THIS<WireSubscriptionBase>, private boost::noncopyable
 	{
 	public:
@@ -289,28 +612,69 @@ namespace RobotRaconteur
 
 		size_t GetActiveWireConnectionCount();
 
+		/**
+		 * @brief Get if InValue is currently being ignored
+		 * 
+		 * @return true InValue is being ignored
+		 * @return false InValue is not being ignored
+		 */
 		bool GetIgnoreInValue();
+
+		/**
+		 * @brief Set if InValue should be ignored
+		 * 
+		 * See WireConnection::SetIgnoreInValue()
+		 * 
+		 * If true, InValue will be ignored for all wire connections.
+		 * 
+		 * @param ignore 
+		 */
 		void SetIgnoreInValue(bool ignore);
 
+		/**
+		 * @brief Get the InValue lifespan in milliseconds
+		 * 
+		 * Get the lifespan of InValue in milliseconds. The value will expire after the specified
+		 * lifespan, becoming invalid. Use -1 for infinite lifespan.
+		 * 
+		 * @return int32_t The lifespan in milliseconds. -1 for infinite
+		 */
 		int32_t GetInValueLifespan();
+
+		/**
+		 * @brief Set the InValue lifespan in milliseconds
+		 * 
+		 * Set the lifespan of InValue in milliseconds. The value will expire after
+		 * the specified lifespan, becoming invalid. Use -1 for infinite lifespan.
+		 * 
+		 * See also WireConnection::SetInValueLifespan()
+		 * 
+		 * @param millis The lifespan in milliseconds. -1 for infinite
+		 */
 		void SetInValueLifespan(int32_t millis);
 
 		void SetOutValueAllBase(const RR_INTRUSIVE_PTR<RRValue>& val);
 
-		size_t GetWireConnectionCount();
-
+		/**
+		 * @brief Closes the wire subscription
+		 * 
+		 * Wire subscriptions are automatically closed when the parent ServiceSubscription is closed
+		 * or when the node is shut down.
+		 * 
+		 */
 		void Close();
 
 		WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath);
 
 	protected:
 
-		void ClientConnected(RR_SHARED_PTR<RRObject> client);
-		void ClientConnected1(RR_WEAK_PTR<RRObject> client, RR_SHARED_PTR<WireConnectionBase> connection, RR_SHARED_PTR<RobotRaconteurException> err);
-
+		void ClientConnected(const ServiceSubscriptionClientID& client_id, RR_SHARED_PTR<RRObject> client);
+		void ClientDisconnected(const ServiceSubscriptionClientID& client_id, RR_SHARED_PTR<RRObject> client);
+		
 		void WireConnectionClosed(RR_SHARED_PTR<detail::WireSubscription_connection> wire);
 		void WireValueChanged(RR_SHARED_PTR<detail::WireSubscription_connection> wire, RR_INTRUSIVE_PTR<RRValue> value, const TimeSpec& time);
-		boost::unordered_set<RR_SHARED_PTR<detail::WireSubscription_connection> > connections;
+
+		boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<detail::WireSubscription_connection> > connections;
 		boost::initialized<bool> closed;
 		RR_WEAK_PTR<RobotRaconteurNode> node;
 		RR_WEAK_PTR<ServiceSubscription> parent;
@@ -333,6 +697,29 @@ namespace RobotRaconteur
 
 	};
 
+	/**
+	 * @brief Subscription for wire members that aggregates the values from client wire connections
+	 * 
+	 * Wire subscriptions are created using the ServiceSubscription::SubscribeWire() function. This function takes the
+	 * type of the wire value, the name of the wire member, and an optional service path of the service
+	 * object that owns the wire member.
+	 * 
+	 * Wire subscriptions aggregate the InValue from all active wire connections. When a client connects,
+	 * the wire subscriptions will automatically create wire connections to the wire member specified
+	 * when the WireSubscription was created using ServiceSubscription::SubscribeWire(). The InValue of
+	 * all the active wire connections are collected, and the most recent one is used as the current InValue
+	 * of the wire subscription. The current value, the timespec, and the wire connection can be accessed
+	 * using GetInValue() or TryGetInValue().
+	 * 
+	 * The lifespan of the InValue can be configured using SetInValueLifespan(). It is recommended that
+	 * the lifespan be configured, so that the value will expire if the subscription stops receiving
+	 * fresh in values.
+	 * 
+	 * The wire subscription can also be used to set the OutValue of all active wire connections. This behaves
+	 * similar to a "reverse broadcaster", sending the same value to all connected services.
+	 * 
+	 * @tparam T The value type used by the wire
+	 */
 	template <typename T>
 	class WireSubscription : public WireSubscriptionBase
 	{
@@ -344,6 +731,15 @@ namespace RobotRaconteur
 
 		}
 
+		/**
+		 * @brief Get the current InValue and metadata
+		 * 
+		 * Throws ValueNotSetException if no valid value is available
+		 * 
+		 * @param time [out] the LastValueReceivedTime of the InValue
+		 * @param connection [out] the wire connection that received the InValue
+		 * @return T the current InValue
+		 */
 		T GetInValue(TimeSpec* time = NULL, typename RR_SHARED_PTR<WireConnection<T> >* connection = NULL)
 		{
 			RR_SHARED_PTR<WireConnectionBase> connection1;
@@ -354,6 +750,19 @@ namespace RobotRaconteur
 			}
 			return o;
 		}
+
+		/**
+		 * @brief Try getting the current InValue and metadata
+		 * 
+		 * Same as GetInValue(), but returns a bool for success or failure instead of throwing
+		 * an exception. 
+		 * 
+		 * @param val [out] the current InValue
+		 * @param time [out] the LastValueReceivedTime of the InValue
+		 * @param connection [out] the wire connection that received the InValue
+		 * @return true Getting the InValue was successful
+		 * @return false There is no valid InValue
+		 */
 		bool TryGetInValue(T& val, TimeSpec* time = NULL, typename RR_SHARED_PTR<WireConnection<T> >* connection = NULL)
 		{
 			RR_INTRUSIVE_PTR<RRValue> o;
@@ -367,11 +776,31 @@ namespace RobotRaconteur
 			return true;
 		}
 
+		/**
+		 * @brief Set the OutValue for all active wire connections
+		 * 
+		 * Behaves like a "reverse broadcaster". Calls WireConnection::SetOutValue()
+		 * for all connected wire connections.
+		 * 
+		 * @tparam T The type of the value
+		 * @param val The new OutValue
+		 */
 		void SetOutValueAll(const T& val)
 		{
 			SetOutValueAllBase(RRPrimUtil<T>::PrePack(val));
 		}
 
+		/**
+		 * @brief Adds a wire value changed event listener function
+		 * 
+		 * Add a listener function that is called when the InValue changes. The callback should have the
+		 * signature:
+		 * 
+		 *     void cb(WireSubscriptionPtr<T> wire_connection, const T& val, const TimeSpec& ts)
+		 * 
+		 * @param f The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
 		event_connection AddWireValueChangedListener(boost::function<void(RR_SHARED_PTR<WireSubscription<T> >, const T&, const TimeSpec&)> f)
 		{
 			return wire_value_changed.connect(f);
@@ -393,6 +822,12 @@ namespace RobotRaconteur
 
 	};
 
+	/**
+	 * @brief Base class for PipeSubscription
+	 * 
+	 * Base class for templated PipeSubscription
+	 * 
+	 */
 	class ROBOTRACONTEUR_CORE_API PipeSubscriptionBase : public RR_ENABLE_SHARED_FROM_THIS<PipeSubscriptionBase>, private boost::noncopyable
 	{
 	public:
@@ -406,28 +841,64 @@ namespace RobotRaconteur
 		RR_INTRUSIVE_PTR<RRValue> ReceivePacketBase();		
 		bool TryReceivePacketBase(RR_INTRUSIVE_PTR<RRValue>& packet, bool peek = false, RR_SHARED_PTR<PipeEndpointBase>* ep = NULL );
 
+		/**
+		 * @brief Get the number of packets available to receive
+		 * 
+		 * Use ReceivePacket(), TryReceivePacket(), or TryReceivePacketWait() to receive the packet
+		 * 
+		 * @return size_t 
+		 */
 		size_t Available();
+
+		/**
+		 * @brief Get the number of pipe endpoints currently connected
+		 * 
+		 * @return size_t The number of active pipe endpoints
+		 */
 		size_t GetActivePipeEndpointCount();
 
+		/**
+		 * @brief Get if incoming packets are currently being ignored
+		 * 
+		 * @return true Incoming packets are being ignored
+		 * @return false Incoming packets are not being ignored
+		 */
 		bool GetIgnoreReceived();
+
+		/**
+		 * @brief Set if incoming packets should be ignored
+		 * 
+		 * See PipeEndpoint::SetIgnoreReceived();
+		 * 
+		 * If true, receivedpackets will be ignored for all connected pipe endpoints
+		 * 
+		 * @param ignore 
+		 */
 		void SetIgnoreReceived(bool ignore);
 				
 		void AsyncSendPacketAllBase(const RR_INTRUSIVE_PTR<RRValue>& packet);
 
-		size_t GetPipeEndpointCount();
-
+		/**
+		 * @brief Closes the pipe subscription
+		 * 
+		 * Pipe subscriptions are automatically closed when the parent ServiceSubscription is closed
+		 * or when the node is shut down.
+		 * 
+		 */
 		void Close();
 
 		PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath = "", int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
 
 	protected:
 
-		void ClientConnected(RR_SHARED_PTR<RRObject> client);
-		void ClientConnected1(RR_WEAK_PTR<RRObject> client, RR_SHARED_PTR<PipeEndpointBase> connection, RR_SHARED_PTR<RobotRaconteurException> err);
+		void ClientConnected(const ServiceSubscriptionClientID& client_id, RR_SHARED_PTR<RRObject> client);
+		void ClientDisconnected(const ServiceSubscriptionClientID& client_id, RR_SHARED_PTR<RRObject> client);
 
 		void PipeEndpointClosed(RR_SHARED_PTR<detail::PipeSubscription_connection> pipe);
 		void PipeEndpointPacketReceived(RR_SHARED_PTR<detail::PipeSubscription_connection> pipe, RR_INTRUSIVE_PTR<RRValue> packet);
-		boost::unordered_set<RR_SHARED_PTR<detail::PipeSubscription_connection> > connections;
+
+		
+		boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<detail::PipeSubscription_connection> > connections;
 		boost::initialized<bool> closed;
 		RR_WEAK_PTR<ServiceSubscription> parent;
 		RR_WEAK_PTR<RobotRaconteurNode> node;
@@ -446,6 +917,29 @@ namespace RobotRaconteur
 		virtual bool isempty_PipePacketReceived();
 	};
 
+	/**
+	 * @brief Subscription for pipe members that aggregates incoming packets from client pipe endpoints
+	 * 
+	 * Pipe subscriptions are created using the ServiceSubscription::SubscribePipe() function. This function takes the
+	 * the type of the pipe packets, the name of the pipe member, and an optional service path of the service
+	 * object that owns the pipe member.
+	 * 
+	 * Pipe subscriptions collect all incoming packets from connect pipe endpoints. When a client connects,
+	 * the pipe subscription will automatically connect a pipe endpoint the pipe endpoint specified when
+	 * the PipeSubscription was created using ServiceSubscription::SubscribePipe(). The packets received
+	 * from each of the collected pipes are collected and placed into a common receive queue. This queue
+	 * is read using ReceivePacket(), TryReceivePacket(), or TryReceivePacketWait(). The number of packets
+	 * available to receive can be checked using Available().
+	 * 
+	 * Pipe subscriptions can also be used to send packets to all connected pipe endpoints. This is done
+	 * with the AsyncSendPacketAll() function. This function behaves somewhat like a "reverse broadcaster",
+	 * sending the packets to all connected services.
+	 * 
+	 * If the pipe subscription is being used to send packets but not receive them, the SetIgnoreInValue()
+	 * should be set to true to prevent packets from queueing.
+	 * 
+	 * @tparam T The type of the pipe packets
+	 */
 	template <typename T>
 	class PipeSubscription : public PipeSubscriptionBase
 	{
@@ -457,10 +951,29 @@ namespace RobotRaconteur
 
 		}
 
+		/**
+		 * @brief Dequeue a packet from the receive queue
+		 * 
+		 * If the receive queue is empty, an InvalidOperationException() is thrown
+		 * 
+		 * @return T The dequeued packet
+		 */
 		T ReceivePacket()
 		{
 			return RRPrimUtil<T>::PreUnpack(ReceivePacketBase());
 		}
+
+		/**
+		 * @brief Try dequeuing a packet from the receive queue
+		 * 
+		 * Same as ReceivePacket(), but returns a bool for success or failure instead of throwing
+		 * an exception
+		 * 
+		 * @param packet [out] the dequeued packet
+		 * @return true The packet was dequeued successfully
+		 * @return false The queue is empty
+		 */
+
 		bool TryReceivePacket(T& packet)
 		{
 			RR_INTRUSIVE_PTR<RRValue> o;
@@ -481,12 +994,34 @@ namespace RobotRaconteur
 			}
 			return true;
 		}
-
+		
+		/**
+		 * @brief Sends a packet to all connected pipe endpoints
+		 * 
+		 * Calls AsyncSendPacket() on all connected pipe endpoints with the specified value.
+		 * Returns immediately, not waiting for transmission to complete.
+		 * 
+		 * @param packet The packet to send
+		 */
 		void AsyncSendPacketAll(const T& packet)
 		{
 			AsyncSendPacketAllBase(RRPrimUtil<T>::PrePack(packet));
 		}
 
+		/**
+		 * @brief Adds a pipe packet received event listener function
+		 * 
+		 * Add a listener function that is called when the pipe subscription receives a packet. The callback should
+		 * have the signature:
+		 * 
+		 *     void cb(PipeSubscriptionPtr<T> pipe_subscription)
+		 * 
+		 * The callback function does not include the received packets as an argument. The callback must call
+		 * one of the ReceivePacket() functions to dequeue the packets.
+		 * 
+		 * @param f The callback function
+		 * @return event_connection The Boost.Signals2 connection
+		 */
 		event_connection AddPipePacketReceivedListener(boost::function<void(RR_SHARED_PTR<PipeSubscription<T> >)> f)
 		{
 			return pipe_packet_received.connect(f);
@@ -514,8 +1049,9 @@ namespace RobotRaconteur
 		{
 		protected:
 			RR_SHARED_PTR<WireSubscriptionBase> subscription;
-			boost::unordered_set<RR_SHARED_PTR<WireSubscription_connection> >::iterator connections_iterator;
-			boost::unordered_set<RR_SHARED_PTR<WireSubscription_connection> >::iterator current_connection;
+			
+			boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<WireSubscription_connection> >::iterator connections_iterator;
+			boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<WireSubscription_connection> >::iterator current_connection;
 
 		public:
 			WireSubscription_send_iterator(RR_SHARED_PTR<WireSubscriptionBase> subscription);
@@ -529,8 +1065,9 @@ namespace RobotRaconteur
 		{
 		protected:
 			RR_SHARED_PTR<PipeSubscriptionBase> subscription;
-			boost::unordered_set<RR_SHARED_PTR<PipeSubscription_connection> >::iterator connections_iterator;
-			boost::unordered_set<RR_SHARED_PTR<PipeSubscription_connection> >::iterator current_connection;
+			
+			boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<PipeSubscription_connection> >::iterator connections_iterator;
+			boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<PipeSubscription_connection> >::iterator current_connection;
 
 		public:
 			PipeSubscription_send_iterator(RR_SHARED_PTR<PipeSubscriptionBase> subscription);
@@ -551,11 +1088,17 @@ namespace RobotRaconteur
 	}
 
 #ifndef BOOST_NO_CXX11_TEMPLATE_ALIASES
+	/** @brief Convenience alias for ServiceSubscriptionFilterNode shared_ptr */
 	using ServiceSubscriptionFilterNodePtr = RR_SHARED_PTR<ServiceSubscriptionFilterNode>;
+	/** @brief Convenience alias for ServiceSubscriptionFilter shared_ptr */
 	using ServiceSubscriptionFilterPtr = RR_SHARED_PTR<ServiceSubscriptionFilter>;
+	/** @brief Convenience alias for ServiceInfo2Subscription shared_ptr */
 	using ServiceInfo2SubscriptionPtr = RR_SHARED_PTR<ServiceInfo2Subscription>;
+	/** @brief Convenience alias for ServiceSubscription shared_ptr */
 	using ServiceSubscriptionPtr = RR_SHARED_PTR<ServiceSubscription>;
+	/** @brief Convenience alias for PipeSubscription shared_ptr */
 	template<typename T> using PipeSubscriptionPtr = RR_SHARED_PTR<PipeSubscription<T> >;
+	/** @brief Convenience alias for WireSubscription shared_ptr */
 	template<typename T> using WireSubscriptionPtr = RR_SHARED_PTR<WireSubscription<T> >;
 
 #endif

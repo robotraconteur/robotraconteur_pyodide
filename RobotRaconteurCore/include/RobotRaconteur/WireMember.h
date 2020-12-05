@@ -237,6 +237,9 @@ namespace RobotRaconteur
 		int32_t inval_lifespan;
 		int32_t outval_lifespan;
 
+		int32_t inval_lifespan;
+		int32_t outval_lifespan;
+
 		uint32_t endpoint;
 		RR_WEAK_PTR<WireBase> parent;
 		std::string service_path;
@@ -732,6 +735,7 @@ namespace RobotRaconteur
 	{
 		friend class WireConnectionBase;
 		friend class WireSubscriptionBase;
+		friend class detail::WireSubscription_connection;
 
 	public:
 

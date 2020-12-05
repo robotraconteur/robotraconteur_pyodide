@@ -15,31 +15,7 @@ namespace RobotRaconteur
 		{
 			node->SetLogLevelFromString(log_level_str);
 		}
-
-		if (config->GetOptionOrDefaultAsBool("local-tap-enable"))
-		{
-			std::string tap_name = config->GetOptionOrDefaultAsString("local-tap-name");
-			if (!tap_name.empty())
-			{
-				try
-				{
-					RR_SHARED_PTR<LocalMessageTap> local_tap = RR_MAKE_SHARED<LocalMessageTap>(tap_name);
-					local_tap->Open();
-					node->SetMessageTap(local_tap);
-
-					ROBOTRACONTEUR_LOG_INFO_COMPONENT(node, NodeSetup, -1, "Local tap initialized with name \"" << tap_name << "\"");
-				}
-				catch (std::exception& exp)
-				{
-					ROBOTRACONTEUR_LOG_ERROR_COMPONENT(node, NodeSetup, -1, "Local tap initialization failed: " << exp.what());
-				}
-			}
-			else
-			{
-				ROBOTRACONTEUR_LOG_ERROR_COMPONENT(node, NodeSetup, -1, "Local tap name not specified, not starting tap interface");
-			}
-		}
-
+		
 		std::string node_name = config->GetOptionOrDefaultAsString("nodename");
 		std::string node_id = config->GetOptionOrDefaultAsString("nodeid","");
 		uint16_t tcp_port = boost::numeric_cast<uint16_t>(config->GetOptionOrDefaultAsInt("tcp-port"));
@@ -55,14 +31,57 @@ namespace RobotRaconteur
 
 		bool nodename_set=false;
 		bool nodeid_set=false;
-	
+
+		
+		if (!node_id.empty())
+		{
+			if (!nodeid_set)
+			{
+				node->SetNodeID(NodeID(node_id));
+			}
+			else
+			{
+				if (node->NodeID() != NodeID(node_id))
+				{
+					ROBOTRACONTEUR_LOG_ERROR_COMPONENT(node, NodeSetup, -1, "User requested NodeID " << node_id << " but node was assigned " << node->NodeID().ToString());	
+				}
+			}
+		}
+
+		if (!node_name.empty())
+		{
+			if (!nodename_set)
+			{
+				node->SetNodeName(node_name);
+			}
+			else
+			{
+				if (node->NodeName() != node_name)
+				{
+					ROBOTRACONTEUR_LOG_ERROR_COMPONENT(node, NodeSetup, -1, "User requested NodeName " << node_name << " but node was assigned " << node->NodeName());	
+				}
+			}
+
+		}
 
 		if (config->GetOptionOrDefaultAsBool("tcp-enable"))
 		{
 			browser_websocket_transport = RR_MAKE_SHARED<BrowserWebSocketTransport>(node);
+			
+			if (config->GetOptionOrDefaultAsBool("disable-message4"))
+			{
+				browser_websocket_transport->SetDisableMessage4(true);
+			}
+
+
+			if (config->GetOptionOrDefaultAsBool("jumbo-message"))
+			{
+				browser_websocket_transport->SetMaxMessageSize(100*1024*1024);
+			}			
+
 			node->RegisterTransport(browser_websocket_transport);
 		}
-
+		
 		if (config->GetOptionOrDefaultAsBool("disable-timeouts"))
 		{
 			node->SetRequestTimeout(std::numeric_limits<uint32_t>::max());
@@ -130,15 +149,13 @@ namespace RobotRaconteur
 		DoSetup(node, service_types, config);
 	}
 
-	RR_SHARED_PTR<BrowserWebSocketTransport> RobotRaconteurNodeSetup::GetBrowserWebSocketTransport()
+
+	
+	RR_SHARED_PTR<BrowserWebsocketTransport> RobotRaconteurNodeSetup::GetBrowserWebsocketTransport()
 	{
 		return browser_websocket_transport;
 	}
 	
-	RR_SHARED_PTR<CommandLineConfigParser> RobotRaconteurNodeSetup::GetCommandLineConfig()
-	{
-		return config;
-	}
 
 	void RobotRaconteurNodeSetup::ReleaseNode()
 	{
@@ -149,12 +166,7 @@ namespace RobotRaconteur
 	{
 		if (release_node)
 			return;
-		if (node)
-		{
-			
-				node->Shutdown();
-			
-		}
+		
 	}
 
 	ClientNodeSetup::ClientNodeSetup(RR_SHARED_PTR<RobotRaconteurNode> node, const std::vector<RR_SHARED_PTR<ServiceFactory> > service_types, 
@@ -199,7 +211,6 @@ namespace RobotRaconteur
 	{
 
 	}
-
 	
 	class FillOptionsDescription_add_helper
 	{
@@ -261,6 +272,8 @@ namespace RobotRaconteur
 
 		h.add<bool>("local-tap-enable", "start local tap interface, must also specify tap name", RobotRaconteurNodeSetupFlags_LOCAL_TAP_ENABLE);
 		h.add<std::string>("local-tap-name", "name of local tap", RobotRaconteurNodeSetupFlags_LOCAL_TAP_NAME);
+
+		h.add<bool>("jumbo-message", "enable jumbo messages (up to 100 MB)", RobotRaconteurNodeSetupFlags_JUMBO_MESSAGE);
 		
 
 	}
@@ -453,6 +466,11 @@ namespace RobotRaconteur
 		if (option == "local-tap-enable")
 		{
 			return (this->default_flags & RobotRaconteurNodeSetupFlags_LOCAL_TAP_ENABLE) != 0;
+		}
+
+		if (option == "jumbo-message")
+		{
+			return (this->default_flags & RobotRaconteurNodeSetupFlags_JUMBO_MESSAGE) != 0;
 		}
 
 		throw boost::program_options::required_option(option);

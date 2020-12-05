@@ -721,6 +721,13 @@ namespace RobotRaconteur
 			try
 			{
 				RR_INTRUSIVE_PTR<RobotRaconteur::MessageElement> me = ret1->FindElement("return");
+				// Limit size to protect from memory leak attacks
+				if (me->ElementSize > 64*1024)
+				{
+					ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Discovery, -1, "UpdateServiceInfo dropping response from remote node " << this->remote_nodeid.ToString() << " to prevent overflow");
+					handle_error(RR_MAKE_SHARED<ServiceException>("Return from remote node too large"));
+					return;
+				}
 				RR_INTRUSIVE_PTR<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> > ret = RobotRaconteur::rr_cast<RobotRaconteur::RRMap<int32_t, RobotRaconteurServiceIndex::ServiceInfo> >((n->UnpackMapType<int32_t, RobotRaconteurServiceIndex::ServiceInfo>(me->CastDataToNestedList())));
 
 				if (ret)
@@ -1014,7 +1021,7 @@ namespace RobotRaconteur
 
 					storage->recent_service_nonce.push_back(info2->ServiceStateNonce);
 
-					storage->retry_window_start = n->NowUTC();
+					storage->retry_window_start = n->NowNodeTime();
 
 					m_DiscoveredNodes.insert(std::make_pair(id, storage));
 					
@@ -1123,7 +1130,7 @@ namespace RobotRaconteur
 			if (!info) return;
 			storage->services = info;
 			storage->last_update_nonce = RR_MOVE(nonce.to_string());
-			storage->last_update_time = n->NowUTC();
+			storage->last_update_time = n->NowNodeTime();
 
 			if (storage->last_update_nonce != storage->info->ServiceStateNonce)
 			{
@@ -1163,7 +1170,7 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
 			if (!n) return;
 
-			boost::posix_time::ptime now = n->NowUTC();
+			boost::posix_time::ptime now = n->NowNodeTime();
 
 			if (now > storage->retry_window_start + boost::posix_time::seconds(60))
 			{
@@ -1304,7 +1311,7 @@ namespace RobotRaconteur
 					info.NodeID = nodeid;
 					info.NodeName = nodename;
 					NodeDiscoveryInfoURL url1;
-					url1.LastAnnounceTime = n->NowUTC();
+					url1.LastAnnounceTime = n->NowNodeTime();
 					url1.URL = url;
 					info.URLs.push_back(url1);
 					info.ServiceStateNonce = services_nonce;
@@ -1335,7 +1342,8 @@ namespace RobotRaconteur
 			if (!n) return;
 
 			{
-				boost::posix_time::ptime now = n->NowUTC();
+				
+				boost::posix_time::ptime now = n->NowNodeTime();
 
 
 

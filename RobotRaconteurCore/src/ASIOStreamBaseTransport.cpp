@@ -57,8 +57,8 @@ namespace RobotRaconteur
 	recvbuf_end=0;
 	recvbuf=boost::shared_array<uint8_t>(new uint8_t[recvbuf_len]);
 
-	tlastrecv = (node->NowUTC());
-	tlastsend = (node->NowUTC());
+	tlastrecv = (node->NowNodeTime());
+	tlastsend = (node->NowNodeTime());
 
 	this->ReceiveTimeout=15000;
 	this->SendHeartbeat=true;
@@ -82,6 +82,8 @@ namespace RobotRaconteur
 
 	disable_message4 = true;
 	disable_async_io = true;
+	send_version4=(false);
+	use_string_table4=(false);
 
 	async_reader = AsyncMessageReader::CreateInstance();
 
@@ -659,7 +661,7 @@ void ASIOStreamBaseTransport::EndSendMessage1()
 {
 
 
-	tlastsend=(GetNode()->NowUTC());
+	tlastsend=(GetNode()->NowNodeTime());
 
 	bool c = connected;
 
@@ -1085,7 +1087,7 @@ void ASIOStreamBaseTransport::EndReceiveMessage3(RR_INTRUSIVE_PTR<Message> messa
 				}				
 			}
 
-			tlastrecv = (GetNode()->NowUTC());
+			tlastrecv=(GetNode()->NowNodeTime());
 
 		}
 	}
@@ -1671,7 +1673,7 @@ void ASIOStreamBaseTransport::heartbeat_timer_func(const TimerEvent& e)
 		{
 		boost::posix_time::ptime t=tlastsend;
 
-		if ((GetNode()->NowUTC() - t).total_milliseconds() > heartbeat_period2 && SendHeartbeat)
+		if ((GetNode()->NowNodeTime() - t).total_milliseconds() > heartbeat_period2 && SendHeartbeat)
 		{
 			RR_INTRUSIVE_PTR<Message> m = CreateMessage();
 			m->header = CreateMessageHeader();
@@ -1698,7 +1700,7 @@ void ASIOStreamBaseTransport::heartbeat_timer_func(const TimerEvent& e)
 		{
 			if (!heartbeat_timer) return;
 
-			boost::posix_time::time_duration t = boost::posix_time::milliseconds(heartbeat_period2+10) - (GetNode()->NowUTC() - tlastsend);
+			boost::posix_time::time_duration t = boost::posix_time::milliseconds(heartbeat_period2+10) - (GetNode()->NowNodeTime() - tlastsend);
 			heartbeat_timer = GetNode()->CreateTimer(t, boost::bind(&ASIOStreamBaseTransport::heartbeat_timer_func, RR_STATIC_POINTER_CAST<ASIOStreamBaseTransport>(shared_from_this()),boost::asio::placeholders::error),true);
 			heartbeat_timer->Start();			
 		}
