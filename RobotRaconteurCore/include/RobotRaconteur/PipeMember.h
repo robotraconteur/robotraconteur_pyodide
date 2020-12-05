@@ -57,7 +57,6 @@ namespace RobotRaconteur
 		friend class PipeBase;
 		friend class PipeClientBase;
 		friend class PipeServerBase;
-		friend class PipeBroadcasterBase;
 		friend class PipeSubscriptionBase;
 		friend class detail::PipeSubscription_connection;
 

@@ -543,9 +543,7 @@ void InitPythonTracebackPrintExc();
 	{
 	public:
 
-		friend class WrappedWireBroadcaster;
-		friend class WrappedWireUnicastReceiver;
-
+		
 		virtual ~WrappedWireConnection();
 		virtual RR_INTRUSIVE_PTR<MessageElement> GetInValue();
 		virtual RR_INTRUSIVE_PTR<MessageElement> GetOutValue();

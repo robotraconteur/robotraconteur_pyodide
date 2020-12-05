@@ -157,6 +157,10 @@ namespace RobotRaconteur
 		return browser_websocket_transport;
 	}
 	
+	RR_SHARED_PTR<CommandLineConfigParser> RobotRaconteurNodeSetup::GetCommandLineConfig()
+	{
+		return config;
+	}
 
 	void RobotRaconteurNodeSetup::ReleaseNode()
 	{
