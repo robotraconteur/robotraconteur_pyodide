@@ -77,5 +77,7 @@ namespace RobotRaconteur
 
         virtual void MessageReceived(RR_INTRUSIVE_PTR<Message> m);
 
+        virtual RR_SHARED_PTR<Transport> GetTransport();
+
     };
 }

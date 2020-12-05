@@ -83,8 +83,7 @@ namespace RobotRaconteur
 	disable_message4 = true;
 	disable_async_io = true;
 	send_version4=(false);
-	use_string_table4=(false);
-
+	
 	async_reader = AsyncMessageReader::CreateInstance();
 
 	async_recv_size = 0;

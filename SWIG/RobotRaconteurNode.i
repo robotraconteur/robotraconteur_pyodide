@@ -349,18 +349,6 @@ public:
 
 }
 
-	std::string GetServiceNodeName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
-	{		
-		return $self->GetServiceNodeName(obj);		
-	}
-
-	std::string GetServiceName(boost::shared_ptr<RobotRaconteur::WrappedServiceStub> obj)
-	{		
-		return $self->GetServiceName(obj);		
-	}
-
-}
-
 	
 	RR_MAKE_METHOD_PRIVATE(NodeID)
 	RR_MAKE_METHOD_PRIVATE(SetNodeID)

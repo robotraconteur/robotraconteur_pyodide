@@ -602,4 +602,14 @@ void BrowserWebSocketTransportConnection::MessageReceived(RR_INTRUSIVE_PTR<Messa
     GetNode()->MessageReceived(m);
 }
 
+RR_SHARED_PTR<Transport> BrowserWebSocketTransportConnection::GetTransport()
+{
+    RR_SHARED_PTR<BrowserWebSocketTransport> p=parent.lock();
+    if (!p)
+    {
+        throw InvalidOperationException("BrowserWebSocketTransport has been released");
+    }
+    return p;
+}
+
 }

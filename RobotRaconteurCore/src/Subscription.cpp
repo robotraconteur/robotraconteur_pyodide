@@ -844,9 +844,9 @@ namespace RobotRaconteur
 			ConnectRetry(c2);
 			try
 			{
-				RobotRaconteurNode::TryPostToThreadPool(n, RR_BOOST_ASIO_STRAND_WRAP(*listener_strand,
+				RobotRaconteurNode::TryPostToThreadPool(n,
 					boost::bind(&ServiceSubscription::fire_ClientConnectFailedListeners,
-						shared_from_this(), ServiceSubscriptionClientID(c2->nodeid, c2->service_name), url, err)));
+						shared_from_this(), ServiceSubscriptionClientID(c2->nodeid, c2->service_name), url, err));
 			}
 			catch (std::exception&) {}
 			return;

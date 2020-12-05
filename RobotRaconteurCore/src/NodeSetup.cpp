@@ -76,7 +76,8 @@ namespace RobotRaconteur
 
 			if (config->GetOptionOrDefaultAsBool("jumbo-message"))
 			{
-				browser_websocket_transport->SetMaxMessageSize(100*1024*1024);
+				//TODO: add max message size to BrowserWebSocketTransport
+				//browser_websocket_transport->SetMaxMessageSize(100*1024*1024);
 			}			
 
 			node->RegisterTransport(browser_websocket_transport);
@@ -151,7 +152,7 @@ namespace RobotRaconteur
 
 
 	
-	RR_SHARED_PTR<BrowserWebsocketTransport> RobotRaconteurNodeSetup::GetBrowserWebsocketTransport()
+	RR_SHARED_PTR<BrowserWebSocketTransport> RobotRaconteurNodeSetup::GetBrowserWebSocketTransport()
 	{
 		return browser_websocket_transport;
 	}

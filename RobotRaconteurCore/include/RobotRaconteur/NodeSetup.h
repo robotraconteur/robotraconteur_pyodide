@@ -534,35 +534,7 @@ namespace RobotRaconteur
 			RR_SHARED_PTR<CommandLineConfigParser> config);
 
 			RR_SHARED_PTR<BrowserWebSocketTransport> GetBrowserWebSocketTransport();
-
 		
-
-		
-		/**
-		 * @brief Get the command line config parser object used to configure node
-		 * 
-		 * @return RR_SHARED_PTR<CommandLineConfigParser> The command line config parser
-		 */
-		RR_SHARED_PTR<CommandLineConfigParser> GetCommandLineConfig();
-		
-		/**
-		 * @brief Release the node from lifecycle management
-		 * 
-		 * If called, RobotRaconteurNode::Shutdown() will not
-		 * be called when the node setup instance is destroyed
-		 * 
-		 */
-		void ReleaseNode();
-
-		/**
-		 * @brief Get the IntraTransport
-		 * 
-		 * Will be null if IntraTransport is not specified in flags
-		 * 
-		 * @return RR_SHARED_PTR<IntraTransport> The IntraTransport object
-		 */
-		RR_SHARED_PTR<IntraTransport> GetIntraTransport();
-
 		/**
 		 * @brief Get the command line config parser object used to configure node
 		 * 

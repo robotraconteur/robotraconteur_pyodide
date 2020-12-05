@@ -814,6 +814,13 @@ std::string RobotRaconteurNode::GetServiceName(RR_SHARED_PTR<RRObject> obj)
 	return stub->GetContext()->GetServiceName();
 }
 
+std::string RobotRaconteurNode::GetObjectServicePath(RR_SHARED_PTR<RRObject> obj)
+{
+	if (!obj) throw InvalidArgumentException("obj must not be null");
+	RR_SHARED_PTR<ServiceStub> stub = rr_cast<ServiceStub>(obj);
+	return stub->ServicePath;
+}
+
 uint32_t RobotRaconteurNode::RegisterEndpoint(RR_SHARED_PTR<Endpoint> e)
 {
 	
@@ -1379,8 +1386,7 @@ boost::posix_time::ptime RobotRaconteurNode::NowUTC()
 
 TimeSpec RobotRaconteurNode::NowTimeSpec()
 {
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-
+	
 	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
 
 	if (t)
@@ -1400,8 +1406,7 @@ TimeSpec RobotRaconteurNode::NowTimeSpec()
 
 boost::posix_time::ptime RobotRaconteurNode::NowNodeTime()
 {
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-
+	
 	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
 
 	if (t)
@@ -1417,8 +1422,7 @@ boost::posix_time::ptime RobotRaconteurNode::NowNodeTime()
 
 boost::posix_time::ptime RobotRaconteurNode::NodeSyncTimeUTC()
 {
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-
+	
 	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
 
 	if (t)
@@ -1433,8 +1437,7 @@ boost::posix_time::ptime RobotRaconteurNode::NodeSyncTimeUTC()
 
 TimeSpec RobotRaconteurNode::NodeSyncTimeSpec()
 {
-	boost::shared_lock<boost::shared_mutex> lock(time_provider_lock);
-
+	
 	RR_SHARED_PTR<ITransportTimeProvider> t=time_provider.lock();
 
 	if (t)
