@@ -1431,7 +1431,7 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<RobotRaconteurNode> n = parent1->node.lock();
 		if (!n) return;
 
-		boost::mutex::scoped_lock lock(this_lock);
+		//boost::mutex::scoped_lock lock(this_lock);
 		if (closed.data()) return;
 
 		RR_SHARED_PTR<detail::WireSubscription_connection> c = RR_MAKE_SHARED<detail::WireSubscription_connection>();
@@ -1441,7 +1441,7 @@ namespace RobotRaconteur
 
 	void WireSubscriptionBase::ClientDisconnected(const ServiceSubscriptionClientID& client_id, RR_SHARED_PTR<RRObject> client)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
+		//boost::mutex::scoped_lock lock(this_lock);
 		boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<detail::WireSubscription_connection> >::iterator e = connections.find(client_id);
 		if (e == connections.end())
 		{
@@ -1549,7 +1549,7 @@ namespace RobotRaconteur
 			if (!stub)
 			{
 				ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription client connect wire failed: Invalid service path");
-				boost::mutex::scoped_lock lock(p->this_lock);
+				//boost::mutex::scoped_lock lock(p->this_lock);
 				RetryConnect();
 				return;
 			}
@@ -1562,7 +1562,7 @@ namespace RobotRaconteur
 			}
 			catch (std::exception& exp) {
 				ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription client connect wire failed: " << exp.what());
-				boost::mutex::scoped_lock lock(p->this_lock);
+				//boost::mutex::scoped_lock lock(p->this_lock);
 				RetryConnect();
 			}
 		}
@@ -1578,7 +1578,7 @@ namespace RobotRaconteur
 			if (err)
 			{
 				ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription client connect wire failed: " << err->what());
-				boost::mutex::scoped_lock lock(p->this_lock);
+				//boost::mutex::scoped_lock lock(p->this_lock);
 				RetryConnect();
 				return;
 			}
@@ -1586,7 +1586,7 @@ namespace RobotRaconteur
 
 			RR_SHARED_PTR<detail::WireSubscription_connection> c;
 			{
-				boost::mutex::scoped_lock lock(p->this_lock);
+				//boost::mutex::scoped_lock lock(p->this_lock);
 
 				if (p->closed.data())
 				{
@@ -1617,7 +1617,7 @@ namespace RobotRaconteur
 			
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription client wire connection closed");
 
-			boost::mutex::scoped_lock lock(p->this_lock);
+			//boost::mutex::scoped_lock lock(p->this_lock);
 			RetryConnect();
 		}
 
@@ -1671,7 +1671,7 @@ namespace RobotRaconteur
 			if (!n) return;
 			RR_SHARED_PTR<RRObject> c = client.lock();
 
-			boost::mutex::scoped_lock lock(p->this_lock);
+			//boost::mutex::scoped_lock lock(p->this_lock);
 			retry_timer.reset();
 
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription begin retry connect wire");
@@ -1923,7 +1923,7 @@ namespace RobotRaconteur
 
 	void PipeSubscriptionBase::ClientDisconnected(const ServiceSubscriptionClientID& client_id, RR_SHARED_PTR<RRObject> client)
 	{
-		boost::mutex::scoped_lock lock(this_lock);
+		//boost::mutex::scoped_lock lock(this_lock);
 		boost::unordered_map<ServiceSubscriptionClientID,RR_SHARED_PTR<detail::PipeSubscription_connection> >::iterator e = connections.find(client_id);
 		if (e == connections.end())
 		{
@@ -2056,7 +2056,7 @@ namespace RobotRaconteur
 
 			RR_SHARED_PTR<detail::PipeSubscription_connection> c;
 			{
-				boost::mutex::scoped_lock lock(p->this_lock);
+				//boost::mutex::scoped_lock lock(p->this_lock);
 
 				if (p->closed.data())
 				{
@@ -2087,7 +2087,7 @@ namespace RobotRaconteur
 
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription client pipe connection closed");
 
-			boost::mutex::scoped_lock lock(p->this_lock);
+			//boost::mutex::scoped_lock lock(p->this_lock);
 			RetryConnect();
 		}
 
@@ -2206,7 +2206,7 @@ namespace RobotRaconteur
 			if (!n) return;
 			RR_SHARED_PTR<RRObject> c = client.lock();
 
-			boost::mutex::scoped_lock lock(p->this_lock);
+			//boost::mutex::scoped_lock lock(p->this_lock);
 			retry_timer.reset();
 
 			ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", p->membername, "ServiceSubscription begin retry connect pipe");
