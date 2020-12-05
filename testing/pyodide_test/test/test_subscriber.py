@@ -8,8 +8,8 @@ c1 = None
 async def test_subscriber_func():
     
     sub = RRN.SubscribeService("rr+ws://localhost:2222?service=RobotRaconteurTestService")
-    await RRN.AsyncSleep(0.5, None)
-    c = sub.GetDefaultClient()
+    #await RRN.AsyncSleep(0.5, None)
+    c = await sub.AsyncGetDefaultClient(None)
     print_div("d1: " + str(await c.async_get_d1(None)))
     print_div("i32_huge: " + str(await c.async_get_i32_huge(None)))
     try:
