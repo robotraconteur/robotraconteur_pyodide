@@ -337,6 +337,7 @@ def stub_async_functioncall(stub,name,type1,*args):
     i=0
     for p in type1.Parameters:
         a=PackMessageElement(args[i],p,stub)
+        a.ElementName = p.Name
         m.append(a)
         i+=1
     handler=args[i]
@@ -352,6 +353,7 @@ def stub_async_functioncallvoid(stub,name,type1,*args):
     i=0
     for p in type1.Parameters:
         a=PackMessageElement(args[i],p,stub)
+        a.ElementName = p.Name
         m.append(a)
         i+=1
     handler=args[i]
@@ -370,6 +372,7 @@ def stub_async_functioncallgenerator(stub,name,type1,*args):
     for p in type1.Parameters:
         if (p.ContainerType != RobotRaconteurPython.DataTypes_ContainerTypes_generator):
             a=PackMessageElement(args[i],p,stub)
+            a.ElementName = p.Name
             m.append(a)
             i+=1
         else:
