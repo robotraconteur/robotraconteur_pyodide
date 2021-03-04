@@ -297,6 +297,7 @@ BrowserWebSocketTransportConnection::BrowserWebSocketTransportConnection(RR_SHAR
     this->ReceiveTimeout=parent->GetDefaultReceiveTimeout();
 	this->HeartbeatPeriod=parent->GetDefaultHeartbeatPeriod();
     this->max_message_size = parent->GetMaxMessageSize();
+    this->closing = false;
 }
 
 EM_BOOL websocket_open_callback_func(int eventType, const EmscriptenWebSocketOpenEvent *websocketEvent, void *userData)
