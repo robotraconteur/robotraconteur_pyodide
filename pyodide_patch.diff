@@ -1,45 +1,25 @@
 diff --git a/Makefile b/Makefile
-index f7d5961..7beead7 100644
+index 3e6ccd9..df83bd3 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -21,7 +21,7 @@ SHELL := /bin/bash
- CC=emcc
- CXX=em++
- OPTFLAGS=-O3
--CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths
-+CFLAGS=$(OPTFLAGS) -g -I$(PYTHONINCLUDE) -Wno-warn-absolute-paths -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0 --profiling
- CXXFLAGS=$(CFLAGS) -std=c++14
- 
- 
-@@ -31,7 +31,7 @@ LDFLAGS=\
- 	$(CPYTHONROOT)/installs/python-$(PYVERSION)/lib/libpython$(PYMINOR).a \
- 	$(LZ4LIB) \
- 	-s "BINARYEN_METHOD='native-wasm'" \
--	-s TOTAL_MEMORY=10485760 \
-+	-s TOTAL_MEMORY=128MB \
- 	-s ALLOW_MEMORY_GROWTH=1 \
- 	-s MAIN_MODULE=1 \
- 	-s EMULATED_FUNCTION_POINTERS=1 \
-@@ -50,7 +50,13 @@ LDFLAGS=\
- 	--memory-init-file 0 \
- 	-s "BINARYEN_TRAP_MODE='clamp'" \
- 	-s TEXTDECODER=0 \
--	-s LZ4=1
-+	-s LZ4=1 \
+@@ -24,6 +24,8 @@ CFLAGS=\
+ 	-Wno-warn-absolute-paths \
+ 	-Werror=int-conversion \
+ 	-Werror=incompatible-pointer-types \
 +	-s DISABLE_EXCEPTION_CATCHING=0 \
 +	-s EXCEPTION_DEBUG=0 \
-+	-s WEBSOCKET_DEBUG=0 \
-+	-s ASSERTIONS=0 \
-+	--profiling \
-+	-lwebsocket.js
+ 	$(EXTRA_CFLAGS)
+ LDFLAGS=\
+ 	$(OPTFLAGS) \
+@@ -46,8 +48,16 @@ LDFLAGS=\
+ 	--memory-init-file 0 \
+ 	-s "BINARYEN_TRAP_MODE='clamp'" \
+ 	-s LZ4=1 \
++	-s DISABLE_EXCEPTION_CATCHING=0 \
++	-s EXCEPTION_DEBUG=0 \
+ 	$(EXTRA_LDFLAGS)
  
- SIX_ROOT=packages/six/six-1.11.0/build/lib
- SIX_LIBS=$(SIX_ROOT)/six.py
-@@ -63,6 +69,12 @@ PARSO_LIBS=$(PARSO_ROOT)/__init__.py
- 
- SITEPACKAGES=root/lib/python$(PYMINOR)/site-packages
- 
-+BOOST_DIR=/rr_src/build_boost/boost_1_71_0
++BOOST_DIR=/rr_src/build_boost/boost_1_75_0
 +BOOST_LIB_DIR=$(BOOST_DIR)/stage/lib
 +
 +RR_PYTHON_DIR=/rr_src/build/out/Python
@@ -47,20 +27,26 @@ index f7d5961..7beead7 100644
 +
  all: check \
  	build/pyodide.asm.js \
- 	build/pyodide.asm.data \
-@@ -78,12 +90,23 @@ all: check \
- 	echo -e "\nSUCCESS!"
- 
- 
--build/pyodide.asm.js: src/main.bc src/jsimport.bc src/jsproxy.bc src/js2python.bc \
-+build/pyodide.asm.js: src/main.bc $(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
-+		$(RR_LIB_DIR)/libRobotRaconteurCore.a \
-+		src/jsimport.bc src/jsproxy.bc src/js2python.bc \
- 		src/pyimport.bc src/pyproxy.bc src/python2js.bc src/python2js_buffer.bc \
- 		src/runpython.bc src/hiwire.bc
+ 	build/pyodide.js \
+@@ -75,7 +85,9 @@ build/pyodide.asm.js: \
+ 	src/_testcapi.py \
+ 	src/webbrowser.py \
+ 	$(wildcard src/pyodide-py/pyodide/*.py) \
+-	$(CPYTHONLIB)
++	$(CPYTHONLIB) \
++	$(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
++	$(RR_LIB_DIR)/libRobotRaconteurCore.a
  	date +"[%F %T] Building pyodide.asm.js..."
  	[ -d build ] || mkdir build
- 	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.html $(filter %.bc,$^) \
+ 	$(CXX) -s EXPORT_NAME="'pyodide'" -o build/pyodide.asm.js $(filter %.o,$^) \
+@@ -86,7 +98,19 @@ build/pyodide.asm.js: \
+ 		--preload-file src/pystone.py@/lib/python$(PYMINOR)/pystone.py \
+ 		--preload-file src/pyodide-py/pyodide@/lib/python$(PYMINOR)/site-packages/pyodide \
+ 		--exclude-file "*__pycache__*" \
+-		--exclude-file "*/test/*"
++		--exclude-file "*/test/*" \
++		--preload-file $(RR_PYTHON_DIR)/RobotRaconteur@/lib/python$(PYMINOR)/site-packages/RobotRaconteur \
++		--exclude-file $(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython* \
 +		$(RR_PYTHON_DIR)/RobotRaconteur/_RobotRaconteurPython.a \
 +		$(RR_LIB_DIR)/libRobotRaconteurCore.a \
 +		$(BOOST_LIB_DIR)/libboost_date_time.bc \
@@ -70,131 +56,298 @@ index f7d5961..7beead7 100644
 +		$(BOOST_LIB_DIR)/libboost_chrono.bc \
 +		$(BOOST_LIB_DIR)/libboost_random.bc \
 +		$(BOOST_LIB_DIR)/libboost_program_options.bc \
- 		$(LDFLAGS) -s FORCE_FILESYSTEM=1
- 	rm build/pyodide.asm.html
++		-lwebsocket.js
  	date +"[%F %T] done building pyodide.asm.js."
-@@ -93,7 +116,7 @@ env:
- 	env
  
  
--build/pyodide.asm.data: root/.built
-+build/pyodide.asm.data: root/.built root/.rrbuilt
- 	( \
- 		cd build; \
- 		python $(FILEPACKAGER) pyodide.asm.data --abi=$(PYODIDE_PACKAGE_ABI) --lz4 --preload ../root/lib@lib --js-output=pyodide.asm.data.js --use-preload-plugins \
-@@ -103,13 +126,13 @@ build/pyodide.asm.data: root/.built
+@@ -140,8 +164,8 @@ clean:
+ 	rm -fr build/*
+ 	rm -fr src/*.o
+ 	rm -fr node_modules
+-	make -C packages clean
+-	echo "The Emsdk, CPython are not cleaned. cd into those directories to do so."
++	#make -C packages clean
++	echo "The Emsdk, CPython, packages are not cleaned. cd into those directories to do so."
  
- build/pyodide_dev.js: src/pyodide.js
- 	cp $< $@
--	sed -i -e "s#{{DEPLOY}}#./#g" $@
-+	sed -i -e "s#{{DEPLOY}}#/build/#g" $@
- 	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
- 
- 
- build/pyodide.js: src/pyodide.js
- 	cp $< $@
--	sed -i -e 's#{{DEPLOY}}#https://pyodide-cdn2.iodide.io/v0.15.0/full/#g' $@
-+	sed -i -e 's#{{DEPLOY}}#https://robotraconteur.github.io/robotraconteur_pyodide/#g' $@
- 
- 	sed -i -e "s#{{ABI}}#$(PYODIDE_PACKAGE_ABI)#g" $@
- 
-diff --git a/Makefile.envs b/Makefile.envs
-index 2fb9ec4..78bd4d3 100644
---- a/Makefile.envs
-+++ b/Makefile.envs
-@@ -29,4 +29,5 @@ export SIDE_LDFLAGS=\
-   --memory-init-file 0 \
-   -s LINKABLE=1 \
-   -s EXPORT_ALL=1 \
-+  -s DISABLE_EXCEPTION_CATCHING=0 \
-   -s ERROR_ON_MISSING_LIBRARIES=0
+ clean-all: clean
+ 	make -C emsdk clean
 diff --git a/cpython/Makefile b/cpython/Makefile
-index 8fa194f..a57dc51 100644
+index 80faa3c..ae55a43 100644
 --- a/cpython/Makefile
 +++ b/cpython/Makefile
-@@ -123,8 +123,8 @@ $(BUILD)/Makefile: $(BUILD)/.patched $(ZLIBBUILD)/.patched $(SQLITEBUILD)/libsql
+@@ -111,8 +111,8 @@ $(BUILD)/Makefile: $(BUILD)/.patched $(ZLIBBUILD)/.configured $(SQLITEBUILD)/lib
  		cd $(BUILD); \
- 		CONFIG_SITE=./config.site READELF=true LD_RUN_PATH="$(SQLITEBUILD):$(BZIP2BUILD)" emconfigure \
+ 		EMCC_CFLAGS="-s WASM=0" CONFIG_SITE=./config.site READELF=true emconfigure \
  		  ./configure \
--			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD)" \
--			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD)" \
-+			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0" \
-+			  LDFLAGS="-L$(SQLITEBUILD) -L$(BZIP2BUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0" \
+-			  CFLAGS="-fPIC" \
+-			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD) -I$(ZLIBBUILD)" \
++			  CFLAGS="-fPIC -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0" \
++			  CPPFLAGS="-I$(SQLITEBUILD) -I$(BZIP2BUILD) -I$(ZLIBBUILD) -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0" \
  			  --without-pymalloc \
  			  --disable-shared \
  			  --disable-ipv6 \
+diff --git a/emsdk/patches/robotraconteur_websocket_protocol.patch b/emsdk/patches/robotraconteur_websocket_protocol.patch
+new file mode 100644
+index 0000000..9070f8c
+--- /dev/null
++++ b/emsdk/patches/robotraconteur_websocket_protocol.patch
+@@ -0,0 +1,12 @@
++--- a/emsdk/fastcomp/emscripten/src/library_websocket.js
+++++ b/emsdk/fastcomp/emscripten/src/library_websocket.js
++@@ -272,7 +272,7 @@
++ 
++     // TODO: protocols
++     // TODO: createOnMainThread
++-    var socket = new WebSocket(url);
+++    var socket = new WebSocket(url,"robotraconteur.robotraconteur.com");
++     socket.binaryType = 'arraybuffer';
++     // TODO: While strictly not necessary, this ID would be good to be unique across all threads to avoid confusion.
++     var socketId = WS.sockets.length;
++     
+\ No newline at end of file
 diff --git a/packages/matplotlib/src/wasm_backend.py b/packages/matplotlib/src/wasm_backend.py
-index 5125e48..7afcc77 100644
+index a206b3c..8b6efeb 100644
 --- a/packages/matplotlib/src/wasm_backend.py
 +++ b/packages/matplotlib/src/wasm_backend.py
-@@ -109,7 +109,9 @@ class FigureCanvasWasm(backend_agg.FigureCanvasAgg):
+@@ -102,8 +102,18 @@ class FigureCanvasWasm(backend_agg.FigureCanvasAgg):
+         return (getattr(window, "devicePixelRatio", 0) or 1) / backing_store
  
-             return iodide.output.element("div")
-         except ImportError:
--            return document.createElement("div")
+     def create_root_element(self):
++        # Designed to be overridden by subclasses for use in contexts other
++        # than iodide.
++        try:
++            from js import iodide
++
++            return iodide.output.element("div")
++        except ImportError:
 +            div = document.createElement('div')
 +            document.body.appendChild(div)
 +            return div
+         # Designed to be overridden by subclasses
+-        return document.createElement("div")
++        # return document.createElement("div")
  
      def show(self):
          # If we've already shown this canvas elsewhere, don't create a new one,
 diff --git a/pyodide_build/common.py b/pyodide_build/common.py
-index de955a3..0579ddf 100644
+index de73210..787d0a9 100644
 --- a/pyodide_build/common.py
 +++ b/pyodide_build/common.py
-@@ -5,7 +5,10 @@ from typing import Optional, Set
- ROOTDIR = Path(__file__).parents[1].resolve() / "tools"
- HOSTPYTHON = ROOTDIR / ".." / "cpython" / "build" / "3.8.2" / "host"
- TARGETPYTHON = ROOTDIR / ".." / "cpython" / "installs" / "python-3.8.2"
--DEFAULTCFLAGS = ""
-+DEFAULTCFLAGS = " ".join([
-+    '-s', 'DISABLE_EXCEPTION_CATCHING=0',
-+    '-s', 'EXCEPTION_DEBUG=0'
-+])
+@@ -7,8 +7,8 @@ TOOLSDIR = ROOTDIR / "tools"
+ TARGETPYTHON = ROOTDIR / "cpython" / "installs" / "python-3.8.2"
+ 
+ # Leading space so that argparse doesn't think this is a flag
+-DEFAULTCFLAGS = " -fPIC"
+-DEFAULTCXXFLAGS = ""
++DEFAULTCFLAGS = " -fPIC -s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0"
++DEFAULTCXXFLAGS = "-s DISABLE_EXCEPTION_CATCHING=0 -s EXCEPTION_DEBUG=0"
+ # fmt: off
  DEFAULTLDFLAGS = " ".join(
      [
-         "-O3",
-@@ -22,6 +25,8 @@ DEFAULTLDFLAGS = " ".join(
-         "WASM=1",
-         "--memory-init-file",
-         "0",
+@@ -21,6 +21,8 @@ DEFAULTLDFLAGS = " ".join(
+         "--memory-init-file", "0",
+         "-s", "LINKABLE=1",
+         "-s", "EXPORT_ALL=1",
 +        '-s', 'DISABLE_EXCEPTION_CATCHING=0',
 +        '-s', 'EXCEPTION_DEBUG=0'
      ]
  )
- 
+ # fmt: on
 diff --git a/run_docker b/run_docker
-index 2d40ff2..43e84ff 100755
+index 31ebd1c..9759f47 100755
 --- a/run_docker
 +++ b/run_docker
-@@ -8,6 +8,7 @@ exec docker run \
-     -p $PYODIDE_SYSTEM_PORT:$PYODIDE_DOCKER_PORT \
+@@ -73,6 +73,8 @@ exec docker run \
+     -p "$PYODIDE_SYSTEM_PORT":"$PYODIDE_DOCKER_PORT" \
      -it --rm \
      -v $PWD:/src \
 +    -v /home/wasonj/pyodide/robotraconteur_pyodide:/rr_src \
++    -v /home/wasonj/pyodide/swig:/swig \
      --user root -e NB_UID=$UID -e NB_GID=$GID \
-     ${PYODIDE_DOCKER_IMAGE} \
+     "${PYODIDE_DOCKER_IMAGE}" \
      /bin/bash
-diff --git a/src/main.c b/src/main.c
-index 1861b94..7058489 100644
---- a/src/main.c
-+++ b/src/main.c
-@@ -10,6 +10,9 @@
+diff --git a/src/core/main.c b/src/core/main.c
+index 7e338d8..e3ab63a 100644
+--- a/src/core/main.c
++++ b/src/core/main.c
+@@ -13,6 +13,8 @@
  #include "python2js.h"
  #include "runpython.h"
  
 +PyMODINIT_FUNC
 +PyInit__RobotRaconteurPython(void);
-+
+ #define FATAL_ERROR(args...)                                                   \
+   do {                                                                         \
+     printf("FATAL ERROR: ");                                                   \
+@@ -76,6 +78,7 @@ static struct PyModuleDef core_module_def = {
  int
  main(int argc, char** argv)
  {
-@@ -17,6 +20,8 @@ main(int argc, char** argv)
- 
-   setenv("PYTHONHOME", "/", 0);
- 
 +  PyImport_AppendInittab("_RobotRaconteurPython",PyInit__RobotRaconteurPython);
-+
-   Py_InitializeEx(0);
+   // This exits and prints a message to stderr on failure,
+   // no status code to check.
+   initialize_python();
+diff --git a/src/pyodide-py/pyodide/webloop.py b/src/pyodide-py/pyodide/webloop.py
+index b427107..a86f3ec 100644
+--- a/src/pyodide-py/pyodide/webloop.py
++++ b/src/pyodide-py/pyodide/webloop.py
+@@ -6,6 +6,9 @@ import contextvars
  
-   // This doesn't seem to work anymore, but I'm keeping it for good measure
+ from typing import Awaitable, Callable
+ 
++import sys
++import traceback
++
+ 
+ class WebLoop(asyncio.AbstractEventLoop):
+     """A custom event loop for use in Pyodide.
+@@ -27,9 +30,11 @@ class WebLoop(asyncio.AbstractEventLoop):
+     def __init__(self):
+         self._task_factory = None
+         asyncio._set_running_loop(self)
++        self._exception_handler = None
++        self._current_handle = None
+ 
+     def get_debug(self):
+-        return False
++        return True
+ 
+     #
+     # Lifecycle methods: We ignore all lifecycle management
+@@ -98,7 +103,7 @@ class WebLoop(asyncio.AbstractEventLoop):
+         delay = 0
+         return self.call_later(delay, callback, *args, context=context)
+ 
+-    def call_soon_threadsafe(
++    def call_soon_threadsafe(self,
+         callback: Callable, *args, context: contextvars.Context = None
+     ):
+         """Like ``call_soon()``, but thread-safe.
+@@ -222,6 +227,127 @@ class WebLoop(asyncio.AbstractEventLoop):
+         """
+         return self._task_factory
+ 
++    def get_exception_handler(self):
++        """Return an exception handler, or None if the default one is in use.
++        """
++        return self._exception_handler
++
++    def set_exception_handler(self, handler):
++        """Set handler as the new event loop exception handler.
++        If handler is None, the default exception handler will
++        be set.
++        If handler is a callable object, it should have a
++        signature matching '(loop, context)', where 'loop'
++        will be a reference to the active event loop, 'context'
++        will be a dict object (see `call_exception_handler()`
++        documentation for details about context).
++        """
++        if handler is not None and not callable(handler):
++            raise TypeError(f'A callable object or None is expected, '
++                            f'got {handler!r}')
++        self._exception_handler = handler
++
++    def default_exception_handler(self, context):
++        """Default exception handler.
++        This is called when an exception occurs and no exception
++        handler is set, and can be called by a custom exception
++        handler that wants to defer to the default behavior.
++        This default handler logs the error message and other
++        context-dependent information.  In debug mode, a truncated
++        stack trace is also appended showing where the given object
++        (e.g. a handle or future or task) was created, if any.
++        The context parameter has the same meaning as in
++        `call_exception_handler()`.
++        """
++        message = context.get('message')
++        if not message:
++            message = 'Unhandled exception in event loop'
++
++        exception = context.get('exception')
++        if exception is not None:
++            exc_info = (type(exception), exception, exception.__traceback__)
++        else:
++            exc_info = False
++
++        if ('source_traceback' not in context and
++                self._current_handle is not None and
++                self._current_handle._source_traceback):
++            context['handle_traceback'] = \
++                self._current_handle._source_traceback
++
++        log_lines = [message]
++        for key in sorted(context):
++            if key in {'message', 'exception'}:
++                continue
++            value = context[key]
++            if key == 'source_traceback':
++                tb = ''.join(traceback.format_list(value))
++                value = 'Object created at (most recent call last):\n'
++                value += tb.rstrip()
++            elif key == 'handle_traceback':
++                tb = ''.join(traceback.format_list(value))
++                value = 'Handle created at (most recent call last):\n'
++                value += tb.rstrip()
++            else:
++                value = repr(value)
++            log_lines.append(f'{key}: {value}')
++
++        print('\n'.join(log_lines), file=sys.stderr)
++
++    def call_exception_handler(self, context):
++        """Call the current event loop's exception handler.
++        The context argument is a dict containing the following keys:
++        - 'message': Error message;
++        - 'exception' (optional): Exception object;
++        - 'future' (optional): Future instance;
++        - 'task' (optional): Task instance;
++        - 'handle' (optional): Handle instance;
++        - 'protocol' (optional): Protocol instance;
++        - 'transport' (optional): Transport instance;
++        - 'socket' (optional): Socket instance;
++        - 'asyncgen' (optional): Asynchronous generator that caused
++                                 the exception.
++        New keys maybe introduced in the future.
++        Note: do not overload this method in an event loop subclass.
++        For custom exception handling, use the
++        `set_exception_handler()` method.
++        """
++        if self._exception_handler is None:
++            try:
++                self.default_exception_handler(context)
++            except (SystemExit, KeyboardInterrupt):
++                raise
++            except BaseException:
++                # Second protection layer for unexpected errors
++                # in the default implementation, as well as for subclassed
++                # event loops with overloaded "default_exception_handler".
++                print('Exception in default exception handler', file=sys.stderr)
++                traceback.print_exc()
++        else:
++            try:
++                self._exception_handler(self, context)
++            except (SystemExit, KeyboardInterrupt):
++                raise
++            except BaseException as exc:
++                # Exception in the user set custom exception handler.
++                try:
++                    # Let's try default handler.
++                    self.default_exception_handler({
++                        'message': 'Unhandled error in exception handler',
++                        'exception': exc,
++                        'context': context,
++                    })
++                except (SystemExit, KeyboardInterrupt):
++                    raise
++                except BaseException:
++                    # Guard 'default_exception_handler' in case it is
++                    # overloaded.
++                    print('Exception in default exception handler '
++                                 'while handling an unexpected error '
++                                 'in custom exception handler',
++                                 file=sys.stderr)
++                    traceback.print_exc()
++
+ 
+ class WebLoopPolicy(asyncio.DefaultEventLoopPolicy):
+     """

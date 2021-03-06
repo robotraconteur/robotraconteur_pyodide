@@ -8,5 +8,5 @@ from .RobotRaconteurPythonUtil import PipeEndpoint, Pipe,\
     ServiceSubscriptionFilter, ServiceSubscriptionFilterNode, RobotRaconteurNodeSetup, \
     ClientNodeSetup, UserLogRecordHandler, TapFileReader, \
     ServiceInfo2, NodeInfo2, ServiceInfo2Subscription, ServiceSubscription, WireSubscription, PipeSubscription, \
-    ServiceSubscriptionClientID, WebLoop
+    ServiceSubscriptionClientID
 from .RobotRaconteurPythonDataTypes import *

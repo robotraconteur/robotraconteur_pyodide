@@ -1,10 +1,12 @@
 from js import print_div
 from RobotRaconteur.Client import *
 import traceback
+import asyncio
 
 print_div("Begin test_subscriber")
 
-c1 = None
+RRN.SetLogLevelFromString("DEBUG")
+RR.SetPythonTracebackPrintExc(True)
 
 async def test_subscriber_func():
     
@@ -25,10 +27,18 @@ async def test_subscriber_func():
             await c.async_set_d1(3.456,None)
         except:
             traceback.print_exc()
-    
+   
     print_div("Done!")
 
-loop = RR.WebLoop()
-loop.call_soon(test_subscriber_func())
+loop = asyncio.get_event_loop()
+
+async def run_program():
+    try:
+        await test_subscriber_func()
+    except:
+        traceback.print_exc()
+
+loop.create_task(run_program())
+
 
 

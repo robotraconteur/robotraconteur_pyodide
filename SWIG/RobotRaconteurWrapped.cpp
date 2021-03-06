@@ -1800,6 +1800,10 @@ namespace RobotRaconteur
 
 #ifdef RR_PYTHON
 	bool PythonTracebackPrintExc = false;
+	void SetPythonTracebackPrintExc(bool value)
+	{
+		PythonTracebackPrintExc = value;
+	}
 	void InitPythonTracebackPrintExc()
 	{
 		PythonTracebackPrintExc = false;

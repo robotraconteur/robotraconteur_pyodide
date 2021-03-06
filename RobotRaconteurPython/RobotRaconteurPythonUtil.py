@@ -40,6 +40,8 @@ else:
 
 import numpy
 
+import asyncio
+
 def SplitQualifiedName(name):
     pos=name.rfind('.')
     if (pos==-1): raise Exception("Name is not qualified")
@@ -1583,23 +1585,24 @@ def async_call(func, args, directorclass, handler, noerror=False, directorargs=(
     d=None
     if (handler is None):
         if (sys.version_info > (3,5)):
-            d = WebFuture()
+            loop = asyncio.get_event_loop()
+            d = asyncio.Future()
                                     
             def handler3(*args):
                 if noerror:
                     if len(args) == 0:
-                        d.handler(None,None)
+                        loop.call_soon_threadsafe(d.set_result,None)
                     else:
-                        d.handler(args[0],None)
+                        loop.call_soon_threadsafe(d.set_result,args[0])
                 else:
                     ret = None
                     if len(args) == 2:
                         ret = args[0]
                     if args[-1] is None:
-                        d.handler(ret,None)
+                        loop.call_soon_threadsafe(d.set_result,ret)
                     else:
-                        d.handler(None,args[-1])
-            handler = lambda *args1: handler3(*args1)            
+                        loop.call_soon_threadsafe(d.set_exception,args[-1])
+            handler = lambda *args1: handler3(*args1)             
         else:
             raise Exception("handler must not be None")
             
@@ -2880,64 +2883,4 @@ def settrace():
     if 'ptvsd' in sys.modules:
         import ptvsd
         ptvsd.debug_this_thread()
-
-# Based on https://github.com/akloster/aioweb-demo/blob/master/src/main.py
-
-class WebFuture(object):
-    
-    def __init__(self):
-        self.complete_handler=None
-        self.exception_handler=None
-        self.ret=None
-        self.early_ret=None
-        self.early_exp=None
-
-    def handler(self, arg, exp):
-        if (exp is not None):
-            if (self.exception_handler is not None):
-                self.exception_handler(exp)
-            else:
-                self.early_exp = exp
-        else:
-            self.ret=arg
-            if (self.complete_handler is not None):
-                self.complete_handler(arg)
-            else:
-                self.early_ret = arg
-
-    def __await__(self):
-        if self.early_ret is not None:
-            return self.early_ret
-        if self.early_exp is not None:
-            raise self.early_exp
-        yield self
-        return self.ret
-
-    __iter__ = __await__
-
-class WebLoop:
-    def __init__(self):
-        self.coros = []
-    def call_soon(self, coro):
-        self.step(coro)
-    def step(self, coro, arg=None):
-        try:
-            x = coro.send(arg)
-            x.complete_handler = partial(self.step, coro)
-            x.exception_handler = partial(self.fail,coro)
-        except StopIteration:
-            pass
-
-    def fail(self, coro,arg=None):
-        try:
-            x = coro.throw(arg)
-            x.complete_handler = partial(self.step, coro)
-            x.exception_handler = partial(self.fail,coro)
-        except StopIteration:
-            pass
-
-    @staticmethod
-    def run(coro):
-        loop=WebLoop()
-        loop.call_soon(coro)
 

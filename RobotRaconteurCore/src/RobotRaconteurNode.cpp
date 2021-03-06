@@ -79,7 +79,7 @@ void RobotRaconteurNode::Init()
 	instance_is_init=true;
 
 	//Deal with possible race in boost::filesystem::path
-	boost::filesystem::path::codecvt();
+	//boost::filesystem::path::codecvt();
 
 	m_Discovery = RR_MAKE_SHARED<detail::Discovery>(shared_from_this());
 

@@ -90,6 +90,7 @@ namespace RobotRaconteur
 
 extern bool PythonTracebackPrintExc;
 void InitPythonTracebackPrintExc();
+void SetPythonTracebackPrintExc(bool value);
 
 #else
 #define DIRECTOR_CALL(dirtype,command) { \

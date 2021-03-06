@@ -122,6 +122,7 @@ public:
 namespace RobotRaconteur
 {
 extern bool PythonTracebackPrintExc;
+void SetPythonTracebackPrintExc(bool value);
 }
 
 %init {
