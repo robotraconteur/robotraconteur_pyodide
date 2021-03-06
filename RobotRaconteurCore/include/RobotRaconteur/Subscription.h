@@ -229,6 +229,8 @@ namespace RobotRaconteur
 		 */
 		virtual void Close();
 
+		RR_SHARED_PTR<RobotRaconteurNode> GetNode();
+
 	protected:
 
 		bool active;
@@ -533,6 +535,49 @@ namespace RobotRaconteur
 			AsyncGetDefaultClientBase(boost::bind(&detail::AsyncGetDefaultClient_handler_adapter<T>, handler, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2)), timeout);
 		}
 
+		/**
+		 * @brief Get the service connection URL
+		 * 
+		 * Returns the service connection URL. Only valid when subscription was created using
+		 * RobotRaconteurNode::SubscribeService(). Will throw an exception if subscription
+		 * was opened using RobotRaconteurNode::SubscribeServiceByType()
+		 * 
+		 * @return std::vector<std::string> 
+		 */
+		std::vector<std::string> GetServiceURL();
+
+		/**
+		 * @brief Update the service connection URL
+		 * 
+		 * Updates the URL used to connect to the service. If close_connected is true,
+		 * existing connections will be closed. If false,
+		 * existing connections will not be closed.
+		 * 
+		 * @param url The new URL to use to connect to service
+		 * @param username (Optional) The new username
+		 * @param credentials (Optional) The new credentials
+		 * @param object_type (Optional) The desired root object proxy type. Optional but highly recommended.
+		 * @param close_connected (Optional, default false) Close existing connections
+		 */
+		void UpdateServiceURL(boost::string_ref url, boost::string_ref username = "", RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials=(RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> >()), boost::string_ref object_type = "", bool close_connected = false);
+
+		/**
+		 * @brief Update the service connection URL
+		 * 
+		 * Updates the URL used to connect to the service. If close_connected is true,
+		 * existing connections will be closed. If false,
+		 * existing connections will not be closed.
+		 * 
+		 * @param url The new URLs to use to connect to service
+		 * @param username (Optional) The new username
+		 * @param credentials (Optional) The new credentials
+		 * @param object_type The desired root object proxy type. Optional but highly recommended.
+		 * @param close_connected (Optional, default false) Close existing connections
+		 */
+		void UpdateServiceURL(const std::vector<std::string>& url, boost::string_ref username = "", RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials=(RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> >()), boost::string_ref object_type = "", bool close_connected = false);
+
+		RR_SHARED_PTR<RobotRaconteurNode> GetNode();
+
 	protected:
 
 		bool active;
@@ -665,6 +710,8 @@ namespace RobotRaconteur
 		void Close();
 
 		WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath);
+
+		RR_SHARED_PTR<RobotRaconteurNode> GetNode();
 
 	protected:
 
@@ -888,6 +935,8 @@ namespace RobotRaconteur
 		void Close();
 
 		PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath = "", int32_t max_recv_packets = -1, int32_t max_send_backlog = 5);
+
+		RR_SHARED_PTR<RobotRaconteurNode> GetNode();
 
 	protected:
 

@@ -5,8 +5,8 @@ import asyncio
 
 print_div("Begin test_subscriber")
 
-RRN.SetLogLevelFromString("DEBUG")
-RR.SetPythonTracebackPrintExc(True)
+#RRN.SetLogLevelFromString("DEBUG")
+#RR.SetPythonTracebackPrintExc(True)
 
 async def test_subscriber_func():
     

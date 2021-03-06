@@ -76,6 +76,11 @@ namespace RobotRaconteur
 
 	std::vector<std::string> WrappedGetDetectedNodes(boost::shared_ptr<RobotRaconteurNode> node);
 
+	NodeInfo2 WrappedGetDetectedNodeCacheInfo(boost::shared_ptr<RobotRaconteurNode> node,const RobotRaconteur::NodeID& nodeid);
+
+	bool WrappedTryGetDetectedNodeCacheInfo(boost::shared_ptr<RobotRaconteurNode> node, const RobotRaconteur::NodeID& nodeid, NodeInfo2& nodeinfo2);
+
+
 }
 
 %template(vectornodeinfo2) std::vector<RobotRaconteur::NodeInfo2>;

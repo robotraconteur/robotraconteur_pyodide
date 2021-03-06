@@ -720,6 +720,10 @@ void SetPythonTracebackPrintExc(bool value);
 
 	std::vector<std::string> WrappedGetDetectedNodes(RR_SHARED_PTR<RobotRaconteurNode> node);
 
+	NodeInfo2 WrappedGetDetectedNodeCacheInfo(boost::shared_ptr<RobotRaconteurNode> node, const RobotRaconteur::NodeID& nodeid);
+	
+	bool WrappedTryGetDetectedNodeCacheInfo(boost::shared_ptr<RobotRaconteurNode> node, const RobotRaconteur::NodeID& nodeid, NodeInfo2& nodeinfo2);
+
 	void AsyncStubReturn_handler(RR_SHARED_PTR<RRObject> obj, RR_SHARED_PTR<RobotRaconteurException> err, RR_SHARED_PTR<AsyncStubReturnDirector> handler);
 	
 	void AsyncVoidNoErrReturn_handler(RR_SHARED_PTR<AsyncVoidNoErrReturnDirector> handler);
@@ -784,6 +788,8 @@ void SetPythonTracebackPrintExc(bool value);
 		void Close();
 
 		void SetRRDirector(WrappedServiceInfo2SubscriptionDirector* director, int32_t id);
+
+		boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
 
 	protected:
 
@@ -857,6 +863,13 @@ void SetPythonTracebackPrintExc(bool value);
 		void AsyncGetDefaultClient(int32_t timeout, AsyncStubReturnDirector* handler, int32_t id);
 
 		void SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id);
+
+		boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
+
+		std::vector<std::string> GetServiceURL();
+
+		void UpdateServiceURL(const std::vector<std::string>& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "", bool close_connected = false);
+		void UpdateServiceURL(const std::string& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "", bool close_connected = false);
 		
 	protected:
 

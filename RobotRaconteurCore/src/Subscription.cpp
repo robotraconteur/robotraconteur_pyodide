@@ -295,6 +295,13 @@ namespace RobotRaconteur
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceInfo2Subscription closed");
 	}
+
+	RR_SHARED_PTR<RobotRaconteurNode> ServiceInfo2Subscription::GetNode()
+	{
+		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
+		if (!n) throw InvalidOperationException("Node has been released");
+		return n;
+	}
 		
 	ServiceInfo2Subscription::ServiceInfo2Subscription(RR_SHARED_PTR<detail::Discovery> parent)
 	{
@@ -538,6 +545,13 @@ namespace RobotRaconteur
 		d->SubscriptionClosed(shared_from_this());
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "ServiceSubscription closed");
+	}
+
+	RR_SHARED_PTR<RobotRaconteurNode> ServiceSubscription::GetNode()
+	{
+		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
+		if (!n) throw InvalidOperationException("Node has been released");
+		return n;
 	}
 
 	static RR_SHARED_PTR<detail::ServiceSubscription_client> SeviceSubscription_FindClient(std::map<ServiceSubscriptionClientID, RR_SHARED_PTR<detail::ServiceSubscription_client> >& clients, RR_SHARED_PTR<RRObject> client)
@@ -1236,7 +1250,107 @@ namespace RobotRaconteur
 		RR_SHARED_PTR<detail::AsyncGetDefaultClientBase_impl> impl = RR_MAKE_SHARED<detail::AsyncGetDefaultClientBase_impl>();
 		impl->Init(node, shared_from_this(), handler, timeout);
 	}
-	
+
+	std::vector<std::string> ServiceSubscription::GetServiceURL()
+	{
+		if(!use_service_url)
+		{
+			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "Subscription not using service url"); 
+			throw InvalidOperationException("Subscription not using service url");			
+		}
+		return service_url;
+	}
+
+	void ServiceSubscription::UpdateServiceURL(boost::string_ref url, boost::string_ref username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials, boost::string_ref object_type, bool close_connected)
+	{
+		std::vector<std::string> urls;
+		urls.push_back(url.to_string());
+		UpdateServiceURL(urls, username, credentials, object_type, close_connected);
+	}
+
+	void ServiceSubscription::UpdateServiceURL(const std::vector<std::string>& url, boost::string_ref username, RR_INTRUSIVE_PTR<RRMap<std::string,RRValue> > credentials, boost::string_ref object_type, bool close_connected)
+	{
+		if (!active)
+		{
+			return;
+		}
+
+		if(!use_service_url)
+		{
+			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "Subscription not using service url"); 
+			throw InvalidOperationException("Subscription not using service url");			
+		}
+
+		if (url.empty())
+		{
+			ROBOTRACONTEUR_LOG_TRACE_COMPONENT(node, Subscription, -1, "url most not be empty"); 
+			throw InvalidArgumentException("url must not be empty");
+		}
+
+		NodeID service_nodeid;
+		std::string service_nodename;
+		std::string service_name;
+
+		ParseConnectionURLResult url_res = ParseConnectionURL(url.at(0));
+		service_nodeid = url_res.nodeid;
+		service_nodename = url_res.nodename;
+		service_name = url_res.service;
+
+		for (size_t i=1; i<url.size(); i++)
+		{	
+			ParseConnectionURLResult url_res1 = ParseConnectionURL(url.at(0));
+			if (url_res1.nodeid != url_res.nodeid
+				|| url_res1.nodename != url_res.nodename
+				|| url_res1.service != url_res.service)
+			{
+				ROBOTRACONTEUR_LOG_DEBUG_COMPONENT(node, Subscription, -1, "Provided URLs do not point to same service");
+				throw InvalidArgumentException("URLs must point to same service");
+			}
+		}
+
+
+		this->service_url = url;
+		this->service_url_username = username.to_string();
+		this->service_url_credentials = credentials;
+		
+		RR_SHARED_PTR<RobotRaconteurNode> n = node.lock();
+		
+		BOOST_FOREACH(RR_SHARED_PTR<detail::ServiceSubscription_client>& c, clients | boost::adaptors::map_values)
+		{
+					
+			c->nodeid = service_nodeid;
+			c->nodename = service_nodename;
+			c->service_name = service_name;
+			c->service_type = object_type.to_string();
+			c->urls = url;
+			c->last_node_update = n->NowNodeTime();
+							
+			c->username = username.to_string();
+			c->credentials = credentials;
+
+			if (!close_connected)
+			{
+				continue;
+			}
+
+			if(c->claimed.data())
+			{
+				continue;
+			}		
+
+			RR_SHARED_PTR<RRObject> c2 = c->client.lock();
+			if (!c2) continue;
+			try
+			{	
+				if (n)					
+				{
+					n->AsyncDisconnectService(c2, ServiceSubscription_close_handler);
+				}
+			}
+			catch (std::exception&) {}
+		}
+	}
+
 	//class WireSubscriptionBase
 
 	static void WireSubscriptionBase_emptyhandler(RR_SHARED_PTR<RobotRaconteurException> e)
@@ -1374,6 +1488,13 @@ namespace RobotRaconteur
 		}
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "WireSubscription closed");
+	}
+
+	RR_SHARED_PTR<RobotRaconteurNode> WireSubscriptionBase::GetNode()
+	{
+		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
+		if (!n) throw InvalidOperationException("Node has been released");
+		return n;
 	}
 
 	WireSubscriptionBase::WireSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath)
@@ -1896,6 +2017,13 @@ namespace RobotRaconteur
 		}
 
 		ROBOTRACONTEUR_LOG_TRACE_COMPONENT_PATH(node, Subscription, -1, "", membername, "PipeSubscription closed");
+	}
+
+	RR_SHARED_PTR<RobotRaconteurNode> PipeSubscriptionBase::GetNode()
+	{
+		RR_SHARED_PTR<RobotRaconteurNode> n=node.lock();
+		if (!n) throw InvalidOperationException("Node has been released");
+		return n;
 	}
 
 	PipeSubscriptionBase::PipeSubscriptionBase(RR_SHARED_PTR<ServiceSubscription> parent, boost::string_ref membername, boost::string_ref servicepath, int32_t max_recv_packets, int32_t max_send_backlog)		

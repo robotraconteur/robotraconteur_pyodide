@@ -105,6 +105,8 @@ namespace RobotRaconteur
 		void Close();
 
 		void SetRRDirector(WrappedServiceInfo2SubscriptionDirector* director, int32_t id);
+
+		boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
 			
 	};
 	
@@ -154,6 +156,14 @@ namespace RobotRaconteur
 		void AsyncGetDefaultClient(int32_t timeout, AsyncStubReturnDirector* handler, int32_t id);
 
 		void SetRRDirector(WrappedServiceSubscriptionDirector* director, int32_t id);
+
+		boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
+
+		std::vector<std::string> GetServiceURL();
+
+		void UpdateServiceURL(const std::vector<std::string>& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "", bool close_connected = false);
+		void UpdateServiceURL(const std::string& url, const std::string& username = "", boost::intrusive_ptr<MessageElementData> credentials=boost::intrusive_ptr<MessageElementData>(),  const std::string& objecttype = "", bool close_connected = false);
+		
 			
 	};
 
@@ -185,6 +195,8 @@ namespace RobotRaconteur
 		void Close();
 
 		void SetRRDirector(WrappedWireSubscriptionDirector* director, int32_t id);
+
+		boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
 	
 	};
 
@@ -224,6 +236,8 @@ namespace RobotRaconteur
 		void Close();
 
 		void SetRRDirector(WrappedPipeSubscriptionDirector* director, int32_t id);
+
+		boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> GetNode();
 	};
 
 	class WrappedPipeSubscription_send_iterator

@@ -480,7 +480,15 @@ namespace RobotRaconteur
 
 	std::string WrappedServiceStub::RRType()
 	{
-		return RR_objecttype->Name;
+		RR_SHARED_PTR<ServiceDefinition> def = RR_objecttype->ServiceDefinition_.lock();
+		if (!def)
+		{
+			return RR_objecttype->Name;
+		}
+		else
+		{
+			return def->Name + "." + RR_objecttype->Name;
+		}
 	}
 
 	WrappedServiceStub::~WrappedServiceStub()
@@ -1012,6 +1020,16 @@ namespace RobotRaconteur
 		return o;
 	}
 
+	NodeInfo2 WrappedGetDetectedNodeCacheInfo(boost::shared_ptr<RobotRaconteurNode> node, const RobotRaconteur::NodeID& nodeid)
+	{
+		return node->GetDetectedNodeCacheInfo(nodeid);
+	}
+
+	bool WrappedTryGetDetectedNodeCacheInfo(boost::shared_ptr<RobotRaconteurNode> node, const RobotRaconteur::NodeID& nodeid, NodeInfo2& nodeinfo2)
+	{
+		return node->TryGetDetectedNodeCacheInfo(nodeid, nodeinfo2);
+	}
+
 				
 	RR_INTRUSIVE_PTR<RobotRaconteur::MessageEntry> RRDirectorExceptionHelper::last_err;
 
@@ -1174,6 +1192,11 @@ namespace RobotRaconteur
 			subscription->AddServiceDetectedListener(boost::bind(&WrappedServiceInfo2Subscription::ServiceDetected, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
 			subscription->AddServiceLostListener(boost::bind(&WrappedServiceInfo2Subscription::ServiceLost, weak_this, RR_BOOST_PLACEHOLDERS(_1), RR_BOOST_PLACEHOLDERS(_2), RR_BOOST_PLACEHOLDERS(_3)));
 		}
+	}
+
+	boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> WrappedServiceInfo2Subscription::GetNode()
+	{
+		return subscription->GetNode();
 	}
 
 	void WrappedServiceInfo2Subscription::ServiceDetected(RR_WEAK_PTR<WrappedServiceInfo2Subscription> this_, RR_SHARED_PTR<ServiceInfo2Subscription> subscription, const ServiceSubscriptionClientID& id, const ServiceInfo2& info)
@@ -1339,6 +1362,30 @@ namespace RobotRaconteur
 		HandlerErrorInfo err2(err);
 		DIRECTOR_CALL3(WrappedServiceSubscriptionDirector, RR_Director->ClientConnectFailed(s, id, url, err2));
 	}
+
+	boost::shared_ptr<RobotRaconteur::RobotRaconteurNode> WrappedServiceSubscription::GetNode()
+	{
+		return subscription->GetNode();
+	}
+
+	std::vector<std::string> WrappedServiceSubscription::GetServiceURL()
+	{	
+		return subscription->GetServiceURL();
+	}
+
+	void WrappedServiceSubscription::UpdateServiceURL(const std::vector<std::string>& url, const std::string& username, boost::intrusive_ptr<MessageElementData> credentials, const std::string& objecttype, bool close_connected)
+	{
+		RR_SHARED_PTR<RobotRaconteurNode> node = GetNode();
+		boost::intrusive_ptr<RRMap<std::string,RRValue> > credentials2;
+		if (credentials) credentials2=rr_cast<RRMap<std::string,RRValue> >(node->UnpackMapType<std::string,RRValue>(rr_cast<MessageElementNestedElementList>(credentials)));
+
+		subscription->UpdateServiceURL(url, username, credentials2, objecttype, close_connected);
+	}
+	void WrappedServiceSubscription::UpdateServiceURL(const std::string& url, const std::string& username, boost::intrusive_ptr<MessageElementData> credentials,  const std::string& objecttype, bool close_connected)
+	{
+
+	}
+		
 
 	WrappedWireSubscription::WrappedWireSubscription(RR_SHARED_PTR<ServiceSubscription> parent, const std::string& membername, const std::string& servicepath)
 		: WireSubscriptionBase(parent, membername, servicepath)
