@@ -1,4 +1,4 @@
-self.languagePluginUrl = 'http://192.168.1.133:8000/build/'
+self.languagePluginUrl = 'https://robotraconteur.github.io/robotraconteur_pyodide/'
 importScripts('./pyodide.js')
 
 onmessage = async function(e) {
