@@ -79,7 +79,7 @@ cp $CURRENT_DIR/build/out/Python/RobotRaconteur/*.py $PYODIDE_RR_DIR
 
 touch $PYODIDE_ROOT/root/.rrbuilt
 
-#export PYODIDE_BASE_URL=https://robotraconteur.github.io/robotraconteur_pyodide/
-export PYODIDE_BASE_URL=http://192.168.1.133:8000/build/
+export PYODIDE_BASE_URL=https://robotraconteur.github.io/robotraconteur_pyodide/
+#export PYODIDE_BASE_URL=http://192.168.1.133:8000/build/
 
 ( cd $PYODIDE_ROOT && make )
