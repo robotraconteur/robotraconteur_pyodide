@@ -493,7 +493,6 @@ void BrowserWebSocketTransportConnection::Close()
         {
             RobotRaconteurNode::TryHandleException(node, &exp);
         }
-        return;
     }
 
     if(closing) return;
