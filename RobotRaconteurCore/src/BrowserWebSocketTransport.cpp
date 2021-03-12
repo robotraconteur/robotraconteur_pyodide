@@ -281,6 +281,8 @@ void BrowserWebSocketTransport::erase_transport(RR_SHARED_PTR<ITransportConnecti
 		}
 	}
 	catch (std::exception&) {}
+
+    TransportConnectionClosed(connection->GetLocalEndpoint());
 }
 
 std::map<void*,RR_SHARED_PTR<BrowserWebSocketTransportConnection> > BrowserWebSocketTransportConnection::active_transports;
