@@ -15,7 +15,11 @@
 import RobotRaconteur as RR
 RRN=RR.RobotRaconteurNode.s
 
-node_setup=RR.ClientNodeSetup(argv=__import__("sys").argv)
-node_setup.ReleaseNode()
+#node_setup=RR.ClientNodeSetup(argv=__import__("sys").argv)
+#node_setup.ReleaseNode()
 
-browser_websocket_transport=node_setup.browser_websocket_transport
+#browser_websocket_transport=node_setup.browser_websocket_transport
+
+# Workaround due to broken CommandLineConfigParser
+browser_websocket_transport=RR.BrowserWebSocketTransport()
+RRN.RegisterTransport(browser_websocket_transport)

@@ -7,7 +7,9 @@ import pathlib
 
 TEST_PATH = os.path.dirname(os.path.abspath(__file__)) + "/test"
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__)) + "/serve_root"
-BUILD_PATH = '/src/build'
+BUILD_PATH =  os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + '/../../../pyodide/dist')
+
+assert os.path.isfile(BUILD_PATH + "/pyodide.js"), "Pyodide dist dir not found"
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):

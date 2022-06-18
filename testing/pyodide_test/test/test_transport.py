@@ -1,3 +1,13 @@
+# import RobotRaconteur as RR
+# RRN=RR.RobotRaconteurNode.s
+# RRN.SetLogLevel(RR.LogLevel_Trace)
+# node_setup=RR.CommandLineConfigParser(0)
+# #node_setup=RR.ClientNodeSetup(argv=["--robotraconteur-tcp-enable=false"])
+# #browser_transport = RR.BrowserWebSocketTransport()
+# #RRN.RegisterTransport(browser_transport)
+# print("done")
+
+
 from js import print_div
 from RobotRaconteur.Client import *
 
@@ -22,6 +32,6 @@ def connect_cb(c, err):
 
 RRN.SetLogLevel(RR.LogLevel_Debug)
 
-RRN.AsyncConnectService("rr+ws://localhost:2222?service=RobotRaconteurTestService", None, None, None, connect_cb)
+RRN.AsyncConnectService("rr+ws://localhost:22222?service=RobotRaconteurTestService", None, None, None, connect_cb)
 
 
