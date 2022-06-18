@@ -414,9 +414,7 @@ void BrowserWebSocketTransportConnection::AsyncConnect(boost::function<void (RR_
 
     create_attributes.createOnMainThread=EM_TRUE;
     create_attributes.url=ws_url.c_str();
-    const char* protocols[2];
-    protocols[0] = "robotraconteur.robotraconteur.com";
-    protocols[1] = NULL;
+    const char* protocols = "robotraconteur.robotraconteur.com";
     create_attributes.protocols = protocols;
 
     socket = emscripten_websocket_new(&create_attributes);
