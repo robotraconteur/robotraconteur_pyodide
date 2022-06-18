@@ -1,5 +1,6 @@
 from js import print_div
 from RobotRaconteur.Client import *
+import asyncio
 
 RRN.SetLogLevel(RR.LogLevel_Debug)
 
@@ -9,7 +10,7 @@ c1 = None
 
 async def test_wire_func():
 
-    c = await RRN.AsyncConnectService("rr+ws://localhost:2222?service=RobotRaconteurTestService", None, None, None, None)
+    c = await RRN.AsyncConnectService("rr+ws://localhost:22222?service=RobotRaconteurTestService", None, None, None, None)
     w = await c.broadcastwire.AsyncConnect(None)
     await RRN.AsyncSleep(1,None)
     for _ in range(50):
@@ -19,7 +20,6 @@ async def test_wire_func():
     
     print_div("Done!")
 
-loop = RR.WebLoop()
-loop.call_soon(test_wire_func())
+asyncio.ensure_future(test_wire_func())
 
 

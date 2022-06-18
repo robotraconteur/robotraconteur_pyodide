@@ -22,8 +22,6 @@ async def test_await_func():
     
     print_div("Done!")
 
-#loop = RR.WebLoop()
-
 asyncio.ensure_future(test_await_func())
 
 

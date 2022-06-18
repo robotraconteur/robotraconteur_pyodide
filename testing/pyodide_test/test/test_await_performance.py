@@ -1,5 +1,6 @@
 from js import print_div
 from RobotRaconteur.Client import *
+import asyncio
 
 import time
 
@@ -9,7 +10,7 @@ c1 = None
 
 async def test_await_func():
 
-    c = await RRN.AsyncConnectService("rr+ws://localhost:2222?service=RobotRaconteurTestService", None, None, None, None)
+    c = await RRN.AsyncConnectService("rr+ws://localhost:22222?service=RobotRaconteurTestService", None, None, None, None)
     
     f1 = RRN.NewStructure("com.robotraconteur.testing.TestService1.teststruct1",c)
     struct1_type = RRN.GetStructureType("com.robotraconteur.testing.TestService1.teststruct1",c)
@@ -27,7 +28,6 @@ async def test_await_func():
     
     print_div("Done!")
 
-loop = RR.WebLoop()
-loop.call_soon(test_await_func())
+asyncio.ensure_future(test_await_func())
 
 

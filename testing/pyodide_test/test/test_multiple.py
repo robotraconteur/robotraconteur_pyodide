@@ -1,6 +1,7 @@
 from js import print_div
 from RobotRaconteur.Client import *
 import traceback
+import asyncio
 
 print_div("Begin test_multiple")
 
@@ -33,7 +34,7 @@ async def test_await_func():
         traceback.print_exc()
     
 
-loop = RR.WebLoop()
-loop.call_soon(test_await_func())
+
+asyncio.ensure_future(test_await_func())
 
 
