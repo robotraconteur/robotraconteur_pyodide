@@ -1,0 +1,31 @@
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <script src="https://code.jquery.com/jquery-latest.js"></script>
+        <script src="../build/pyodide.js"></script>
+        <!--<script src="https://robotraconteur.github.io/robotraconteur_pyodide/pyodide.js"></script>-->
+
+    </head>
+    <body>
+        
+        <script>
+        
+            function print_div(message)
+            {
+                $("#print_div").append("<p>" + message)
+            }
+
+            async function run_test(){
+                let pyodide = await loadPyodide();
+                //await languagePluginLoader;
+                //await pyodide.loadPackage(["numpy","robotraconteur"]);      
+                const response = await fetch("test_sha256_performance.py", {cache: "no-store"});
+                const test_await_py = await response.text();
+                pyodide.runPython(test_await_py)
+            }
+            run_test();
+        </script>
+        <H2>sha256 performance test</H2>
+        <div id="print_div"></div>  
+    </body>
+</html>
