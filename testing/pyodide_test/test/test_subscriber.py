@@ -10,7 +10,7 @@ print_div("Begin test_subscriber")
 
 async def test_subscriber_func():
     
-    sub = RRN.SubscribeService("rr+ws://localhost:2222?service=RobotRaconteurTestService")
+    sub = RRN.SubscribeService("rr+ws://localhost:22222?service=RobotRaconteurTestService")
     #await RRN.AsyncSleep(0.5, None)
     while True:
         try:

@@ -1,4 +1,4 @@
-%module(directors="1", moduleimport="import _RobotRaconteurPython") RobotRaconteurPython
+%module(directors="1") RobotRaconteurPython
 
 #pragma SWIG nowarn=473
 

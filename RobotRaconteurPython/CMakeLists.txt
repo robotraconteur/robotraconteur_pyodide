@@ -1,8 +1,13 @@
-set(Python_ADDITIONAL_VERSIONS 3.6 3.7)
+if(CMAKE_COMPILER_IS_GNUCXX)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -fPIC" )
+endif()
 
-find_package(PythonInterp REQUIRED 3.7)
-find_package(PythonLibs REQUIRED 3.7)
+set(Python_ADDITIONAL_VERSIONS 3.6 3.7 3.8 3.9 3.10)
 
+find_package(PythonInterp  3.10)
+find_package(PythonLibs  3.10)
+
+if(NOT NUMPY_INCLUDE_DIR)
 find_path(NUMPY_INCLUDE_NDARRAYOBJECT_DIR numpy/ndarrayobject.h PATHS ${PYTHON_INCLUDE_DIRS} NO_DEFAULT_PATH)
 if (NUMPY_INCLUDE_NDARRAYOBJECT_DIR)
 set(NUMPY_INCLUDE_DIR ${NUMPY_INCLUDE_NDARRAYOBJECT_DIR})
@@ -12,6 +17,7 @@ string(STRIP "${NUMPY_INCLUDE_DIR}" NUMPY_INCLUDE_DIR)
 
 if(${FIND_NUMPY_RESULT})
 message(FATAL_ERROR "Could not determine NumPy include directory")
+endif()
 endif()
 endif()
 
@@ -31,10 +37,14 @@ include(${CMAKE_SOURCE_DIR}/cmake/RRUseSwig.cmake)
 include(PythonSwigVars.cmake)
 set(CMAKE_SWIG_OUTDIR ${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/RobotRaconteurCore/include)
-SWIG_ADD_LIBRARY(RobotRaconteurPython TYPE STATIC LANGUAGE python SOURCES RobotRaconteurPython.i ${CMAKE_SOURCE_DIR}/SWIG/RobotRaconteurWrapped.cpp ${CMAKE_SOURCE_DIR}/SWIG/RobotRaconteurWrapped.h PythonTypeSupport.cpp PythonTypeSupport.h)
+SWIG_ADD_LIBRARY(RobotRaconteurPython TYPE MODULE LANGUAGE python SOURCES RobotRaconteurPython.i ${CMAKE_SOURCE_DIR}/SWIG/RobotRaconteurWrapped.cpp ${CMAKE_SOURCE_DIR}/SWIG/RobotRaconteurWrapped.h PythonTypeSupport.cpp PythonTypeSupport.h)
 SWIG_LINK_LIBRARIES(RobotRaconteurPython ${RobotRaconteur_CORE_LIBRARY} ${Boost_LIBRARIES}  ${ROBOTRACONTEUR_EXTRA_LIBS})
 else()
 set(SWIG_MODULE_RobotRaconteurPython_REAL_NAME _RobotRaconteurPython)
+
+if(NOT PREGENERATED_SOURCE_DIR)
+set(PREGENERATED_SOURCE_DIR ${CMAKE_SOURCE_DIR}/generated_src)
+endif()
 
 if ("${SIZEOF_LONG_INT}" EQUAL 8 AND CMAKE_COMPILER_IS_GNUCXX )
 set(CMAKE_SWIG_OUTDIR ${PREGENERATED_SOURCE_DIR}/Python/swigwordsize64/)
@@ -90,9 +100,9 @@ endif()
 ADD_CUSTOM_COMMAND(TARGET ${SWIG_MODULE_RobotRaconteurPython_REAL_NAME} POST_BUILD COMMAND ${PYTHON_COPY_COMMAND} ${P2} ${P3})
 ENDFOREACH(P)
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in" "${CMAKE_BINARY_DIR}/out/Python/setup.py" @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in" "${CMAKE_BINARY_DIR}/out_debug/Python/setup.py" @ONLY)
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in" "${CMAKE_BINARY_DIR}/out_reldebug/Python/setup.py" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in" "${CMAKE_BINARY_DIR}/setup.py" @ONLY)
+#configure_file("${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in" "${CMAKE_BINARY_DIR}/out_debug/Python/setup.py" @ONLY)
+#configure_file("${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in" "${CMAKE_BINARY_DIR}/out_reldebug/Python/setup.py" @ONLY)
 
 set(PYTHON2_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 include("${CMAKE_CURRENT_SOURCE_DIR}/PythonExceptions.cmake")

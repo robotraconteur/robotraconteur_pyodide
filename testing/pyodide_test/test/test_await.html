@@ -2,7 +2,7 @@
     <head>
         <meta charset="utf-8"/>
         <script src="https://code.jquery.com/jquery-latest.js"></script>
-        <script src="../build/pyodide_dev.js"></script>        
+        <script src="../build/pyodide.js"></script>        
     </head>
     <body>
         
@@ -14,8 +14,8 @@
             }
 
             async function run_test(){
-                await languagePluginLoader;
-                await pyodide.loadPackage(["numpy"]);      
+                let pyodide = await loadPyodide();
+                await pyodide.loadPackage(["numpy","robotraconteur"]);      
                 const response = await fetch("test_await.py", {cache: "no-store"});
                 const test_await_py = await response.text();
                 pyodide.runPython(test_await_py)

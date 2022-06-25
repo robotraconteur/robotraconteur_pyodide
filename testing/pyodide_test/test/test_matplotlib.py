@@ -1,8 +1,9 @@
 from js import print_div
 from RobotRaconteur.Client import *
-
-from matplotlib import pyplot as plt
+import asyncio
 import matplotlib
+matplotlib.use("module://matplotlib.backends.html5_canvas_backend")
+from matplotlib import pyplot as plt
 print_div("matplotlib backend: " + str(matplotlib.get_backend()))
 plt.figure()
 plt.plot([1,2,3])
@@ -19,4 +20,4 @@ async def test_plot():
         plt.plot([a,2,3])
         await RRN.AsyncSleep(0.1,None)        
 
-RR.WebLoop.run(test_plot())
+asyncio.ensure_future(test_plot())
